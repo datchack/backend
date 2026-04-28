@@ -239,10 +239,11 @@ function renderCalendar() {
         root.innerHTML = '<div class="cal-empty">Chargement...</div>';
         return;
     }
+
     const filtered = calEvents.filter(e =>
-    calFilters.impact.has(e.impact)
+        calFilters.impact.has(e.impact)
     );
-    
+
     let html = '';
     let lastDay = '';
 
@@ -269,15 +270,52 @@ function renderCalendar() {
             e.impact === 'High' ? 'high' :
             e.impact === 'Medium' ? 'medium' : 'low';
 
-    let colorClass = '';
+        // ==============================
+        // 🔥 LOGIQUE ÉCONOMIQUE PROPRE
+        // ==============================
+        let colorClass = '';
 
-        const a = parseFloat(e.actual);
-        const f = parseFloat(e.forecast);
+        const actual = parseFloat(String(e.actual).replace(/[^\d.-]/g, ''));
+        const forecast = parseFloat(String(e.forecast).replace(/[^\d.-]/g, ''));
+        const previous = parseFloat(String(e.previous).replace(/[^\d.-]/g, ''));
 
-        if (!isNaN(a) && !isNaN(f)) {
-        if (a > f) colorClass = 'cal-green';
-        else if (a < f) colorClass = 'cal-red';
-}
+        if (!isNaN(actual) && !isNaN(forecast)) {
+
+            const title = (e.title || '').toLowerCase();
+
+            // ⚠️ UNEMPLOYMENT / CLAIMS → PLUS HAUT = NÉGATIF
+            const negativeHigher = [
+                "unemployment",
+                "claims",
+                "jobless",
+                "jobless claims"
+            ];
+
+            const isNegativeHigher = negativeHigher.some(k =>
+                title.includes(k)
+            );
+
+            if (isNegativeHigher) {
+                colorClass = actual > forecast ? 'cal-red' : 'cal-green';
+            }
+
+            // 📈 GDP / INFLATION / SALES → PLUS HAUT = POSITIF
+            else if (
+                title.includes("gdp") ||
+                title.includes("inflation") ||
+                title.includes("cpi") ||
+                title.includes("retail") ||
+                title.includes("sales")
+            ) {
+                colorClass = actual > forecast ? 'cal-green' : 'cal-red';
+            }
+
+            // ⚙️ DEFAULT LOGIC
+            else {
+                colorClass = actual > forecast ? 'cal-green' : 'cal-red';
+            }
+        }
+
         html += `
         <div class="cal-row ${colorClass}">
             <span class="cal-time">${time}</span>
