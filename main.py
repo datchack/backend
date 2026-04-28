@@ -1,13 +1,20 @@
 from datetime import datetime, timedelta, timezone
 import asyncio
+import hashlib
+import json
+import os
+import secrets
+import sqlite3
 import time
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import aiohttp
 import feedparser
 import uvicorn
 from bs4 import BeautifulSoup
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, Response
+from pydantic import BaseModel
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -42,6 +49,9 @@ _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
 _context_cache: dict = {"data": None, "ts": 0.0}
 CONTEXT_CACHE_TTL = 30
+ACCOUNT_DB_PATH = os.path.join(os.path.dirname(__file__), "terminal_users.db")
+SESSION_COOKIE = "tt_session"
+TRIAL_DAYS = 7
 
 MARKET_SYMBOLS = {
     "gold": {"symbol": "GC=F", "label": "GOLD"},
@@ -52,6 +62,169 @@ MARKET_SYMBOLS = {
     "spy": {"symbol": "SPY", "label": "SPY"},
     "qqq": {"symbol": "QQQ", "label": "QQQ"},
 }
+
+
+class AccountAuthPayload(BaseModel):
+    email: str
+    password: str
+
+
+class PreferencesPayload(BaseModel):
+    prefs: dict[str, Any]
+
+
+def db_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(ACCOUNT_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_account_db() -> None:
+    with db_connection() as conn:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                trial_started_at TEXT NOT NULL,
+                trial_ends_at TEXT NOT NULL,
+                plan TEXT NOT NULL DEFAULT 'trial',
+                status TEXT NOT NULL DEFAULT 'trialing',
+                prefs_json TEXT NOT NULL DEFAULT '{}'
+            );
+
+            CREATE TABLE IF NOT EXISTS sessions (
+                token TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+            """
+        )
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def hash_password(password: str, salt: str | None = None) -> str:
+    actual_salt = salt or secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        actual_salt.encode("utf-8"),
+        200_000,
+    ).hex()
+    return f"{actual_salt}${digest}"
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    try:
+        salt, expected = stored_hash.split("$", 1)
+    except ValueError:
+        return False
+    candidate = hash_password(password, salt).split("$", 1)[1]
+    return secrets.compare_digest(candidate, expected)
+
+
+def normalize_account_row(row: sqlite3.Row | None) -> dict | None:
+    if row is None:
+        return None
+
+    trial_ends_at = datetime.fromisoformat(row["trial_ends_at"])
+    now = utc_now()
+    trial_active = trial_ends_at > now
+    days_left = max(0, int((trial_ends_at - now).total_seconds() // 86400))
+    prefs = {}
+    try:
+        prefs = json.loads(row["prefs_json"] or "{}")
+    except json.JSONDecodeError:
+        prefs = {}
+
+    return {
+        "id": row["id"],
+        "email": row["email"],
+        "created_at": row["created_at"],
+        "plan": row["plan"],
+        "status": row["status"],
+        "trial_started_at": row["trial_started_at"],
+        "trial_ends_at": row["trial_ends_at"],
+        "trial_active": trial_active,
+        "trial_days_left": days_left,
+        "prefs": prefs,
+    }
+
+
+def create_session(user_id: int) -> tuple[str, str]:
+    token = secrets.token_urlsafe(32)
+    expires_at = utc_now() + timedelta(days=30)
+    with db_connection() as conn:
+        conn.execute(
+            "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+            (token, user_id, utc_now().isoformat(), expires_at.isoformat()),
+        )
+    return token, expires_at.isoformat()
+
+
+def get_user_by_session(token: str | None) -> dict | None:
+    if not token:
+        return None
+
+    with db_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT users.*
+            FROM sessions
+            JOIN users ON users.id = sessions.user_id
+            WHERE sessions.token = ?
+            """,
+            (token,),
+        ).fetchone()
+        session_row = conn.execute(
+            "SELECT expires_at FROM sessions WHERE token = ?",
+            (token,),
+        ).fetchone()
+
+        if not session_row:
+            return None
+
+        expires_at = datetime.fromisoformat(session_row["expires_at"])
+        if expires_at <= utc_now():
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            return None
+
+    return normalize_account_row(row)
+
+
+def require_user(request: Request) -> dict:
+    user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentification requise")
+    return user
+
+
+def clear_session(response: Response, token: str | None) -> None:
+    if token:
+        with db_connection() as conn:
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+    response.delete_cookie(SESSION_COOKIE, path="/")
+
+
+def set_session_cookie(response: Response, token: str, expires_at: str) -> None:
+    expires_dt = datetime.fromisoformat(expires_at)
+    max_age = int((expires_dt - utc_now()).total_seconds())
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=max_age,
+        httponly=True,
+        samesite="lax",
+        secure=False,
+        path="/",
+    )
 
 
 def parse_fmp_datetime(raw_date: str) -> datetime | None:
@@ -561,6 +734,99 @@ async def fetch_xau_context() -> dict:
     _context_cache["data"] = context
     _context_cache["ts"] = now
     return context
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    init_account_db()
+
+
+@app.get("/api/account/me")
+async def account_me(request: Request):
+    user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    return {"authenticated": bool(user), "account": user}
+
+
+@app.post("/api/account/register")
+async def account_register(payload: AccountAuthPayload, response: Response):
+    email = payload.email.strip().lower()
+    password = payload.password.strip()
+
+    if "@" not in email or "." not in email:
+        raise HTTPException(status_code=400, detail="Email invalide")
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Mot de passe trop court")
+
+    created_at = utc_now()
+    trial_ends_at = created_at + timedelta(days=TRIAL_DAYS)
+
+    try:
+        with db_connection() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, prefs_json)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    email,
+                    hash_password(password),
+                    created_at.isoformat(),
+                    created_at.isoformat(),
+                    trial_ends_at.isoformat(),
+                    "{}",
+                ),
+            )
+            user_id = int(cursor.lastrowid)
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="Compte deja existant") from exc
+
+    token, expires_at = create_session(user_id)
+    set_session_cookie(response, token, expires_at)
+
+    with db_connection() as conn:
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    return {"authenticated": True, "account": normalize_account_row(row)}
+
+
+@app.post("/api/account/login")
+async def account_login(payload: AccountAuthPayload, response: Response):
+    email = payload.email.strip().lower()
+    password = payload.password
+
+    if "@" not in email or "." not in email:
+        raise HTTPException(status_code=400, detail="Email invalide")
+
+    with db_connection() as conn:
+        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+
+    if not row or not verify_password(password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Identifiants invalides")
+
+    token, expires_at = create_session(int(row["id"]))
+    set_session_cookie(response, token, expires_at)
+    return {"authenticated": True, "account": normalize_account_row(row)}
+
+
+@app.post("/api/account/logout")
+async def account_logout(request: Request, response: Response):
+    clear_session(response, request.cookies.get(SESSION_COOKIE))
+    return {"ok": True}
+
+
+@app.get("/api/account/preferences")
+async def account_preferences(request: Request):
+    user = require_user(request)
+    return {"prefs": user["prefs"]}
+
+
+@app.post("/api/account/preferences")
+async def account_preferences_save(payload: PreferencesPayload, request: Request):
+    user = require_user(request)
+    prefs_json = json.dumps(payload.prefs)
+    with db_connection() as conn:
+        conn.execute("UPDATE users SET prefs_json = ? WHERE id = ?", (prefs_json, user["id"]))
+    return {"ok": True}
 
 
 @app.get("/api/news")

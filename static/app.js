@@ -3,6 +3,7 @@ const CALENDAR_REFRESH_MS = 60000;
 const NEWS_REFRESH_MS = 8000;
 const CONTEXT_REFRESH_MS = 15000;
 const IMPACT_LEVELS = ['High', 'Medium', 'Low'];
+const DEFAULT_ACCOUNT_MODE = 'register';
 
 function loadPrefs() {
     try {
@@ -15,7 +16,9 @@ function loadPrefs() {
 function savePrefs(patch) {
     try {
         const current = loadPrefs();
-        localStorage.setItem(PREFS_KEY, JSON.stringify({ ...current, ...patch }));
+        const next = { ...current, ...patch };
+        localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+        schedulePrefsSync(next);
     } catch {}
 }
 
@@ -37,6 +40,9 @@ let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let currentCenterTab = PREFS.centerTab || 'bias';
 let layoutState = loadLayoutPrefs();
+let accountMode = DEFAULT_ACCOUNT_MODE;
+let accountState = { authenticated: false, account: null };
+let prefsSyncTimer = null;
 let lastSeenNewsTs = 0;
 let calEvents = [];
 let contextState = null;
@@ -58,8 +64,8 @@ function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
 }
 
-function loadLayoutPrefs() {
-    const raw = PREFS.layout || {};
+function loadLayoutPrefs(source = null) {
+    const raw = source || PREFS.layout || {};
     return {
         leftWidth: clamp(Number(raw.leftWidth) || DEFAULT_LAYOUT.leftWidth, 260, 520),
         rightWidth: clamp(Number(raw.rightWidth) || DEFAULT_LAYOUT.rightWidth, 260, 520),
@@ -75,6 +81,75 @@ function loadLayoutPrefs() {
 
 function persistLayout() {
     savePrefs({ layout: layoutState });
+}
+
+function getClientPrefsSnapshot() {
+    return {
+        ...loadPrefs(),
+        symbol: currentSymbol,
+        soundEnabled,
+        soundType,
+        centerTab: currentCenterTab,
+        impactFilters: [...calFilters.impact],
+        layout: layoutState,
+    };
+}
+
+function schedulePrefsSync(nextPrefs = null) {
+    if (!accountState.authenticated) return;
+
+    const payload = nextPrefs || getClientPrefsSnapshot();
+    window.clearTimeout(prefsSyncTimer);
+    prefsSyncTimer = window.setTimeout(() => {
+        syncPreferences(payload);
+    }, 350);
+}
+
+async function syncPreferences(prefs = null) {
+    if (!accountState.authenticated) return;
+
+    try {
+        await fetch('/api/account/preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefs: prefs || getClientPrefsSnapshot() }),
+        });
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function applyLoadedPrefs(prefs = {}) {
+    if (!prefs || typeof prefs !== 'object') return;
+
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+
+    currentSymbol = prefs.symbol || currentSymbol;
+    soundEnabled = typeof prefs.soundEnabled === 'boolean' ? prefs.soundEnabled : soundEnabled;
+    soundType = prefs.soundType || soundType;
+    currentCenterTab = prefs.centerTab || currentCenterTab;
+    layoutState = {
+        ...layoutState,
+        ...loadLayoutPrefs(prefs.layout),
+        ...(prefs.layout || {}),
+        collapsed: {
+            ...layoutState.collapsed,
+            ...(prefs.layout?.collapsed || {}),
+        },
+    };
+
+    const impactPrefs = Array.isArray(prefs.impactFilters) && prefs.impactFilters.length ? prefs.impactFilters : IMPACT_LEVELS;
+    calFilters.impact = new Set(impactPrefs);
+
+    renderSoundToggle();
+    renderCalendarFilters();
+    const soundSelect = document.getElementById('sound-pick');
+    if (soundSelect) soundSelect.value = soundType;
+    const cmdInput = document.getElementById('cmd');
+    if (cmdInput) cmdInput.value = currentSymbol;
+    setCenterTab(currentCenterTab);
+    applyLayoutState();
+    changeChart(currentSymbol);
 }
 
 function ensureAudio() {
@@ -144,6 +219,171 @@ function renderSoundToggle() {
 
     soundEl.textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF';
     soundEl.style.color = soundEnabled ? '#22c55e' : '';
+}
+
+function setAccountMessage(message = '', tone = '') {
+    const messageEl = document.getElementById('account-message');
+    if (!messageEl) return;
+    messageEl.textContent = message;
+    messageEl.className = `account-message${tone ? ` ${tone}` : ''}`;
+}
+
+function setAccountMode(mode) {
+    accountMode = mode === 'login' ? 'login' : 'register';
+
+    const titleEl = document.getElementById('account-title');
+    const submitEl = document.getElementById('account-submit');
+    const switchEl = document.getElementById('account-switch');
+    const passwordEl = document.getElementById('account-password');
+
+    if (titleEl) titleEl.textContent = accountMode === 'login' ? 'CONNEXION' : 'ESPACE COMPTE';
+    if (submitEl) submitEl.textContent = accountMode === 'login' ? 'SE CONNECTER' : 'CREER MON COMPTE';
+    if (switchEl) switchEl.textContent = accountMode === 'login' ? 'CREER UN COMPTE' : "J'AI DEJA UN COMPTE";
+    if (passwordEl) passwordEl.autocomplete = accountMode === 'login' ? 'current-password' : 'new-password';
+}
+
+function renderAccountState() {
+    const toggle = document.getElementById('account-toggle');
+    const trial = document.getElementById('account-trial');
+    const summary = document.getElementById('account-summary');
+    const form = document.getElementById('account-form');
+    const userBlock = document.getElementById('account-user');
+    const emailValue = document.getElementById('account-email-value');
+    const planValue = document.getElementById('account-plan-value');
+    const expiryValue = document.getElementById('account-expiry-value');
+
+    if (!toggle || !trial || !summary || !form || !userBlock) return;
+
+    if (!accountState.authenticated || !accountState.account) {
+        toggle.textContent = 'ACCOUNT';
+        trial.textContent = 'TRIAL 7J';
+        summary.textContent = "Connecte-toi pour sauvegarder ton terminal et demarrer un essai 7 jours.";
+        form.classList.remove('hidden');
+        userBlock.classList.add('hidden');
+        setAccountMode(accountMode);
+        return;
+    }
+
+    const { account } = accountState;
+    toggle.textContent = 'MY ACCOUNT';
+    trial.textContent = account.trial_active ? `TRIAL ${account.trial_days_left}J` : (account.plan || 'PLAN').toUpperCase();
+    summary.textContent = account.trial_active
+        ? `Essai actif jusqu'au ${new Date(account.trial_ends_at).toLocaleDateString('fr-FR')}. Tes preferences sont synchronisees.`
+        : 'Compte actif. Structure abonnement prete a etre branchee.';
+    form.classList.add('hidden');
+    userBlock.classList.remove('hidden');
+    if (emailValue) emailValue.textContent = account.email;
+    if (planValue) planValue.textContent = String(account.plan || 'trial').toUpperCase();
+    if (expiryValue) expiryValue.textContent = new Date(account.trial_ends_at).toLocaleDateString('fr-FR');
+}
+
+function toggleAccountPanel(forceOpen = null) {
+    const panel = document.getElementById('account-panel');
+    if (!panel) return;
+
+    const shouldOpen = forceOpen === null ? panel.classList.contains('hidden') : forceOpen;
+    panel.classList.toggle('hidden', !shouldOpen);
+}
+
+async function fetchAccountState() {
+    try {
+        const response = await fetch('/api/account/me', { cache: 'no-store' });
+        const payload = await response.json();
+        accountState = payload;
+        if (accountState.authenticated && accountState.account?.prefs) {
+            applyLoadedPrefs(accountState.account.prefs);
+        }
+        renderAccountState();
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function submitAccountForm(event) {
+    event.preventDefault();
+
+    const emailEl = document.getElementById('account-email');
+    const passwordEl = document.getElementById('account-password');
+    if (!emailEl || !passwordEl) return;
+
+    const email = emailEl.value.trim().toLowerCase();
+    const password = passwordEl.value;
+    if (!email || !password) return;
+
+    try {
+        setAccountMessage('Connexion en cours...');
+        const response = await fetch(`/api/account/${accountMode}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || 'Action impossible');
+        }
+
+        accountState = payload;
+        renderAccountState();
+        setAccountMessage(accountMode === 'login' ? 'Connexion reussie.' : 'Compte cree. Essai 7 jours active.', 'ok');
+        await syncPreferences();
+        emailEl.value = '';
+        passwordEl.value = '';
+    } catch (error) {
+        setAccountMessage(error.message || 'Erreur compte', 'err');
+    }
+}
+
+async function logoutAccount() {
+    try {
+        await fetch('/api/account/logout', { method: 'POST' });
+        accountState = { authenticated: false, account: null };
+        renderAccountState();
+        setAccountMode(DEFAULT_ACCOUNT_MODE);
+        setAccountMessage('Session fermee.');
+    } catch (error) {
+        setAccountMessage('Impossible de fermer la session.', 'err');
+    }
+}
+
+function bindAccountControls() {
+    const toggle = document.getElementById('account-toggle');
+    const form = document.getElementById('account-form');
+    const switchBtn = document.getElementById('account-switch');
+    const logoutBtn = document.getElementById('account-logout');
+    const syncBtn = document.getElementById('account-sync');
+    const panel = document.getElementById('account-panel');
+
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            toggleAccountPanel();
+            renderAccountState();
+        });
+    }
+    if (form) form.addEventListener('submit', submitAccountForm);
+    if (switchBtn) {
+        switchBtn.addEventListener('click', () => {
+            setAccountMode(accountMode === 'login' ? 'register' : 'login');
+            setAccountMessage('');
+        });
+    }
+    if (logoutBtn) logoutBtn.addEventListener('click', logoutAccount);
+    if (syncBtn) {
+        syncBtn.addEventListener('click', async () => {
+            await syncPreferences();
+            setAccountMessage('Preferences synchronisees.', 'ok');
+        });
+    }
+
+    document.addEventListener('click', (event) => {
+        if (!panel || panel.classList.contains('hidden')) return;
+        const slot = document.querySelector('.account-slot');
+        if (slot && !slot.contains(event.target)) {
+            toggleAccountPanel(false);
+        }
+    });
+
+    renderAccountState();
+    setAccountMode(accountMode);
 }
 
 function updateToggleButtons(panel, collapsed) {
@@ -913,6 +1153,7 @@ function init() {
     renderSoundToggle();
     renderCalendarFilters();
     bindQuoteCards();
+    bindAccountControls();
     bindLayoutControls();
     bindResizers();
     bindCenterTabs();
@@ -921,6 +1162,7 @@ function init() {
     bindSoundToggle();
 
     initChart(currentSymbol);
+    fetchAccountState();
     updateClocks();
     getNews();
     fetchCalendar();
