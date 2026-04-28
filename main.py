@@ -223,39 +223,48 @@ def _parse_myfxbook_html(html: str) -> list[dict]:
     return events
 
 
-async def _fetch_myfxbook():
-    url = "https://economic-calendar.tradingview.com/events"
+async def _fetch_calendar():
+    API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
+    url = f"https://financialmodelingprep.com/stable/economic-calendar?country=US&apikey={API_KEY}"
 
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.get(url) as resp:
+            async with session.get(url, timeout=20) as resp:
                 if resp.status != 200:
-                    text = await resp.text()
-                    print("Erreur API:", text)
+                    print("API error:", resp.status)
                     return []
                 data = await resp.json()
         except Exception as e:
-            print("Exception:", e)
+            print("Request error:", e)
             return []
 
     events = []
 
-    for e in data.get("result", []):
+    for e in data:
         try:
-            ts = int(e.get("timestamp", 0))
-            if not ts:
-                continue
+            # format attendu: "2026-04-28 14:30:00"
+            dt = datetime.strptime(e["date"], "%Y-%m-%d %H:%M:%S")
+            ts = int(dt.replace(tzinfo=timezone.utc).timestamp())
+
+            impact_raw = str(e.get("impact", "")).lower()
+
+            if "high" in impact_raw:
+                impact = "High"
+            elif "medium" in impact_raw:
+                impact = "Medium"
+            else:
+                impact = "Low"
 
             events.append({
-                "title": e.get("title", ""),
-                "country": e.get("country", ""),
-                "impact": e.get("importance", "Low"),
+                "title": e.get("event", ""),
+                "country": "US",
+                "impact": impact,
                 "actual": e.get("actual", ""),
-                "forecast": e.get("forecast", ""),
+                "forecast": e.get("estimate", ""),
                 "previous": e.get("previous", ""),
                 "ts": ts,
             })
-        except:
+        except Exception as err:
             continue
 
     events.sort(key=lambda x: x["ts"])
@@ -280,7 +289,7 @@ async def get_calendar():
             "stale": False,
         }
 
-    events = await _fetch_myfxbook()
+    events = await _fetch_calendar()
     if events:
         _calendar_cache["data"] = events
         _calendar_cache["ts"] = now
