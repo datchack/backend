@@ -52,6 +52,11 @@ CONTEXT_CACHE_TTL = 30
 ACCOUNT_DB_PATH = os.path.join(os.path.dirname(__file__), "terminal_users.db")
 SESSION_COOKIE = "tt_session"
 TRIAL_DAYS = 7
+OWNER_EMAILS = {
+    email.strip().lower()
+    for email in os.getenv("OWNER_EMAILS", os.getenv("OWNER_EMAIL", "")).split(",")
+    if email.strip()
+}
 
 MARKET_SYMBOLS = {
     "gold": {"symbol": "GC=F", "label": "GOLD"},
@@ -110,6 +115,27 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def is_owner_row(row: sqlite3.Row) -> bool:
+    email = str(row["email"]).strip().lower()
+    return email in OWNER_EMAILS or int(row["id"]) == 1
+
+
+def derive_access_state(row: sqlite3.Row) -> tuple[str, str, bool, bool, int]:
+    if is_owner_row(row):
+        return "owner", "owner", True, True, 999
+
+    trial_ends_at = datetime.fromisoformat(row["trial_ends_at"])
+    now = utc_now()
+    trial_active = trial_ends_at > now
+    trial_days_left = max(0, int(((trial_ends_at - now).total_seconds() + 86399) // 86400))
+
+    if row["plan"] == "active" or row["status"] == "active":
+        return "member", "active", True, trial_active, trial_days_left
+    if trial_active:
+        return "trial", "trialing", True, True, trial_days_left
+    return "expired", "expired", False, False, 0
+
+
 def hash_password(password: str, salt: str | None = None) -> str:
     actual_salt = salt or secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac(
@@ -134,10 +160,7 @@ def normalize_account_row(row: sqlite3.Row | None) -> dict | None:
     if row is None:
         return None
 
-    trial_ends_at = datetime.fromisoformat(row["trial_ends_at"])
-    now = utc_now()
-    trial_active = trial_ends_at > now
-    days_left = max(0, int((trial_ends_at - now).total_seconds() // 86400))
+    role, status, has_access, trial_active, days_left = derive_access_state(row)
     prefs = {}
     try:
         prefs = json.loads(row["prefs_json"] or "{}")
@@ -149,7 +172,9 @@ def normalize_account_row(row: sqlite3.Row | None) -> dict | None:
         "email": row["email"],
         "created_at": row["created_at"],
         "plan": row["plan"],
-        "status": row["status"],
+        "status": status,
+        "role": role,
+        "has_access": has_access,
         "trial_started_at": row["trial_started_at"],
         "trial_ends_at": row["trial_ends_at"],
         "trial_active": trial_active,
@@ -203,6 +228,13 @@ def require_user(request: Request) -> dict:
     user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
     if not user:
         raise HTTPException(status_code=401, detail="Authentification requise")
+    return user
+
+
+def require_terminal_access(request: Request) -> dict:
+    user = require_user(request)
+    if not user.get("has_access"):
+        raise HTTPException(status_code=403, detail="Acces reserve aux membres en essai ou abonnes")
     return user
 
 
@@ -830,7 +862,8 @@ async def account_preferences_save(payload: PreferencesPayload, request: Request
 
 
 @app.get("/api/news")
-async def get_news():
+async def get_news(request: Request):
+    require_terminal_access(request)
     now = time.time()
     if _news_cache["data"] and (now - _news_cache["ts"]) < NEWS_CACHE_TTL:
         return {
@@ -852,7 +885,8 @@ async def get_news():
 
 
 @app.get("/api/calendar")
-async def get_calendar():
+async def get_calendar(request: Request):
+    require_terminal_access(request)
     events, error = await fetch_calendar()
     week_start, week_end = get_current_week_bounds()
     if error:
@@ -890,7 +924,8 @@ async def health():
 
 
 @app.get("/api/context")
-async def get_context():
+async def get_context(request: Request):
+    require_terminal_access(request)
     context = await fetch_xau_context()
     return context
 

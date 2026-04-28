@@ -34,6 +34,16 @@ body {
     grid-template-rows: auto auto auto minmax(0, 1fr) auto;
 }
 
+body.gated .top-bar,
+body.gated .header,
+body.gated .main-layout > .col,
+body.gated .main-layout > .layout-splitter {
+    filter: blur(7px);
+    opacity: 0.28;
+    pointer-events: none;
+    user-select: none;
+}
+
 .ticker-tape {
     border-bottom: 1px solid var(--border);
     background: #06080c;
@@ -176,6 +186,7 @@ body {
     gap: 6px;
     padding: 0 6px 6px;
     min-height: 0;
+    position: relative;
 }
 
 @media (min-width: 1180px) {
@@ -190,6 +201,58 @@ body {
 .layout-splitter,
 .panel-rail {
     display: none;
+}
+
+.access-gate {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.access-card {
+    width: min(720px, 100%);
+    padding: 28px;
+    border: 1px solid rgba(162, 89, 255, 0.35);
+    border-radius: 8px;
+    background: rgba(7, 10, 14, 0.94);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    text-align: center;
+}
+
+.access-kicker {
+    margin-bottom: 10px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+}
+
+.access-card h1 {
+    margin: 0 0 12px;
+    font-size: 30px;
+    line-height: 1.1;
+    letter-spacing: 0;
+}
+
+.access-card p {
+    margin: 0 auto;
+    max-width: 560px;
+    color: #bcc3cf;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.access-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
 }
 
 .col {

@@ -43,6 +43,7 @@ let layoutState = loadLayoutPrefs();
 let accountMode = DEFAULT_ACCOUNT_MODE;
 let accountState = { authenticated: false, account: null };
 let prefsSyncTimer = null;
+let appBooted = false;
 let lastSeenNewsTs = 0;
 let calEvents = [];
 let contextState = null;
@@ -149,7 +150,55 @@ function applyLoadedPrefs(prefs = {}) {
     if (cmdInput) cmdInput.value = currentSymbol;
     setCenterTab(currentCenterTab);
     applyLayoutState();
-    changeChart(currentSymbol);
+    if (appBooted) {
+        changeChart(currentSymbol);
+    }
+}
+
+function hasTerminalAccess() {
+    return !!accountState.account?.has_access;
+}
+
+function renderAccessGate() {
+    const gate = document.getElementById('access-gate');
+    const title = document.getElementById('access-title');
+    const copy = document.getElementById('access-copy');
+    if (!gate || !title || !copy) return;
+
+    const authenticated = !!accountState.authenticated;
+    const role = accountState.account?.role || 'guest';
+    const gated = !hasTerminalAccess();
+
+    document.body.classList.toggle('gated', gated);
+    gate.classList.toggle('hidden', !gated);
+
+    if (!gated) return;
+
+    if (!authenticated) {
+        title.textContent = 'Active ton essai gratuit 7 jours';
+        copy.textContent = 'Accede au terminal complet, personnalise ton workspace et centralise news, calendrier et charting en un seul endroit.';
+        return;
+    }
+
+    if (role === 'expired') {
+        title.textContent = 'Ton essai est termine';
+        copy.textContent = 'Reconnecte le terminal complet en passant a l’abonnement quand tu seras pret.';
+        return;
+    }
+
+    title.textContent = 'Complete ton acces';
+    copy.textContent = 'Ce terminal complet est reserve aux comptes en essai, abonnes ou owner.';
+}
+
+function bootTerminalApp() {
+    if (appBooted) return;
+    appBooted = true;
+
+    initChart(currentSymbol);
+    getNews();
+    fetchCalendar();
+    fetchContext();
+    window.setInterval(getNews, NEWS_REFRESH_MS);
 }
 
 function ensureAudio() {
@@ -261,20 +310,26 @@ function renderAccountState() {
         form.classList.remove('hidden');
         userBlock.classList.add('hidden');
         setAccountMode(accountMode);
+        renderAccessGate();
         return;
     }
 
     const { account } = accountState;
     toggle.textContent = 'MY ACCOUNT';
-    trial.textContent = account.trial_active ? `TRIAL ${account.trial_days_left}J` : (account.plan || 'PLAN').toUpperCase();
-    summary.textContent = account.trial_active
+    trial.textContent = account.role === 'owner'
+        ? 'OWNER'
+        : account.trial_active ? `TRIAL ${account.trial_days_left}J` : (account.plan || 'PLAN').toUpperCase();
+    summary.textContent = account.role === 'owner'
+        ? 'Acces createur actif a vie. Le terminal complet reste ouvert sans limitation.'
+        : account.trial_active
         ? `Essai actif jusqu'au ${new Date(account.trial_ends_at).toLocaleDateString('fr-FR')}. Tes preferences sont synchronisees.`
         : 'Compte actif. Structure abonnement prete a etre branchee.';
     form.classList.add('hidden');
     userBlock.classList.remove('hidden');
     if (emailValue) emailValue.textContent = account.email;
-    if (planValue) planValue.textContent = String(account.plan || 'trial').toUpperCase();
-    if (expiryValue) expiryValue.textContent = new Date(account.trial_ends_at).toLocaleDateString('fr-FR');
+    if (planValue) planValue.textContent = account.role === 'owner' ? 'OWNER' : String(account.plan || 'trial').toUpperCase();
+    if (expiryValue) expiryValue.textContent = account.role === 'owner' ? 'LIFETIME' : new Date(account.trial_ends_at).toLocaleDateString('fr-FR');
+    renderAccessGate();
 }
 
 function toggleAccountPanel(forceOpen = null) {
@@ -294,6 +349,9 @@ async function fetchAccountState() {
             applyLoadedPrefs(accountState.account.prefs);
         }
         renderAccountState();
+        if (hasTerminalAccess()) {
+            bootTerminalApp();
+        }
     } catch (error) {
         console.error(error);
     }
@@ -328,6 +386,11 @@ async function submitAccountForm(event) {
         await syncPreferences();
         emailEl.value = '';
         passwordEl.value = '';
+        if (hasTerminalAccess()) {
+            bootTerminalApp();
+            renderAccessGate();
+            toggleAccountPanel(false);
+        }
     } catch (error) {
         setAccountMessage(error.message || 'Erreur compte', 'err');
     }
@@ -336,10 +399,7 @@ async function submitAccountForm(event) {
 async function logoutAccount() {
     try {
         await fetch('/api/account/logout', { method: 'POST' });
-        accountState = { authenticated: false, account: null };
-        renderAccountState();
-        setAccountMode(DEFAULT_ACCOUNT_MODE);
-        setAccountMessage('Session fermee.');
+        window.location.reload();
     } catch (error) {
         setAccountMessage('Impossible de fermer la session.', 'err');
     }
@@ -352,6 +412,8 @@ function bindAccountControls() {
     const logoutBtn = document.getElementById('account-logout');
     const syncBtn = document.getElementById('account-sync');
     const panel = document.getElementById('account-panel');
+    const startTrialBtn = document.getElementById('access-start-trial');
+    const loginBtn = document.getElementById('access-login');
 
     if (toggle) {
         toggle.addEventListener('click', () => {
@@ -373,6 +435,20 @@ function bindAccountControls() {
             setAccountMessage('Preferences synchronisees.', 'ok');
         });
     }
+    if (startTrialBtn) {
+        startTrialBtn.addEventListener('click', () => {
+            setAccountMode('register');
+            toggleAccountPanel(true);
+            setAccountMessage('');
+        });
+    }
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            setAccountMode('login');
+            toggleAccountPanel(true);
+            setAccountMessage('');
+        });
+    }
 
     document.addEventListener('click', (event) => {
         if (!panel || panel.classList.contains('hidden')) return;
@@ -384,6 +460,7 @@ function bindAccountControls() {
 
     renderAccountState();
     setAccountMode(accountMode);
+    renderAccessGate();
 }
 
 function updateToggleButtons(panel, collapsed) {
@@ -1161,15 +1238,10 @@ function init() {
     bindSoundPicker();
     bindSoundToggle();
 
-    initChart(currentSymbol);
     fetchAccountState();
     updateClocks();
-    getNews();
-    fetchCalendar();
-    fetchContext();
 
     window.setInterval(updateClocks, 1000);
-    window.setInterval(getNews, NEWS_REFRESH_MS);
     window.addEventListener('resize', applyLayoutState);
 }
 
