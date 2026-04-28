@@ -224,28 +224,32 @@ def _parse_myfxbook_html(html: str) -> list[dict]:
 
 
 async def _fetch_myfxbook():
-    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    url = "https://economic-calendar.tradingview.com/events"
 
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(url) as resp:
                 if resp.status != 200:
+                    text = await resp.text()
+                    print("Erreur API:", text)
                     return []
                 data = await resp.json()
-        except:
+        except Exception as e:
+            print("Exception:", e)
             return []
 
     events = []
-    now = time.time()
 
-    for e in data:
+    for e in data.get("result", []):
         try:
-            ts = int(datetime.strptime(e["date"], "%Y-%m-%d %H:%M:%S").timestamp())
+            ts = int(e.get("timestamp", 0))
+            if not ts:
+                continue
 
             events.append({
                 "title": e.get("title", ""),
                 "country": e.get("country", ""),
-                "impact": e.get("impact", "Low"),
+                "impact": e.get("importance", "Low"),
                 "actual": e.get("actual", ""),
                 "forecast": e.get("forecast", ""),
                 "previous": e.get("previous", ""),
