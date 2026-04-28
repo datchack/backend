@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import asyncio
 import time
 from zoneinfo import ZoneInfo
@@ -33,6 +33,7 @@ NEWS_SOURCES = {
 
 FMP_API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
 FMP_URL = f"https://financialmodelingprep.com/stable/economic-calendar?country=US&apikey={FMP_API_KEY}"
+CALENDAR_TZ = PARIS
 
 _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
@@ -84,6 +85,14 @@ def normalize_calendar_event(event: dict) -> dict | None:
     }
 
 
+def get_current_week_bounds(now: datetime | None = None) -> tuple[datetime, datetime]:
+    current = now.astimezone(CALENDAR_TZ) if now else datetime.now(CALENDAR_TZ)
+    week_start = current.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = week_start - timedelta(days=week_start.weekday())
+    week_end = week_start + timedelta(days=7)
+    return week_start, week_end
+
+
 async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> list[dict]:
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=6)) as resp:
@@ -125,19 +134,19 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> 
     return items
 
 
-async def fetch_calendar() -> list[dict]:
+async def fetch_calendar() -> tuple[list[dict], str | None]:
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(FMP_URL, timeout=20) as resp:
                 if resp.status != 200:
-                    return []
+                    return [], f"Calendar feed HTTP {resp.status}"
                 payload = await resp.json()
         except Exception:
-            return []
+            return [], "Calendar feed unavailable"
 
     raw_events = payload.get("value", payload) if isinstance(payload, dict) else payload
     if not isinstance(raw_events, list):
-        return []
+        return [], "Calendar payload invalid"
 
     events: list[dict] = []
     for event in raw_events:
@@ -147,8 +156,16 @@ async def fetch_calendar() -> list[dict]:
         if normalized:
             events.append(normalized)
 
-    events.sort(key=lambda item: item["ts"])
-    return events
+    week_start, week_end = get_current_week_bounds()
+    week_start_ts = int(week_start.timestamp())
+    week_end_ts = int(week_end.timestamp())
+
+    filtered_events = [
+        event for event in events
+        if week_start_ts <= event["ts"] < week_end_ts
+    ]
+    filtered_events.sort(key=lambda item: item["ts"])
+    return filtered_events, None
 
 
 @app.get("/api/news")
@@ -175,14 +192,17 @@ async def get_news():
 
 @app.get("/api/calendar")
 async def get_calendar():
-    events = await fetch_calendar()
-    if not events:
+    events, error = await fetch_calendar()
+    week_start, week_end = get_current_week_bounds()
+    if error:
         return {
             "events": [],
             "count": 0,
-            "timezone": "UTC",
+            "timezone": "Europe/Paris",
             "hot": False,
-            "error": "Calendar feed unavailable",
+            "error": error,
+            "week_start": week_start.isoformat(),
+            "week_end": week_end.isoformat(),
         }
 
     now_ts = int(time.time())
@@ -191,9 +211,11 @@ async def get_calendar():
     return {
         "events": events,
         "count": len(events),
-        "timezone": "UTC",
+        "timezone": "Europe/Paris",
         "hot": hot,
         "error": None,
+        "week_start": week_start.isoformat(),
+        "week_end": week_end.isoformat(),
     }
 
 

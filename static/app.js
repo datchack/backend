@@ -25,7 +25,7 @@ let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let lastSeenNewsTs = 0;
 let calEvents = [];
-let calendarMeta = { timezone: 'UTC', error: null, count: 0 };
+let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null };
 let audioCtx = null;
 
 const calFilters = {
@@ -260,7 +260,7 @@ function renderCalendar() {
     }
 
     if (!Array.isArray(calEvents) || calEvents.length === 0) {
-        root.innerHTML = '<div class="cal-empty">Aucun evenement disponible.</div>';
+        root.innerHTML = '<div class="cal-empty">Aucun evenement sur la semaine en cours.</div>';
         return;
     }
 
@@ -339,17 +339,19 @@ async function fetchCalendar() {
 
         calEvents = Array.isArray(payload.events) ? payload.events : [];
         calendarMeta = {
-            timezone: payload.timezone || 'UTC',
+            timezone: payload.timezone || 'Europe/Paris',
             error: payload.error || null,
             count: payload.count || 0,
             hot: !!payload.hot,
+            weekStart: payload.week_start || null,
+            weekEnd: payload.week_end || null,
         };
 
         updateCalendarStatus(calendarMeta);
         renderCalendar();
     } catch (error) {
         console.error(error);
-        calendarMeta = { timezone: 'UTC', error: 'Requete impossible', count: 0, hot: false };
+        calendarMeta = { timezone: 'Europe/Paris', error: 'Requete impossible', count: 0, hot: false, weekStart: null, weekEnd: null };
         calEvents = [];
         updateCalendarStatus(calendarMeta);
         renderCalendar();
