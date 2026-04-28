@@ -1,6 +1,6 @@
-from fastapi import Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, FileResponse
 import asyncio
 import json
 import os
@@ -12,13 +12,11 @@ from zoneinfo import ZoneInfo
 import aiohttp
 import feedparser
 import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
 
 app = FastAPI()
 
+# Static + templates (Render-friendly paths)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 
 PARIS = ZoneInfo("Europe/Paris")
@@ -115,7 +113,7 @@ async def health():
     }
 
 
-# ====== ECONOMIC CALENDAR (Forex Factory weekly feed — JSON primary, XML fallback) ======
+# ====== ECONOMIC CALENDAR ======
 CALENDAR_JSON_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 CALENDAR_XML_URL  = "https://nfs.faireconomy.media/ff_calendar_thisweek.xml"
 BROWSER_UA = (
@@ -161,8 +159,8 @@ def _parse_ff_xml(xml_text: str) -> list[dict]:
         def g(tag: str) -> str:
             el = ev.find(tag)
             return (el.text or "").strip() if el is not None and el.text else ""
-        date_s = g("date")     # "04-26-2026"
-        time_s = g("time")     # "8:00pm" / "All Day" / "Tentative"
+        date_s = g("date")
+        time_s = g("time")
         if not date_s:
             continue
         try:
@@ -216,7 +214,6 @@ def _parse_ff_json(data: list) -> list[dict]:
 async def _fetch_calendar() -> list[dict]:
     headers = {"User-Agent": BROWSER_UA, "Accept": "application/json, text/xml, */*"}
     async with aiohttp.ClientSession(headers=headers) as session:
-        # Try JSON first (richer / native ISO dates)
         try:
             async with session.get(CALENDAR_JSON_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status == 200:
@@ -226,7 +223,7 @@ async def _fetch_calendar() -> list[dict]:
                         return parsed
         except Exception:
             pass
-        # Fallback to XML when JSON is unavailable / rate-limited
+
         try:
             async with session.get(CALENDAR_XML_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status != 200:
@@ -243,7 +240,6 @@ async def get_calendar():
     now = time.time()
     upcoming_ts = _calendar_cache.get("next_event_ts", 0.0)
     cache_age = now - _calendar_cache["ts"]
-    # Adaptive cache: 10s when an event is between -90s and +120s of now, else 60s
     in_hot_window = bool(upcoming_ts and -90 < (upcoming_ts - now) < 120)
     ttl = 10 if in_hot_window else 60
 
@@ -258,9 +254,8 @@ async def get_calendar():
         _calendar_cache["next_event_ts"] = nxt
         _save_disk_cache()
     else:
-        # Source unreachable / rate-limited → keep serving last known data, mark TS
-        # so we don't keep hammering it within the same TTL.
         _calendar_cache["ts"] = now
+
     return {
         "events": _calendar_cache["data"],
         "cached": not events,
@@ -270,12 +265,10 @@ async def get_calendar():
     }
 
 
-
-
-
+# ====== SERVE INDEX.HTML WITHOUT JINJA ======
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def index():
+    return FileResponse("templates/index.html")
 
 
 if __name__ == "__main__":
