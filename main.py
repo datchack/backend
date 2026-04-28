@@ -5,7 +5,7 @@ import asyncio
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 import aiohttp
@@ -112,179 +112,93 @@ async def health():
     }
 
 
-# ====== ECONOMIC CALENDAR (ForexFactory HTML, PRO) ======
-FF_URL = "https://www.forexfactory.com/calendar?week=this"
-BROWSER_UA = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-)
-ET_TZ = ZoneInfo("America/New_York")
-CALENDAR_DISK_CACHE = "/tmp/tt_calendar_cache.json"
-_calendar_cache: dict = {"data": [], "ts": 0.0, "next_event_ts": 0.0}
+# ============================================================
+# ===============   ECONOMIC CALENDAR (MyFXBook)   ===========
+# ============================================================
+
+MYFXBOOK_URL = "https://www.myfxbook.com/api/get-economic-calendar.json"
+CALENDAR_CACHE_FILE = "/tmp/tt_calendar_cache.json"
+
+_calendar_cache = {"data": [], "ts": 0.0, "next_event_ts": 0.0}
 
 
-def _load_disk_cache() -> None:
+def _load_calendar_cache():
     try:
-        if os.path.exists(CALENDAR_DISK_CACHE):
-            with open(CALENDAR_DISK_CACHE, "r") as f:
-                cached = json.load(f)
-            if isinstance(cached, dict) and isinstance(cached.get("data"), list):
-                _calendar_cache["data"] = cached["data"]
-                _calendar_cache["ts"] = float(cached.get("ts") or 0.0)
-                _calendar_cache["next_event_ts"] = float(cached.get("next_event_ts") or 0.0)
-    except Exception:
+        if os.path.exists(CALENDAR_CACHE_FILE):
+            with open(CALENDAR_CACHE_FILE, "r") as f:
+                data = json.load(f)
+            _calendar_cache.update(data)
+    except:
         pass
 
 
-def _save_disk_cache() -> None:
+def _save_calendar_cache():
     try:
-        with open(CALENDAR_DISK_CACHE, "w") as f:
+        with open(CALENDAR_CACHE_FILE, "w") as f:
             json.dump(_calendar_cache, f)
-    except Exception:
+    except:
         pass
 
 
-_load_disk_cache()
+_load_calendar_cache()
 
 
-def _parse_ff_html(html: str) -> list[dict]:
-    """
-    Parse le HTML ForexFactory et renvoie une liste d'événements
-    au format attendu par ton frontend :
-    ts, country, impact, title, actual, forecast, previous
-    """
-    soup = BeautifulSoup(html, "html.parser")
-    events: list[dict] = []
+async def _fetch_myfxbook():
+    headers = {
+        "User-Agent": "Mozilla/5.0 TradingTerminal",
+        "Accept": "application/json",
+    }
 
-    # FF structure typique : lignes avec class "calendar__row"
-    rows = soup.select(".calendar__row")
-    if not rows:
+    async with aiohttp.ClientSession(headers=headers) as session:
+        try:
+            async with session.get(MYFXBOOK_URL, timeout=10) as resp:
+                if resp.status != 200:
+                    return []
+                data = await resp.json()
+        except:
+            return []
+
+    events = data.get("calendar", [])
+    if not events:
         return []
 
-    current_date = None  # date du jour courant dans le calendrier
+    now = datetime.now(timezone.utc)
+    limit = now + timedelta(days=7)
 
-    for row in rows:
-        # Certaines lignes sont des séparateurs de jour
-        day_cell = row.select_one(".calendar__cell.calendar__date")
-        if day_cell and day_cell.get_text(strip=True):
-            # Exemple de texte : "Mon Jan 6"
-            current_date = day_cell.get_text(strip=True)
+    parsed = []
+    for e in events:
+        try:
+            ts = int(e.get("timestamp", 0)) / 1000
+        except:
             continue
 
-        # On ne parse que les vraies lignes d'événements
-        time_cell = row.select_one(".calendar__cell.calendar__time")
-        country_cell = row.select_one(".calendar__cell.calendar__country")
-        impact_cell = row.select_one(".calendar__cell.calendar__impact")
-        event_cell = row.select_one(".calendar__cell.calendar__event")
-        actual_cell = row.select_one(".calendar__cell.calendar__actual")
-        forecast_cell = row.select_one(".calendar__cell.calendar__forecast")
-        previous_cell = row.select_one(".calendar__cell.calendar__previous")
-
-        if not event_cell or not country_cell or not time_cell:
+        dt = datetime.fromtimestamp(ts, timezone.utc)
+        if not (now <= dt <= limit):
             continue
 
-        title = event_cell.get_text(strip=True)
-        if not title:
-            continue
-
-        country = country_cell.get_text(strip=True).upper() or "USD"
-
-        impact_text = impact_cell.get_text(strip=True) if impact_cell else ""
-        # FF utilise souvent des icônes, on normalise
-        if "High" in impact_text:
-            impact = "High"
-        elif "Medium" in impact_text:
-            impact = "Medium"
-        elif "Low" in impact_text:
-            impact = "Low"
-        else:
-            impact = "Low"
-
-        time_text = time_cell.get_text(strip=True)
-        # Gestion des cas "All Day", "Tentative", etc.
-        if time_text.lower() in ("all day", "allday", "tentative", ""):
-            hour = 0
-            minute = 0
-        else:
-            try:
-                # FF : "2:30pm", "8:00am"
-                dt_time = datetime.strptime(time_text.lower().replace(" ", ""), "%I:%M%p")
-                hour = dt_time.hour
-                minute = dt_time.minute
-            except Exception:
-                hour = 0
-                minute = 0
-
-        # current_date peut être du style "Mon Jan 6"
-        if current_date:
-            try:
-                # On ajoute l'année courante
-                year = datetime.now(ET_TZ).year
-                dt_day = datetime.strptime(f"{current_date} {year}", "%a %b %d %Y")
-            except Exception:
-                dt_day = datetime.now(ET_TZ)
-        else:
-            dt_day = datetime.now(ET_TZ)
-
-        dt = datetime(
-            dt_day.year, dt_day.month, dt_day.day,
-            hour, minute, tzinfo=ET_TZ
-        )
-        ts = dt.timestamp()
-
-        def clean(cell):
-            if not cell:
-                return ""
-            return cell.get_text(strip=True) or ""
-
-        actual = clean(actual_cell)
-        forecast = clean(forecast_cell)
-        previous = clean(previous_cell)
-
-        events.append({
-            "title": title,
-            "country": country,
-            "impact": impact,
-            "forecast": forecast,
-            "previous": previous,
-            "actual": actual,
+        parsed.append({
+            "title": e.get("title", ""),
+            "country": e.get("country", ""),
+            "impact": e.get("impact", ""),
+            "actual": e.get("actual", ""),
+            "forecast": e.get("forecast", ""),
+            "previous": e.get("previous", ""),
             "ts": ts,
         })
 
-    events.sort(key=lambda x: x["ts"])
-    return events
-
-
-async def _fetch_calendar() -> list[dict]:
-    headers = {
-        "User-Agent": BROWSER_UA,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Referer": "https://www.forexfactory.com/",
-    }
-    async with aiohttp.ClientSession(headers=headers) as session:
-        try:
-            async with session.get(FF_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status != 200:
-                    return []
-                html = await resp.text()
-        except Exception:
-            return []
-
-    events = _parse_ff_html(html)
-    return events
+    parsed.sort(key=lambda x: x["ts"])
+    return parsed
 
 
 @app.get("/api/calendar")
 async def get_calendar():
     now = time.time()
-    upcoming_ts = _calendar_cache.get("next_event_ts", 0.0)
+    upcoming = _calendar_cache.get("next_event_ts", 0)
     cache_age = now - _calendar_cache["ts"]
 
-    # Hot window : event dans ±90s → on rafraîchit plus souvent
-    in_hot_window = bool(upcoming_ts and -90 < (upcoming_ts - now) < 120)
+    in_hot_window = bool(upcoming and -90 < (upcoming - now) < 120)
     ttl = 10 if in_hot_window else 60
 
-    # Cache encore valide
     if _calendar_cache["data"] and cache_age < ttl:
         return {
             "events": _calendar_cache["data"],
@@ -294,17 +208,15 @@ async def get_calendar():
             "stale": False,
         }
 
-    # Sinon, on refetch
-    events = await _fetch_calendar()
+    events = await _fetch_myfxbook()
     if events:
         _calendar_cache["data"] = events
         _calendar_cache["ts"] = now
-        # prochain event sans actual
-        nxt = next((e["ts"] for e in events if not e.get("actual") and e["ts"] > now), 0.0)
+        nxt = next((e["ts"] for e in events if not e["actual"] and e["ts"] > now), 0)
         _calendar_cache["next_event_ts"] = nxt
-        _save_disk_cache()
+        _save_calendar_cache()
     else:
-        _calendar_cache["ts"] = now  # on marque l'heure du dernier essai
+        _calendar_cache["ts"] = now
 
     return {
         "events": _calendar_cache["data"],
