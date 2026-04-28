@@ -429,3 +429,11 @@
             animation: pulse 0.8s ease-in-out infinite;
         }
         .cal-empty { padding: 24px 12px; text-align: center; color: var(--muted); font-size: 11px; }
+
+        .cal-green {
+        background: rgba(34, 197, 94, 0.08);
+        }
+
+        .cal-red {
+        background: rgba(239, 68, 68, 0.08);
+        }

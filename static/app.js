@@ -207,6 +207,10 @@ async function getNews() {
 }
 
 // ===================== CALENDAR =====================
+const calFilters = {
+    impact: new Set(['High', 'Medium', 'Low'])
+};
+
 let calEvents = [];
 
 async function fetchCalendar() {
@@ -235,11 +239,14 @@ function renderCalendar() {
         root.innerHTML = '<div class="cal-empty">Chargement...</div>';
         return;
     }
-
+    const filtered = calEvents.filter(e =>
+    calFilters.impact.has(e.impact)
+    );
+    
     let html = '';
     let lastDay = '';
 
-    calEvents.forEach(e => {
+    filtered.forEach(e => {
         const dt = new Date(e.ts * 1000);
 
         const day = dt.toLocaleDateString('fr-FR', {
@@ -262,8 +269,17 @@ function renderCalendar() {
             e.impact === 'High' ? 'high' :
             e.impact === 'Medium' ? 'medium' : 'low';
 
+    let colorClass = '';
+
+        const a = parseFloat(e.actual);
+        const f = parseFloat(e.forecast);
+
+        if (!isNaN(a) && !isNaN(f)) {
+        if (a > f) colorClass = 'cal-green';
+        else if (a < f) colorClass = 'cal-red';
+}
         html += `
-        <div class="cal-row">
+        <div class="cal-row ${colorClass}">
             <span class="cal-time">${time}</span>
             <span class="cal-flag">${e.country}</span>
             <span class="cal-title">
