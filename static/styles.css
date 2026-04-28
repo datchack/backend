@@ -255,6 +255,59 @@ body.gated .main-layout > .layout-splitter {
     flex-wrap: wrap;
 }
 
+.access-auth {
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.access-auth-form {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.access-auth-form input {
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #0b0f15;
+    color: var(--text);
+    outline: none;
+}
+
+.access-auth-form input:focus {
+    border-color: var(--accent);
+}
+
+.access-auth-message {
+    min-height: 20px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.access-auth-message.ok {
+    color: var(--buy);
+}
+
+.access-auth-message.err {
+    color: var(--sell);
+}
+
+.access-back {
+    margin-top: 10px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+}
+
+.access-back:hover {
+    color: var(--text);
+}
+
 .col {
     background: var(--card);
     border-radius: 4px;
@@ -743,17 +796,6 @@ body.gated .main-layout > .layout-splitter {
     background: rgba(10, 13, 18, 0.98);
     box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
     z-index: 40;
-}
-
-body.gated .account-panel.hero-open {
-    position: fixed;
-    right: 50%;
-    bottom: 50%;
-    transform: translate(50%, 50%);
-    width: min(420px, calc(100vw - 24px));
-    z-index: 60;
-    border-color: rgba(162, 89, 255, 0.45);
-    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
 }
 
 .account-panel.hidden,

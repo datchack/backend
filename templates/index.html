@@ -100,12 +100,29 @@
     <div class="main-layout">
         <div id="access-gate" class="access-gate hidden">
             <div class="access-card">
-                <div class="access-kicker">TRADING TERMINAL</div>
-                <h1 id="access-title">Active ton essai gratuit 7 jours</h1>
-                <p id="access-copy">Centralise news, calendrier economique, gold bias et charting dans un seul poste de travail personnalisable.</p>
-                <div class="access-actions">
-                    <button type="button" id="access-start-trial" class="panel-btn">DEMARRER MON ESSAI</button>
-                    <button type="button" id="access-login" class="panel-btn">J'AI DEJA UN COMPTE</button>
+                <div id="access-intro">
+                    <div class="access-kicker">TRADING TERMINAL</div>
+                    <h1 id="access-title">Active ton essai gratuit 7 jours</h1>
+                    <p id="access-copy">Centralise news, calendrier economique, gold bias et charting dans un seul poste de travail personnalisable.</p>
+                    <div class="access-actions">
+                        <button type="button" id="access-start-trial" class="panel-btn">DEMARRER MON ESSAI</button>
+                        <button type="button" id="access-login" class="panel-btn">J'AI DEJA UN COMPTE</button>
+                    </div>
+                </div>
+                <div id="access-auth" class="access-auth hidden">
+                    <div class="access-kicker" id="access-auth-kicker">CREATION DE COMPTE</div>
+                    <h1 id="access-auth-title">Active ton essai maintenant</h1>
+                    <p id="access-auth-copy">Cree ton compte pour ouvrir le terminal complet pendant 7 jours.</p>
+                    <form id="access-auth-form" class="access-auth-form">
+                        <input id="access-auth-email" type="email" placeholder="Email" autocomplete="email" required>
+                        <input id="access-auth-password" type="password" placeholder="Mot de passe (8 caracteres min.)" autocomplete="new-password" required>
+                        <div class="access-actions">
+                            <button type="submit" id="access-auth-submit" class="panel-btn">CREER MON COMPTE</button>
+                            <button type="button" id="access-auth-switch" class="panel-btn">J'AI DEJA UN COMPTE</button>
+                        </div>
+                    </form>
+                    <div id="access-auth-message" class="access-auth-message"></div>
+                    <button type="button" id="access-back" class="access-back">Retour</button>
                 </div>
             </div>
         </div>

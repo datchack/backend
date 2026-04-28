@@ -44,6 +44,7 @@ let accountMode = DEFAULT_ACCOUNT_MODE;
 let accountState = { authenticated: false, account: null };
 let prefsSyncTimer = null;
 let appBooted = false;
+let accessFormMode = 'intro';
 let lastSeenNewsTs = 0;
 let calEvents = [];
 let contextState = null;
@@ -163,7 +164,9 @@ function renderAccessGate() {
     const gate = document.getElementById('access-gate');
     const title = document.getElementById('access-title');
     const copy = document.getElementById('access-copy');
-    if (!gate || !title || !copy) return;
+    const intro = document.getElementById('access-intro');
+    const auth = document.getElementById('access-auth');
+    if (!gate || !title || !copy || !intro || !auth) return;
 
     const authenticated = !!accountState.authenticated;
     const role = accountState.account?.role || 'guest';
@@ -171,6 +174,8 @@ function renderAccessGate() {
 
     document.body.classList.toggle('gated', gated);
     gate.classList.toggle('hidden', !gated);
+    intro.classList.toggle('hidden', accessFormMode !== 'intro');
+    auth.classList.toggle('hidden', accessFormMode === 'intro');
 
     if (!gated) return;
 
@@ -188,6 +193,45 @@ function renderAccessGate() {
 
     title.textContent = 'Complete ton acces';
     copy.textContent = 'Ce terminal complet est reserve aux comptes en essai, abonnes ou owner.';
+}
+
+function setAccessAuthMessage(message = '', tone = '') {
+    const el = document.getElementById('access-auth-message');
+    if (!el) return;
+    el.textContent = message;
+    el.className = `access-auth-message${tone ? ` ${tone}` : ''}`;
+}
+
+function setAccessFormMode(mode) {
+    accessFormMode = mode === 'login' ? 'login' : mode === 'register' ? 'register' : 'intro';
+
+    const kicker = document.getElementById('access-auth-kicker');
+    const title = document.getElementById('access-auth-title');
+    const copy = document.getElementById('access-auth-copy');
+    const submit = document.getElementById('access-auth-submit');
+    const switchBtn = document.getElementById('access-auth-switch');
+    const password = document.getElementById('access-auth-password');
+
+    if (accessFormMode === 'intro') {
+        renderAccessGate();
+        return;
+    }
+
+    if (kicker) kicker.textContent = accessFormMode === 'login' ? 'CONNEXION' : 'CREATION DE COMPTE';
+    if (title) title.textContent = accessFormMode === 'login' ? 'Reconnecte-toi au terminal' : 'Active ton essai maintenant';
+    if (copy) copy.textContent = accessFormMode === 'login'
+        ? 'Connecte-toi pour retrouver ton workspace et tes preferences.'
+        : 'Cree ton compte pour ouvrir le terminal complet pendant 7 jours.';
+    if (submit) submit.textContent = accessFormMode === 'login' ? 'SE CONNECTER' : 'CREER MON COMPTE';
+    if (switchBtn) switchBtn.textContent = accessFormMode === 'login' ? 'CREER UN COMPTE' : "J'AI DEJA UN COMPTE";
+    if (password) password.autocomplete = accessFormMode === 'login' ? 'current-password' : 'new-password';
+
+    renderAccessGate();
+
+    const email = document.getElementById('access-auth-email');
+    if (email) {
+        window.setTimeout(() => email.focus(), 30);
+    }
 }
 
 function bootTerminalApp() {
@@ -404,6 +448,46 @@ async function submitAccountForm(event) {
     }
 }
 
+async function submitAccessAuthForm(event) {
+    event.preventDefault();
+
+    const emailEl = document.getElementById('access-auth-email');
+    const passwordEl = document.getElementById('access-auth-password');
+    if (!emailEl || !passwordEl) return;
+
+    const email = emailEl.value.trim().toLowerCase();
+    const password = passwordEl.value;
+    if (!email || !password) return;
+
+    try {
+        setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion en cours...' : 'Creation du compte...');
+        const endpoint = accessFormMode === 'login' ? 'login' : 'register';
+        const response = await fetch(`/api/account/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || 'Action impossible');
+        }
+
+        accountState = payload;
+        renderAccountState();
+        setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion reussie.' : 'Compte cree. Essai active.', 'ok');
+        await syncPreferences();
+        emailEl.value = '';
+        passwordEl.value = '';
+        if (hasTerminalAccess()) {
+            bootTerminalApp();
+            accessFormMode = 'intro';
+            renderAccessGate();
+        }
+    } catch (error) {
+        setAccessAuthMessage(error.message || 'Erreur compte', 'err');
+    }
+}
+
 async function logoutAccount() {
     try {
         await fetch('/api/account/logout', { method: 'POST' });
@@ -422,6 +506,9 @@ function bindAccountControls() {
     const panel = document.getElementById('account-panel');
     const startTrialBtn = document.getElementById('access-start-trial');
     const loginBtn = document.getElementById('access-login');
+    const accessForm = document.getElementById('access-auth-form');
+    const accessSwitchBtn = document.getElementById('access-auth-switch');
+    const accessBackBtn = document.getElementById('access-back');
 
     if (toggle) {
         toggle.addEventListener('click', () => {
@@ -445,16 +532,27 @@ function bindAccountControls() {
     }
     if (startTrialBtn) {
         startTrialBtn.addEventListener('click', () => {
-            setAccountMode('register');
-            toggleAccountPanel(true, true);
-            setAccountMessage('Cree ton compte pour activer les 7 jours gratuits.');
+            setAccessFormMode('register');
+            setAccessAuthMessage('');
         });
     }
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
-            setAccountMode('login');
-            toggleAccountPanel(true, true);
-            setAccountMessage('Connecte-toi pour retrouver ton acces.');
+            setAccessFormMode('login');
+            setAccessAuthMessage('');
+        });
+    }
+    if (accessForm) accessForm.addEventListener('submit', submitAccessAuthForm);
+    if (accessSwitchBtn) {
+        accessSwitchBtn.addEventListener('click', () => {
+            setAccessFormMode(accessFormMode === 'login' ? 'register' : 'login');
+            setAccessAuthMessage('');
+        });
+    }
+    if (accessBackBtn) {
+        accessBackBtn.addEventListener('click', () => {
+            setAccessFormMode('intro');
+            setAccessAuthMessage('');
         });
     }
 
@@ -468,6 +566,7 @@ function bindAccountControls() {
 
     renderAccountState();
     setAccountMode(accountMode);
+    setAccessFormMode('intro');
     renderAccessGate();
 }
 
