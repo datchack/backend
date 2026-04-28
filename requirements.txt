@@ -1,4 +1,6 @@
 fastapi
-uvicorn
+uvicorn[standard]
 requests
 jinja2
+aiohttp
+feedparser
