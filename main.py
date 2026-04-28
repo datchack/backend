@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 import aiohttp
 import feedparser
 import uvicorn
+from bs4 import BeautifulSoup
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,12 +24,14 @@ ALERTS_CRITICAL = [
 ]
 
 NEWS_SOURCES = {
-    "INVESTING": "https://www.investing.com/rss/news.rss",
-    "REUTERS": "https://news.google.com/rss/search?q=finance+source:reuters&hl=en-US&gl=US&ceid=US:en",
-    "FOREXLIVE": "https://www.forexlive.com/feed/news",
-    "BLOOMBERG": "https://news.google.com/rss/search?q=markets+source:bloomberg&hl=en-US&gl=US&ceid=US:en",
-    "COINDESK": "https://www.coindesk.com/arc/outboundfeeds/rss/",
-    "CNBC": "https://news.google.com/rss/search?q=markets+source:cnbc&hl=en-US&gl=US&ceid=US:en",
+    "INVESTING": {"url": "https://www.investing.com/rss/news.rss", "kind": "rss"},
+    "REUTERS": {"url": "https://news.google.com/rss/search?q=finance+source:reuters&hl=en-US&gl=US&ceid=US:en", "kind": "rss"},
+    "FOREXLIVE": {"url": "https://www.forexlive.com/feed/news", "kind": "rss"},
+    "BLOOMBERG": {"url": "https://news.google.com/rss/search?q=markets+source:bloomberg&hl=en-US&gl=US&ceid=US:en", "kind": "rss"},
+    "CNBC": {"url": "https://news.google.com/rss/search?q=markets+source:cnbc&hl=en-US&gl=US&ceid=US:en", "kind": "rss"},
+    "FED": {"url": "https://www.federalreserve.gov/feeds/press_monetary.xml", "kind": "rss"},
+    "TREASURY": {"url": "https://home.treasury.gov/news/press-releases", "kind": "html_treasury"},
+    "DOL": {"url": "https://www.dol.gov/rss/releases.xml", "kind": "rss"},
 }
 
 FMP_API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
@@ -93,23 +96,26 @@ def get_current_week_bounds(now: datetime | None = None) -> tuple[datetime, date
     return week_start, week_end
 
 
-async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> list[dict]:
-    try:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=6)) as resp:
-            if resp.status != 200:
-                return []
-            text = await resp.text()
-    except Exception:
-        return []
+def _format_news_item(name: str, title: str, link: str, dt: datetime) -> dict:
+    return {
+        "s": name,
+        "t": title,
+        "l": link,
+        "time": dt.astimezone(PARIS).strftime("%H:%M:%S"),
+        "ts": dt.timestamp(),
+        "crit": any(keyword in title.upper() for keyword in ALERTS_CRITICAL),
+    }
 
+
+def _parse_rss_items(name: str, text: str) -> list[dict]:
     try:
-        feed = await asyncio.to_thread(feedparser.parse, text)
+        feed = feedparser.parse(text)
     except Exception:
         return []
 
     items: list[dict] = []
     for entry in feed.entries[:8]:
-        published = getattr(entry, "published_parsed", None)
+        published = getattr(entry, "published_parsed", None) or getattr(entry, "updated_parsed", None)
         if not published:
             continue
 
@@ -123,15 +129,65 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> 
         if not title or not link:
             continue
 
-        items.append({
-            "s": name,
-            "t": title,
-            "l": link,
-            "time": dt.astimezone(PARIS).strftime("%H:%M:%S"),
-            "ts": dt.timestamp(),
-            "crit": any(keyword in title.upper() for keyword in ALERTS_CRITICAL),
-        })
+        items.append(_format_news_item(name, title, link, dt))
+
     return items
+
+
+def _parse_treasury_items(name: str, text: str) -> list[dict]:
+    soup = BeautifulSoup(text, "html.parser")
+    items: list[dict] = []
+
+    for headline in soup.select("h3.featured-stories__headline")[:8]:
+        link_el = headline.find("a", href=True)
+        if not link_el:
+            continue
+
+        time_el = headline.find_previous("time", class_="datetime")
+        if not time_el:
+            continue
+
+        raw_dt = time_el.get("datetime", "")
+        try:
+            dt = datetime.fromisoformat(raw_dt.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+
+        title = link_el.get_text(" ", strip=True)
+        href = link_el["href"]
+        link = href if href.startswith("http") else f"https://home.treasury.gov{href}"
+
+        if not title or not link:
+            continue
+
+        items.append(_format_news_item(name, title, link, dt))
+
+    return items
+
+
+async def _fetch_source(session: aiohttp.ClientSession, name: str, config: dict | str) -> list[dict]:
+    if isinstance(config, str):
+        url = config
+        kind = "rss"
+    else:
+        url = config.get("url", "")
+        kind = config.get("kind", "rss")
+
+    if not url:
+        return []
+
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+            if resp.status != 200:
+                return []
+            text = await resp.text()
+    except Exception:
+        return []
+
+    if kind == "html_treasury":
+        return await asyncio.to_thread(_parse_treasury_items, name, text)
+
+    return await asyncio.to_thread(_parse_rss_items, name, text)
 
 
 async def fetch_calendar() -> tuple[list[dict], str | None]:
