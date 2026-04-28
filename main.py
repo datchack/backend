@@ -113,10 +113,10 @@ async def health():
 
 
 # ============================================================
-# ===============   ECONOMIC CALENDAR (MyFXBook)   ===========
+# ===============   ECONOMIC CALENDAR (MyFXBook HTML)   ======
 # ============================================================
 
-MYFXBOOK_URL = "https://www.myfxbook.com/api/get-economic-calendar.json"
+MYFXBOOK_URL = "https://www.myfxbook.com/forex-economic-calendar"
 CALENDAR_CACHE_FILE = "/tmp/tt_calendar_cache.json"
 
 _calendar_cache = {"data": [], "ts": 0.0, "next_event_ts": 0.0}
@@ -143,10 +143,91 @@ def _save_calendar_cache():
 _load_calendar_cache()
 
 
+def _parse_myfxbook_html(html: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
+    events: list[dict] = []
+
+    # Tableau principal du calendrier
+    table = soup.find("table", {"id": "economicCalendarTable"})
+    if not table:
+        return []
+
+    now_utc = datetime.now(timezone.utc)
+    limit_utc = now_utc + timedelta(days=7)
+
+    # Chaque ligne d'événement
+    for row in table.find_all("tr"):
+        cols = row.find_all("td")
+        if len(cols) < 7:
+            continue
+
+        # MyFXBook structure typique :
+        # [0]=Date, [1]=Time, [2]=Currency, [3]=Impact, [4]=Event, [5]=Actual, [6]=Forecast, [7]=Previous (parfois)
+        date_text = cols[0].get_text(strip=True)
+        time_text = cols[1].get_text(strip=True)
+        country = cols[2].get_text(strip=True).upper()
+        impact = cols[3].get_text(strip=True)
+        title = cols[4].get_text(strip=True)
+        actual = cols[5].get_text(strip=True) if len(cols) > 5 else ""
+        forecast = cols[6].get_text(strip=True) if len(cols) > 6 else ""
+        previous = cols[7].get_text(strip=True) if len(cols) > 7 else ""
+
+        if not title or not country:
+            continue
+
+        # Impact normalisé
+        impact_u = impact.upper()
+        if "HIGH" in impact_u:
+            impact_norm = "High"
+        elif "MEDIUM" in impact_u:
+            impact_norm = "Medium"
+        elif "LOW" in impact_u:
+            impact_norm = "Low"
+        else:
+            impact_norm = "Low"
+
+        # Date + heure → timestamp (MyFXBook est généralement en GMT)
+        try:
+            # Exemple de date : "Apr 28, 2026" ou "Apr 28"
+            # Exemple de time : "09:00" ou "All Day"
+            if time_text.lower() in ("all day", "allday", "tentative", ""):
+                hh, mm = 0, 0
+            else:
+                hh, mm = map(int, time_text.split(":"))
+
+            # Si l'année n'est pas dans le texte, on ajoute l'année courante
+            if any(ch.isdigit() for ch in date_text):
+                dt_date = datetime.strptime(date_text, "%b %d, %Y")
+            else:
+                year = datetime.now().year
+                dt_date = datetime.strptime(f"{date_text} {year}", "%b %d %Y")
+
+            dt = datetime(dt_date.year, dt_date.month, dt_date.day, hh, mm, tzinfo=timezone.utc)
+        except Exception:
+            continue
+
+        if not (now_utc <= dt <= limit_utc):
+            continue
+
+        events.append({
+            "title": title,
+            "country": country,
+            "impact": impact_norm,
+            "actual": actual,
+            "forecast": forecast,
+            "previous": previous,
+            "ts": dt.timestamp(),
+        })
+
+    events.sort(key=lambda x: x["ts"])
+    return events
+
+
 async def _fetch_myfxbook():
     headers = {
         "User-Agent": "Mozilla/5.0 TradingTerminal",
-        "Accept": "application/json",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://www.myfxbook.com/",
     }
 
     async with aiohttp.ClientSession(headers=headers) as session:
@@ -154,40 +235,11 @@ async def _fetch_myfxbook():
             async with session.get(MYFXBOOK_URL, timeout=10) as resp:
                 if resp.status != 200:
                     return []
-                data = await resp.json()
+                html = await resp.text()
         except:
             return []
 
-    events = data.get("calendar", [])
-    if not events:
-        return []
-
-    now = datetime.now(timezone.utc)
-    limit = now + timedelta(days=7)
-
-    parsed = []
-    for e in events:
-        try:
-            ts = int(e.get("timestamp", 0)) / 1000
-        except:
-            continue
-
-        dt = datetime.fromtimestamp(ts, timezone.utc)
-        if not (now <= dt <= limit):
-            continue
-
-        parsed.append({
-            "title": e.get("title", ""),
-            "country": e.get("country", ""),
-            "impact": e.get("impact", ""),
-            "actual": e.get("actual", ""),
-            "forecast": e.get("forecast", ""),
-            "previous": e.get("previous", ""),
-            "ts": ts,
-        })
-
-    parsed.sort(key=lambda x: x["ts"])
-    return parsed
+    return _parse_myfxbook_html(html)
 
 
 @app.get("/api/calendar")
