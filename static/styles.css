@@ -23,6 +23,9 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     overflow-x: hidden;
     font-size: 13px;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
 }
 
 .ticker-tape {
@@ -166,14 +169,14 @@ body {
     flex-direction: column;
     gap: 6px;
     padding: 0 6px 6px;
+    min-height: 0;
 }
 
 @media (min-width: 1180px) {
     .main-layout {
         display: grid;
         grid-template-columns: minmax(320px, 1.2fr) minmax(520px, 2.1fr) minmax(320px, 1.2fr);
-        height: calc(100vh - 332px);
-        min-height: 620px;
+        min-height: 0;
     }
 }
 
@@ -190,6 +193,15 @@ body {
 .col-left { min-height: 480px; }
 .col-center { min-height: 680px; }
 .col-right { min-height: 520px; }
+
+@media (min-width: 1180px) {
+    .col-left,
+    .col-center,
+    .col-right {
+        min-height: 0;
+        height: 100%;
+    }
+}
 
 .p-header {
     padding: 7px 12px;
