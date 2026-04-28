@@ -224,22 +224,38 @@ def _parse_myfxbook_html(html: str) -> list[dict]:
 
 
 async def _fetch_myfxbook():
-    headers = {
-        "User-Agent": "Mozilla/5.0 TradingTerminal",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Referer": "https://www.myfxbook.com/",
-    }
+    url = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 
-    async with aiohttp.ClientSession(headers=headers) as session:
+    async with aiohttp.ClientSession() as session:
         try:
-            async with session.get(MYFXBOOK_URL, timeout=10) as resp:
+            async with session.get(url) as resp:
                 if resp.status != 200:
                     return []
-                html = await resp.text()
+                data = await resp.json()
         except:
             return []
 
-    return _parse_myfxbook_html(html)
+    events = []
+    now = time.time()
+
+    for e in data:
+        try:
+            ts = int(datetime.strptime(e["date"], "%Y-%m-%d %H:%M:%S").timestamp())
+
+            events.append({
+                "title": e.get("title", ""),
+                "country": e.get("country", ""),
+                "impact": e.get("impact", "Low"),
+                "actual": e.get("actual", ""),
+                "forecast": e.get("forecast", ""),
+                "previous": e.get("previous", ""),
+                "ts": ts,
+            })
+        except:
+            continue
+
+    events.sort(key=lambda x: x["ts"])
+    return events
 
 
 @app.get("/api/calendar")
