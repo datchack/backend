@@ -1,8 +1,6 @@
 import asyncio
 import json
-import os
 import time
-import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -16,31 +14,14 @@ app = FastAPI()
 
 PARIS = ZoneInfo("Europe/Paris")
 
+# ============================
+#        NEWS SOURCES
+# ============================
+
 ALERTS_CRITICAL = [
-    "FED",
-    "POWELL",
-    "FOMC",
-    "RATE",
-    "TAUX",
-    "CPI",
-    "NFP",
-    "INFLATION",
-    "WAR",
-    "URGENT",
-    "BREAKING",
-    "TRUMP",
-    "GOLD",
-    "XAU",
-    "IRAN",
-    "ISRAEL",
-    "ECB",
-    "BOJ",
-    "BOE",
-    "GDP",
-    "RECESSION",
-    "CRASH",
-    "HACK",
-    "ATTACK",
+    "FED", "POWELL", "FOMC", "RATE", "TAUX", "CPI", "NFP", "INFLATION",
+    "WAR", "URGENT", "BREAKING", "TRUMP", "GOLD", "XAU", "IRAN", "ISRAEL",
+    "ECB", "BOJ", "BOE", "GDP", "RECESSION", "CRASH", "HACK", "ATTACK"
 ]
 
 NEWS_SOURCES = {
@@ -52,11 +33,11 @@ NEWS_SOURCES = {
     "CNBC": "https://news.google.com/rss/search?q=markets+source:cnbc&hl=en-US&gl=US&ceid=US:en",
 }
 
-_news_cache: dict = {"data": [], "ts": 0.0}
-NEWS_CACHE_TTL = 30  # secondes
+_news_cache = {"data": [], "ts": 0.0}
+NEWS_CACHE_TTL = 30  # seconds
 
 
-async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> list[dict]:
+async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str):
     try:
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=6)) as resp:
             if resp.status != 200:
@@ -70,11 +51,12 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> 
     except Exception:
         return []
 
-    items: list[dict] = []
+    items = []
     for e in feed.entries[:8]:
         published = getattr(e, "published_parsed", None)
         if not published:
             continue
+
         try:
             dt = datetime(*published[:6], tzinfo=timezone.utc)
         except Exception:
@@ -85,16 +67,14 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> 
         if not title or not link:
             continue
 
-        items.append(
-            {
-                "s": name,
-                "t": title,
-                "l": link,
-                "time": dt.astimezone(PARIS).strftime("%H:%M:%S"),
-                "ts": dt.timestamp(),
-                "crit": any(k in title.upper() for k in ALERTS_CRITICAL),
-            }
-        )
+        items.append({
+            "s": name,
+            "t": title,
+            "l": link,
+            "time": dt.astimezone(PARIS).strftime("%H:%M:%S"),
+            "ts": dt.timestamp(),
+            "crit": any(k in title.upper() for k in ALERTS_CRITICAL),
+        })
 
     return items
 
@@ -102,6 +82,7 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> 
 @app.get("/api/news")
 async def get_news():
     now = time.time()
+
     if _news_cache["data"] and (now - _news_cache["ts"]) < NEWS_CACHE_TTL:
         return {
             "items": _news_cache["data"],
@@ -114,7 +95,7 @@ async def get_news():
             *(_fetch_source(session, n, u) for n, u in NEWS_SOURCES.items())
         )
 
-    all_news = [item for sublist in results for item in sublist]
+    all_news = [item for sub in results for item in sub]
     all_news.sort(key=lambda x: x["ts"], reverse=True)
     all_news = all_news[:80]
 
@@ -133,16 +114,18 @@ async def health():
     }
 
 
-# ====== ECONOMIC CALENDAR (Finnhub API) ======
+# ============================
+#     ECONOMIC CALENDAR
+# ============================
 
 FINNHUB_API_KEY = "d49nh5hr01qlaebi8n50d49nh5hr01qlaebi8n5g"
 FINNHUB_URL = f"https://finnhub.io/api/v1/calendar/economic?token={FINNHUB_API_KEY}"
 
 _calendar_cache = {"data": [], "ts": 0.0}
-CAL_TTL = 30  # rafraîchit toutes les 30 secondes
+CAL_TTL = 30  # seconds
 
 
-async def _fetch_finnhub_calendar() -> list[dict]:
+async def _fetch_finnhub_calendar():
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(FINNHUB_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
@@ -153,7 +136,20 @@ async def _fetch_finnhub_calendar() -> list[dict]:
             return []
 
     events = data.get("economicCalendar", [])
-    out: list[dict] = []
+    out = []
+
+    # Conversion pays → devise
+    country_map = {
+        "AU": "AUD",
+        "NZ": "NZD",
+        "CN": "CNY",
+        "JP": "JPY",
+        "GB": "GBP",
+        "EU": "EUR",
+        "US": "USD",
+        "CA": "CAD",
+        "CH": "CHF",
+    }
 
     for e in events:
         try:
@@ -163,17 +159,18 @@ async def _fetch_finnhub_calendar() -> list[dict]:
 
         ts = dt.timestamp()
 
-        out.append(
-            {
-                "title": e.get("event", ""),
-                "country": e.get("country", "").upper(),
-                "impact": e.get("impact", "Low").capitalize(),
-                "forecast": e.get("forecast", ""),
-                "previous": e.get("previous", ""),
-                "actual": e.get("actual", ""),
-                "ts": ts,
-            }
-        )
+        raw_country = e.get("country", "").upper()
+        currency = country_map.get(raw_country, raw_country)
+
+        out.append({
+            "title": e.get("event", ""),
+            "country": currency,
+            "impact": e.get("impact", "Low").capitalize(),
+            "forecast": e.get("forecast", ""),
+            "previous": e.get("previous", ""),
+            "actual": e.get("actual", ""),
+            "ts": ts,
+        })
 
     out.sort(key=lambda x: x["ts"])
     return out
@@ -212,932 +209,1018 @@ async def get_calendar():
     }
 
 
-INDEX_HTML = r"""
-<!DOCTYPE html>
+# ============================
+#   HTML (Bloc 2 viendra ici)
+# ============================
+
+INDEX_HTML = r"""<!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>TERMINAL HAUTE FRÉQUENCE</title>
-<style>
-:root {
-  --bg: #05070a;
-  --panel: #0d1015;
-  --card: #111419;
-  --card-2: #161b22;
-  --border: #1e2229;
-  --border-hot: #2a2f3a;
-  --text: #e6e8ee;
-  --muted: #6b7280;
-  --accent: #a259ff;
-  --warn: #ffcc00;
-  --buy: #00f2ad;
-  --sell: #ff4d6d;
-  --info: #4facfe;
-}
-* {
-  box-sizing: border-box;
-}
-html, body {
-  margin: 0;
-  padding: 0;
-}
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
-  overflow-x: hidden;
-  font-size: 13px;
-}
-/* === TICKER TAPE === */
-.ticker-tape {
-  border-bottom: 1px solid var(--border);
-  background: #06080c;
-  height: 46px;
-}
-/* === TOP BAR (command + clocks) === */
-.top-bar {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-  padding: 6px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-}
-@media (min-width: 900px) {
-  .top-bar {
-    grid-template-columns: 1.2fr 2fr;
-  }
-}
-.cmd-bar {
-  display: flex;
-  align-items: center;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0 10px;
-  height: 38px;
-}
-.cmd-bar .prompt {
-  color: var(--accent);
-  font-family: "Courier New", monospace;
-  font-weight: 900;
-  margin-right: 8px;
-  font-size: 13px;
-}
-.cmd-bar input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-family: "Courier New", monospace;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.cmd-bar input::placeholder {
-  color: var(--muted);
-  text-transform: none;
-  letter-spacing: 0;
-}
-.cmd-bar .hint {
-  color: var(--muted);
-  font-size: 10px;
-  margin-left: 8px;
-  white-space: nowrap;
-}
-.clocks {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-.clock {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 5px 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-width: 0;
-}
-.clock .city {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--muted);
-  letter-spacing: 0.5px;
-}
-.clock .time {
-  font-family: "Courier New", monospace;
-  color: var(--text);
-  font-size: 13px;
-}
-.clock .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--muted);
-  margin-right: 6px;
-  display: inline-block;
-}
-.clock.open .dot {
-  background: var(--buy);
-  box-shadow: 0 0 6px var(--buy);
-}
-/* === HEADER QUOTES (8 cards, 4 cols) === */
-.header {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  padding: 6px;
-}
-@media (min-width: 700px) {
-  .header {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-@media (min-width: 1300px) {
-  .header {
-    grid-template-columns: repeat(8, 1fr);
-  }
-}
-.qcard {
-  position: relative;
-  background: var(--card);
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-  height: 78px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.qcard:hover {
-  border-color: var(--border-hot);
-}
-.qcard.active {
-  border-color: var(--accent);
-  box-shadow: 0 0 10px rgba(162, 89, 255, 0.25);
-}
-.click-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  cursor: pointer;
-}
-/* === MAIN GRID === */
-.main-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 6px 6px;
-}
-@media (min-width: 1024px) {
-  .main-layout {
-    flex-direction: row;
-    height: calc(100vh - 280px);
-    min-height: 480px;
-  }
-}
-.col {
-  background: var(--card);
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.col-left {
-  flex: 1.5;
-  min-height: 460px;
-  height: 460px;
-}
-.col-center {
-  flex: 3.2;
-  min-height: 480px;
-  height: 480px;
-}
-.col-right {
-  flex: 1.5;
-  min-height: 380px;
-  height: 380px;
-}
-@media (min-width: 1024px) {
-  .col-left, .col-center, .col-right {
-    height: auto;
-    min-height: 0;
-  }
-}
-.p-header {
-  padding: 7px 12px;
-  background: var(--card-2);
-  font-size: 10px;
-  font-weight: 900;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--muted);
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-.p-header .live {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--buy);
-  font-size: 10px;
-}
-.p-header .live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--buy);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-.scroll {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-/* === NEWS === */
-.n-item {
-  padding: 9px 12px;
-  border-bottom: 1px solid #161b22;
-  font-size: 12.5px;
-  border-left: 3px solid transparent;
-  transition: background 0.4s;
-}
-.n-item.critical {
-  border-left-color: var(--warn);
-  background: rgba(255, 204, 0, 0.05);
-}
-.n-item.fresh {
-  animation: flash 1.6s ease-out;
-}
-@keyframes flash {
-  0% { background: rgba(162, 89, 255, 0.35); }
-  100% { background: transparent; }
-}
-.n-item.critical.fresh {
-  animation: flash-crit 1.6s ease-out;
-}
-@keyframes flash-crit {
-  0% { background: rgba(255, 204, 0, 0.4); }
-  100% { background: rgba(255, 204, 0, 0.05); }
-}
-.n-meta {
-  font-size: 10px;
-  color: var(--muted);
-  margin-bottom: 4px;
-  font-weight: 700;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.tag {
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 2px;
-  border: 1px solid currentColor;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-}
-.INVESTING { color: #ffa726; }
-.REUTERS { color: #4facfe; }
-.FOREXLIVE { color: #00f2ad; }
-.BLOOMBERG { color: #ff7849; }
-.COINDESK { color: #f7931a; }
-.CNBC { color: #d946ef; }
-.n-item a {
-  color: #efefef;
-  text-decoration: none;
-  line-height: 1.4;
-  display: block;
-}
-.n-item a:hover {
-  color: var(--accent);
-}
-/* === STATUS BAR === */
-.status-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 10px;
-  background: var(--panel);
-  border-top: 1px solid var(--border);
-  font-size: 10px;
-  color: var(--muted);
-  font-family: "Courier New", monospace;
-  letter-spacing: 0.4px;
-  min-height: 24px;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.status-bar .ok { color: var(--buy); }
-.status-bar .warn { color: var(--warn); }
-.status-bar .err { color: var(--sell); }
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-thumb {
-  background: #2a2f3a;
-  border-radius: 2px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-/* === ECONOMIC CALENDAR === */
-.cal-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  padding: 5px 6px;
-  background: var(--card-2);
-  border-bottom: 1px solid var(--border);
-}
-.cal-chip {
-  padding: 2px 5px;
-  border-radius: 3px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  cursor: pointer;
-  user-select: none;
-  font-weight: 800;
-  font-size: 9px;
-  letter-spacing: 0.3px;
-  transition: all 0.15s;
-}
-.cal-chip:hover {
-  border-color: var(--border-hot);
-  color: var(--text);
-}
-.cal-chip.on {
-  background: rgba(162, 89, 255, 0.18);
-  border-color: var(--accent);
-  color: #e6e8ee;
-}
-.cal-chip.sep {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: default;
-  padding: 3px 2px;
-}
-.cal-head-row, .cal-row {
-  display: grid;
-  grid-template-columns: 44px 24px 1fr 50px 50px 50px;
-  gap: 4px;
-  padding: 6px 6px;
-  align-items: center;
-}
-.cal-head-row {
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-  font-size: 9px;
-  color: var(--muted);
-  font-weight: 900;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-.cal-day {
-  position: sticky;
-  top: 0;
-  background: #161b22;
-  color: #e6e8ee;
-  font-size: 10px;
-  font-weight: 900;
-  padding: 6px 10px;
-  letter-spacing: 1px;
-  border-bottom: 1px solid var(--border);
-  border-top: 1px solid var(--border);
-  z-index: 5;
-  text-transform: uppercase;
-}
-.cal-row {
-  border-bottom: 1px solid #161b22;
-  font-size: 11.5px;
-  transition: background 0.4s;
-}
-.cal-row.past {
-  opacity: 0.55;
-}
-.cal-row.due {
-  background: rgba(255, 204, 0, 0.08);
-  border-left: 3px solid var(--warn);
-  padding-left: 5px;
-}
-.cal-row.fresh-result {
-  animation: cal-flash 2.4s ease-out;
-}
-@keyframes cal-flash {
-  0% { background: rgba(0, 242, 173, 0.4); }
-  100% { background: transparent; }
-}
-.cal-time {
-  font-family: "Courier New", monospace;
-  color: var(--muted);
-  font-size: 11px;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-.cal-row.due .cal-time > span:first-child {
-  color: var(--warn);
-  font-weight: 900;
-}
-.cal-flag-wrap {
-  text-align: center;
-  line-height: 1;
-}
-.cal-flag {
-  font-size: 14px;
-}
-.cal-ccy {
-  font-size: 8px;
-  color: var(--muted);
-  display: block;
-  margin-top: 2px;
-  letter-spacing: 0.3px;
-}
-.cal-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--text);
-}
-.cal-title-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.cal-impact {
-  display: inline-flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-.cal-impact i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #2a2f3a;
-  display: inline-block;
-}
-.cal-impact.high i:nth-child(-n+3) { background: #ff4d6d; }
-.cal-impact.medium i:nth-child(-n+2) { background: #ffa726; }
-.cal-impact.low i:nth-child(-n+1) { background: #ffd54f; }
-.cal-num {
-  font-family: "Courier New", monospace;
-  font-size: 11px;
-  color: var(--text);
-  text-align: right;
-}
-.cal-num.muted {
-  color: var(--muted);
-}
-.cal-num.up {
-  color: var(--buy);
-  font-weight: 900;
-}
-.cal-num.down {
-  color: var(--sell);
-  font-weight: 900;
-}
-.cal-countdown {
-  display: inline-block;
-  margin-top: 2px;
-  padding: 1px 4px;
-  background: rgba(255, 204, 0, 0.18);
-  color: var(--warn);
-  border-radius: 2px;
-  font-family: "Courier New", monospace;
-  font-weight: 900;
-  font-size: 10px;
-  letter-spacing: 0.5px;
-}
-.cal-countdown.urgent {
-  background: rgba(255, 77, 109, 0.28);
-  color: var(--sell);
-  animation: pulse 0.8s ease-in-out infinite;
-}
-.cal-empty {
-  padding: 24px 12px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 11px;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>MDTrading Terminal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --bg: #05070b;
+      --bg-alt: #0b0f18;
+      --panel: #101522;
+      --panel-soft: #151b2b;
+      --border: #222a3d;
+      --text: #e5ecff;
+      --muted: #7f8aad;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59,130,246,0.15);
+      --buy: #22c55e;
+      --sell: #ef4444;
+      --warn: #facc15;
+      --chip-off: #1f2937;
+      --chip-on: #2563eb;
+      --chip-on-text: #e5ecff;
+      --fresh: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .app-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 12px 12px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* HEADER / TOP BAR */
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #60a5fa, #1d4ed8 55%, #020617 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e5ecff;
+      font-weight: 700;
+      font-size: 16px;
+      box-shadow: 0 0 18px rgba(37,99,235,0.7);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .top-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .clock {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .clock-label {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .clock-time {
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+    }
+
+    .status-pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.9);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34,197,94,0.7);
+    }
+
+    /* TICKER */
+
+    .ticker {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: linear-gradient(90deg, rgba(15,23,42,0.95), rgba(15,23,42,0.85));
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .ticker-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .ticker-sep {
+      width: 1px;
+      height: 18px;
+      background: radial-gradient(circle, #4b5563, transparent);
+      flex-shrink: 0;
+    }
+
+    .ticker-track {
+      display: flex;
+      gap: 24px;
+      white-space: nowrap;
+      animation: ticker-scroll 40s linear infinite;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .ticker-item {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .ticker-sym {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .ticker-val {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ticker-chg {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ticker-chg.up {
+      color: var(--buy);
+    }
+
+    .ticker-chg.down {
+      color: var(--sell);
+    }
+
+    @keyframes ticker-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* GRID LAYOUT */
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.4fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .panel {
+      background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+      border-radius: 14px;
+      border: 1px solid rgba(31,41,55,0.9);
+      box-shadow:
+        0 18px 40px rgba(0,0,0,0.85),
+        0 0 0 1px rgba(15,23,42,0.9);
+      padding: 10px 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(31,41,55,0.9);
+    }
+
+    .panel-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title span.label {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .panel-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
+      color: var(--muted);
+    }
+
+    .panel-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* NEWS */
+
+    .news-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .news-item {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr);
+      gap: 6px;
+      padding: 5px 6px;
+      border-radius: 8px;
+      background: radial-gradient(circle at top left, rgba(15,23,42,0.9), rgba(15,23,42,0.7));
+      border: 1px solid rgba(31,41,55,0.9);
+      font-size: 12px;
+      align-items: center;
+    }
+
+    .news-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .news-time {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .news-source {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 10px;
+    }
+
+    .news-title a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .news-title a:hover {
+      text-decoration: underline;
+    }
+
+    .news-item.crit {
+      border-color: rgba(248,250,252,0.9);
+      box-shadow: 0 0 18px rgba(248,250,252,0.35);
+    }
+
+    .news-item.crit .news-title a {
+      color: #fefce8;
+    }
+
+    .news-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+      padding-top: 2px;
+    }
+
+    .news-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--buy);
+      box-shadow: 0 0 10px rgba(34,197,94,0.7);
+    }
+
+    .dot.offline {
+      background: var(--sell);
+      box-shadow: 0 0 10px rgba(239,68,68,0.7);
+    }
+
+    .news-alert {
+      color: var(--warn);
+    }
+
+    /* CALENDAR */
+
+    .cal-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .cal-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .cal-chip {
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cal-chip.on {
+      background: var(--chip-on);
+      border-color: rgba(59,130,246,0.9);
+      color: var(--chip-on-text);
+      box-shadow: 0 0 14px rgba(37,99,235,0.7);
+    }
+
+    .cal-chip.sep {
+      cursor: default;
+      padding-inline: 4px;
+      opacity: 0.6;
+    }
+
+    .cal-live-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cal-live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--buy);
+      box-shadow: 0 0 10px rgba(34,197,94,0.7);
+    }
+
+    .cal-live-dot.hot {
+      background: var(--warn);
+      box-shadow: 0 0 10px rgba(250,204,21,0.8);
+    }
+
+    .cal-live-dot.offline {
+      background: var(--sell);
+      box-shadow: 0 0 10px rgba(239,68,68,0.8);
+    }
+
+    .cal-container {
+      border-radius: 10px;
+      background: radial-gradient(circle at top left, rgba(15,23,42,0.95), rgba(15,23,42,0.85));
+      border: 1px solid rgba(31,41,55,0.9);
+      padding: 6px 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 520px;
+      overflow: hidden;
+    }
+
+    .cal-scroll {
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .cal-day {
+      margin-top: 6px;
+      padding: 4px 4px 3px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      border-bottom: 1px solid rgba(31,41,55,0.9);
+      position: sticky;
+      top: 0;
+      background: linear-gradient(to bottom, rgba(15,23,42,0.98), rgba(15,23,42,0.9));
+      z-index: 2;
+    }
+
+    .cal-row {
+      display: grid;
+      grid-template-columns: 80px 70px minmax(0, 1.7fr) 80px 80px 80px;
+      gap: 6px;
+      align-items: center;
+      padding: 4px 4px;
+      font-size: 11px;
+      border-radius: 6px;
+      margin-top: 2px;
+      background: rgba(15,23,42,0.7);
+    }
+
+    .cal-row.past {
+      opacity: 0.55;
+    }
+
+    .cal-row.due {
+      border: 1px solid rgba(250,204,21,0.8);
+      box-shadow: 0 0 14px rgba(250,204,21,0.4);
+    }
+
+    .cal-row.fresh-result {
+      border: 1px solid rgba(34,197,94,0.9);
+      box-shadow: 0 0 16px rgba(34,197,94,0.5);
+    }
+
+    .cal-time {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cal-countdown {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .cal-countdown.urgent {
+      color: var(--warn);
+    }
+
+    .cal-flag-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .cal-flag {
+      font-size: 16px;
+    }
+
+    .cal-ccy {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .cal-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .cal-title-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cal-impact {
+      display: inline-flex;
+      gap: 1px;
+    }
+
+    .cal-impact i {
+      width: 4px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(55,65,81,0.9);
+      display: inline-block;
+    }
+
+    .cal-impact.high i {
+      background: var(--sell);
+    }
+
+    .cal-impact.medium i:nth-child(-n+2) {
+      background: #f97316;
+    }
+
+    .cal-impact.low i:nth-child(1) {
+      background: var(--warn);
+    }
+
+    .cal-num {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .cal-num.muted {
+      color: var(--muted);
+    }
+
+    .cal-num.up {
+      color: var(--buy);
+    }
+
+    .cal-num.down {
+      color: var(--sell);
+    }
+
+    .cal-empty {
+      padding: 10px 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* FOOT STATUS */
+
+    .foot-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+      padding-top: 4px;
+      border-top: 1px solid rgba(31,41,55,0.9);
+      margin-top: 4px;
+    }
+
+    .foot-left, .foot-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sound-toggle {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(55,65,81,0.9);
+      background: rgba(15,23,42,0.9);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .sound-toggle.on {
+      border-color: rgba(34,197,94,0.9);
+      box-shadow: 0 0 14px rgba(34,197,94,0.5);
+    }
+
+    .sound-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--muted);
+    }
+
+    .sound-toggle.on .sound-dot {
+      background: var(--buy);
+    }
+
+    .small-label {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 10px;
+    }
+
+    .link-muted {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .link-muted:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    /* SCROLLBARS */
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #374151;
+    }
+  </style>
 </head>
 <body>
-<!-- TICKER TAPE -->
-<div class="ticker-tape">
-  <div class="tradingview-widget-container">
-    <div class="tradingview-widget-container__widget"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-    {
-      "symbols": [
-        {"proName": "OANDA:XAUUSD", "title": "XAU/USD"},
-        {"proName": "OANDA:XAGUSD", "title": "SILVER"},
-        {"proName": "TVC:USOIL", "title": "OIL"},
-        {"proName": "CAPITALCOM:DXY", "title": "DXY"},
-        {"proName": "NASDAQ:TLT", "title": "US10Y"},
-        {"proName": "NASDAQ:QQQ", "title": "NASDAQ"},
-        {"proName": "AMEX:SPY", "title": "S&P 500"}
-      ],
-      "showSymbolLogo": false,
-      "isTransparent": true,
-      "displayMode": "regular",
-      "colorTheme": "dark",
-      "locale": "fr"
-    }
-    </script>
-  </div>
-</div>
-
-<!-- TOP BAR : COMMAND + WORLD CLOCKS -->
-<div class="top-bar">
-  <div class="cmd-bar">
-    <span class="prompt">&gt;</span>
-    <input id="cmd" type="text" placeholder="Saisir un symbole (ex: NASDAQ:AAPL, BINANCE:SOLUSDT, FX:EURJPY) puis Entrée…" autocomplete="off" spellcheck="false">
-    <span class="hint">↵ pour charger</span>
-  </div>
-  <div class="clocks">
-    <div class="clock" id="mk-NY"><span><span class="dot"></span><span class="city">NEW YORK</span></span><span class="time" id="time-NY">--:--:--</span></div>
-    <div class="clock" id="mk-LDN"><span><span class="dot"></span><span class="city">LONDON</span></span><span class="time" id="time-LDN">--:--:--</span></div>
-    <div class="clock" id="mk-TKY"><span><span class="dot"></span><span class="city">TOKYO</span></span><span class="time" id="time-TKY">--:--:--</span></div>
-    <div class="clock" id="mk-SYD"><span><span class="dot"></span><span class="city">SYDNEY</span></span><span class="time" id="time-SYD">--:--:--</span></div>
-  </div>
-</div>
-
-<!-- QUOTE GRID (8 cards) -->
-<div class="header">
-  <div class="qcard active" data-symbol="OANDA:XAUUSD">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "OANDA:XAUUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-  <div class="qcard" data-symbol="OANDA:XAGUSD">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "OANDA:XAGUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-  <div class="qcard" data-symbol="CAPITALCOM:DXY">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "CAPITALCOM:DXY", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-  <div class="qcard" data-symbol="TVC:USOIL">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "TVC:USOIL", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-  <div class="qcard" data-symbol="FX:EURUSD">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "FX:EURUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-  <div class="qcard" data-symbol="NASDAQ:TLT">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "NASDAQ:TLT", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-  <div class="qcard" data-symbol="AMEX:SPY">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "AMEX:SPY", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-  <div class="qcard" data-symbol="BINANCE:BTCUSDT">
-    <div class="click-overlay"></div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-    {"symbol": "BINANCE:BTCUSDT", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
-    </script>
-  </div>
-</div>
-
-<!-- MAIN PANELS -->
-<div class="main-layout">
-  <div class="col col-left">
-    <div class="p-header">
-      <span>📅 CALENDRIER ÉCONOMIQUE</span>
-      <span class="live" id="cal-live">LIVE</span>
+  <div class="app-shell">
+    <!-- TOP BAR -->
+    <div class="top-bar">
+      <div class="brand">
+        <div class="brand-logo">MD</div>
+        <div class="brand-text">
+          <div class="brand-title">MDTrading Terminal</div>
+          <div class="brand-sub">Multi‑asset market dashboard</div>
+        </div>
+      </div>
+      <div class="top-right">
+        <div class="clock">
+          <div class="clock-label">Paris</div>
+          <div class="clock-time" id="clock-paris">--:--:--</div>
+        </div>
+        <div class="clock">
+          <div class="clock-label">New York</div>
+          <div class="clock-time" id="clock-ny">--:--:--</div>
+        </div>
+        <div class="clock">
+          <div class="clock-label">Tokyo</div>
+          <div class="clock-time" id="clock-tokyo">--:--:--</div>
+        </div>
+        <div class="status-pill">
+          <div class="status-dot" id="health-dot"></div>
+          <span id="health-text">Backend: checking…</span>
+        </div>
+      </div>
     </div>
-    <div class="cal-toolbar" id="cal-filters"></div>
-    <div class="cal-head-row">
-      <span>HEURE</span>
-      <span></span>
-      <span>ÉVÉNEMENT</span>
-      <span style="text-align:right;">ACTUEL</span>
-      <span style="text-align:right;">PRÉV.</span>
-      <span style="text-align:right;">PRÉC.</span>
+
+    <!-- TICKER (statique pour l’instant) -->
+    <div class="ticker">
+      <div class="ticker-label">Market overview</div>
+      <div class="ticker-sep"></div>
+      <div class="ticker-track">
+        <div class="ticker-item">
+          <span class="ticker-sym">EUR/USD</span>
+          <span class="ticker-val">1.0724</span>
+          <span class="ticker-chg up">+0.18%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">DXY</span>
+          <span class="ticker-val">104.32</span>
+          <span class="ticker-chg down">-0.12%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">XAU/USD</span>
+          <span class="ticker-val">2354.10</span>
+          <span class="ticker-chg up">+0.42%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">BTC/USD</span>
+          <span class="ticker-val">64210</span>
+          <span class="ticker-chg up">+1.85%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">SPX</span>
+          <span class="ticker-val">5284</span>
+          <span class="ticker-chg down">-0.24%</span>
+        </div>
+
+        <!-- duplication pour scroll infini -->
+        <div class="ticker-item">
+          <span class="ticker-sym">EUR/USD</span>
+          <span class="ticker-val">1.0724</span>
+          <span class="ticker-chg up">+0.18%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">DXY</span>
+          <span class="ticker-val">104.32</span>
+          <span class="ticker-chg down">-0.12%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">XAU/USD</span>
+          <span class="ticker-val">2354.10</span>
+          <span class="ticker-chg up">+0.42%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">BTC/USD</span>
+          <span class="ticker-val">64210</span>
+          <span class="ticker-chg up">+1.85%</span>
+        </div>
+        <div class="ticker-item">
+          <span class="ticker-sym">SPX</span>
+          <span class="ticker-val">5284</span>
+          <span class="ticker-chg down">-0.24%</span>
+        </div>
+      </div>
     </div>
-    <div id="calendar-content" class="scroll"></div>
+
+    <!-- MAIN GRID -->
+    <div class="main-grid">
+      <!-- LEFT: CALENDAR -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="label">Economic calendar</span>
+            <span class="panel-badge">Finnhub</span>
+          </div>
+          <div class="cal-toolbar">
+            <div class="cal-filters" id="cal-filters"></div>
+            <div class="cal-live-pill">
+              <div class="cal-live-dot" id="cal-live-dot"></div>
+              <span id="cal-live">LIVE</span>
+            </div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="cal-container">
+            <div class="cal-scroll" id="calendar-content">
+              <div class="cal-empty">Chargement du calendrier…</div>
+            </div>
+          </div>
+          <div class="foot-status">
+            <div class="foot-left">
+              <span class="small-label">Calendar backend</span>
+              <span id="cal-meta" class="link-muted">/api/calendar</span>
+            </div>
+            <div class="foot-right">
+              <button class="sound-toggle on" id="sound-toggle">
+                <span class="sound-dot"></span>
+                <span>Alertes sonores</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: NEWS -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="label">Market news</span>
+            <span class="panel-badge">Multi‑sources</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="news-list" id="news-list">
+            <li class="news-item">
+              <div class="news-meta">
+                <div class="news-time">--:--:--</div>
+                <div class="news-source">Loading</div>
+              </div>
+              <div class="news-title">
+                Chargement des dernières actualités de marché…
+              </div>
+            </li>
+          </ul>
+          <div class="news-footer">
+            <div class="news-status">
+              <div class="dot" id="news-dot"></div>
+              <span id="news-status-text">/api/news</span>
+            </div>
+            <div class="news-alert" id="news-alert"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="foot-status">
+      <div class="foot-left">
+        <span class="small-label">MDTrading Terminal</span>
+        <span class="link-muted">Prototype – données Finnhub &amp; flux RSS</span>
+      </div>
+      <div class="foot-right">
+        <span class="small-label">Backend</span>
+        <span id="health-meta" class="link-muted">/api/health</span>
+      </div>
+    </div>
   </div>
 
-  <div class="col col-center" id="chart_container">
-    <div class="p-header"><span id="chart-symbol">— CHART —</span><span class="live">LIVE</span></div>
-    <div id="tv_main_wrap" style="flex:1; min-height:0;"></div>
-  </div>
+  <script>
+    /* ============================================================
+   CLOCKS
+============================================================ */
+function updateClocks() {
+  const now = new Date();
 
-  <div class="col col-right">
-    <div class="p-header"><span>🚨 FIL INFO MULTI-SOURCE</span><span class="live">LIVE</span></div>
-    <div id="news-content" class="scroll"></div>
-  </div>
-</div>
+  const paris = now.toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris" });
+  const ny = now.toLocaleTimeString("fr-FR", { timeZone: "America/New_York" });
+  const tokyo = now.toLocaleTimeString("fr-FR", { timeZone: "Asia/Tokyo" });
 
-<!-- STATUS BAR -->
-<div class="status-bar">
-  <span>● <span class="ok">CONNECTED</span> · 6 sources RSS · cache 30s</span>
-  <span id="status-news">News: —</span>
-  <span id="status-sound" style="cursor:pointer;user-select:none;" title="Activer/couper le son sur nouvelles">🔇 SOUND OFF</span>
-  <select id="sound-pick" title="Choisir le son d'alerte" style="background:#0a0a0a;color:#e7e7e7;border:1px solid #2a2a2a;font-family:inherit;font-size:11px;padding:1px 4px;cursor:pointer;">
-    <option value="ping">PING</option>
-    <option value="chime" selected>CHIME</option>
-    <option value="siren">SIREN</option>
-    <option value="bloop">BLOOP</option>
-    <option value="alert">ALERT</option>
-  </select>
-  <span id="status-clock">--:--:--</span>
-</div>
-
-<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-<script>
-// ====== STATE + PERSISTENCE ======
-const PREFS_KEY = 'tt_prefs_v1';
-function loadPrefs() {
-  try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; }
-  catch (e) { return {}; }
+  document.getElementById("clock-paris").textContent = paris;
+  document.getElementById("clock-ny").textContent = ny;
+  document.getElementById("clock-tokyo").textContent = tokyo;
 }
-function savePrefs(patch) {
+setInterval(updateClocks, 1000);
+updateClocks();
+
+/* ============================================================
+   HEALTH CHECK
+============================================================ */
+async function checkHealth() {
   try {
-    const cur = loadPrefs();
-    const next = Object.assign({}, cur, patch);
-    localStorage.setItem(PREFS_KEY, JSON.stringify(next));
-  } catch (e) {}
+    const r = await fetch("/api/health");
+    const j = await r.json();
+
+    document.getElementById("health-dot").classList.remove("offline");
+    document.getElementById("health-text").textContent = "Backend OK";
+  } catch (e) {
+    document.getElementById("health-dot").classList.add("offline");
+    document.getElementById("health-text").textContent = "Backend OFFLINE";
+  }
 }
-const PREFS = loadPrefs();
-let lastSeenTs = 0;
-let currentSymbol = PREFS.symbol || "OANDA:XAUUSD";
-let soundEnabled = !!PREFS.soundEnabled;
-let soundType = PREFS.soundType || 'chime';
+setInterval(checkHealth, 5000);
+checkHealth();
+
+/* ============================================================
+   NEWS
+============================================================ */
+let lastNewsTs = 0;
+
+async function loadNews() {
+  try {
+    const r = await fetch("/api/news");
+    const j = await r.json();
+
+    const list = document.getElementById("news-list");
+    list.innerHTML = "";
+
+    j.items.forEach(n => {
+      const li = document.createElement("li");
+      li.className = "news-item" + (n.crit ? " crit" : "");
+
+      li.innerHTML = `
+        <div class="news-meta">
+          <div class="news-time">${n.time}</div>
+          <div class="news-source">${n.s}</div>
+        </div>
+        <div class="news-title">
+          <a href="${n.l}" target="_blank">${n.t}</a>
+        </div>
+      `;
+
+      list.appendChild(li);
+
+      if (n.ts > lastNewsTs && n.crit && soundEnabled) {
+        ensureAudio();
+        beep();
+      }
+    });
+
+    lastNewsTs = Math.max(...j.items.map(n => n.ts));
+
+    document.getElementById("news-dot").classList.remove("offline");
+    document.getElementById("news-status-text").textContent =
+      j.cached ? "cached" : "live";
+  } catch (e) {
+    document.getElementById("news-dot").classList.add("offline");
+    document.getElementById("news-status-text").textContent = "offline";
+  }
+}
+setInterval(loadNews, 8000);
+loadNews();
+
+/* ============================================================
+   SOUND ALERTS
+============================================================ */
+let soundEnabled = true;
 let audioCtx = null;
 
-// ====== AUDIO ALERT ======
 function ensureAudio() {
-  if (!audioCtx) {
-    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-    catch (e) { audioCtx = null; }
-  }
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
-function tone(freq, startOffset, duration, peak, type) {
-  const now = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = type || 'sine';
-  o.frequency.value = freq;
-  g.gain.setValueAtTime(0.0001, now + startOffset);
-  g.gain.exponentialRampToValueAtTime(peak, now + startOffset + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
-  o.connect(g).connect(audioCtx.destination);
-  o.start(now + startOffset);
-  o.stop(now + startOffset + duration + 0.02);
-}
-function playSound(kind) {
-  if (!audioCtx) return;
-  switch (kind) {
-    case 'ping':
-      tone(1760, 0, 0.18, 0.22, 'sine');
-      break;
-    case 'chime':
-      tone(880, 0, 0.20, 0.25, 'sine');
-      tone(1320, 0.12, 0.20, 0.25, 'sine');
-      break;
-    case 'siren':
-      [0, 0.18, 0.36].forEach(t => {
-        tone(700, t, 0.10, 0.22, 'square');
-        tone(1100, t + 0.09, 0.10, 0.22, 'square');
-      });
-      break;
-    case 'bloop':
-      tone(440, 0, 0.15, 0.22, 'triangle');
-      tone(660, 0.10, 0.15, 0.22, 'triangle');
-      tone(880, 0.20, 0.20, 0.22, 'triangle');
-      break;
-    case 'alert':
-      [0, 0.14, 0.28].forEach(t => tone(2000, t, 0.08, 0.28, 'sawtooth'));
-      break;
-  }
-}
+
 function beep() {
-  if (!soundEnabled || !audioCtx) return;
-  playSound(soundType);
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = 880;
+  gain.gain.value = 0.2;
+  osc.start();
+  setTimeout(() => {
+    osc.stop();
+  }, 120);
 }
-function renderSoundToggle() {
-  const el = document.getElementById('status-sound');
-  if (soundEnabled) {
-    el.textContent = '🔔 SOUND ON';
-    el.style.color = '#22c55e';
-  } else {
-    el.textContent = '🔇 SOUND OFF';
-    el.style.color = '';
-  }
-}
-document.getElementById('status-sound').addEventListener('click', () => {
+
+document.getElementById("sound-toggle").addEventListener("click", () => {
   soundEnabled = !soundEnabled;
-  savePrefs({ soundEnabled });
-  renderSoundToggle();
-  if (soundEnabled) {
-    ensureAudio();
-    beep();
-  }
-});
-const soundPick = document.getElementById('sound-pick');
-soundPick.value = soundType;
-soundPick.addEventListener('change', (e) => {
-  soundType = e.target.value;
-  savePrefs({ soundType });
-  ensureAudio();
-  if (audioCtx) playSound(soundType);
-});
-renderSoundToggle();
-
-// ====== CHART ======
-function initChart(symbol) {
-  currentSymbol = symbol;
-  const wrap = document.getElementById('tv_main_wrap');
-  wrap.innerHTML = '<div id="tv_main" style="height:100%;"></div>';
-  document.getElementById('chart-symbol').textContent = symbol;
-  new TradingView.widget({
-    "autosize": true,
-    "symbol": symbol,
-    "interval": "1",
-    "theme": "dark",
-    "style": "1",
-    "locale": "fr",
-    "container_id": "tv_main",
-    "hide_side_toolbar": false,
-    "allow_symbol_change": true,
-    "details": true,
-    "studies": ["Volume@tv-basicstudies"]
-  });
-}
-function selectCard(card) {
-  document.querySelectorAll('.qcard').forEach(c => c.classList.remove('active'));
-  if (card) card.classList.add('active');
-}
-function changeChart(symbol, fromCard) {
-  initChart(symbol);
-  savePrefs({ symbol });
-  const card = fromCard || document.querySelector(`.qcard[data-symbol="${symbol}"]`);
-  selectCard(card || null);
-  if (window.innerWidth < 1024) window.scrollTo({top: 0, behavior: 'smooth'});
-}
-document.querySelectorAll('.qcard').forEach(card => {
-  card.addEventListener('click', () => changeChart(card.dataset.symbol, card));
-});
-const cmd = document.getElementById('cmd');
-cmd.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Enter') {
-    const v = cmd.value.trim().toUpperCase();
-    if (v) {
-      changeChart(v, null);
-      cmd.value = '';
-      cmd.blur();
-    }
-  }
+  const btn = document.getElementById("sound-toggle");
+  if (soundEnabled) btn.classList.add("on");
+  else btn.classList.remove("on");
 });
 
-// ====== WORLD CLOCKS + MARKET STATUS ======
-const MARKETS = {
-  NY:  { tz: 'America/New_York', open: [9, 30], close: [16, 0] },
-  LDN: { tz: 'Europe/London',    open: [8, 0],  close: [16, 30] },
-  TKY: { tz: 'Asia/Tokyo',       open: [9, 0],  close: [15, 0] },
-  SYD: { tz: 'Australia/Sydney', open: [10, 0], close: [16, 0] },
-};
-function getTzParts(tz) {
-  const fmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: tz,
-    hour12: false,
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-  const parts = Object.fromEntries(fmt.formatToParts(new Date()).map(p => [p.type, p.value]));
-  return parts;
-}
-function isMarketOpen(m) {
-  const p = getTzParts(m.tz);
-  const dow = p.weekday;
-  if (dow === 'Sat' || dow === 'Sun') return false;
-  const h = parseInt(p.hour, 10), min = parseInt(p.minute, 10);
-  const cur = h * 60 + min;
-  const op = m.open[0] * 60 + m.open[1];
-  const cl = m.close[0] * 60 + m.close[1];
-  return cur >= op && cur < cl;
-}
-function updateClocks() {
-  for (const [code, m] of Object.entries(MARKETS)) {
-    const p = getTzParts(m.tz);
-    document.getElementById('time-' + code).textContent =
-      `${p.hour}:${p.minute}:${p.second}`;
-    const el = document.getElementById('mk-' + code);
-    el.classList.toggle('open', isMarketOpen(m));
-  }
-  const now = new Date();
-  document.getElementById('status-clock').textContent =
-    String(now.getHours()).padStart(2, '0') + ':' +
-    String(now.getMinutes()).padStart(2, '0') + ':' +
-    String(now.getSeconds()).padStart(2, '0') + ' LOCAL';
-}
+/* ============================================================
+   ECONOMIC CALENDAR
+============================================================ */
 
-// ====== NEWS ======
-function buildNewsItem(n, isFresh) {
-  const item = document.createElement('div');
-  item.className = 'n-item' +
-    (n.crit ? ' critical' : '') +
-    (isFresh ? ' fresh' : '');
-  const meta = document.createElement('div');
-  meta.className = 'n-meta';
-  const timeSpan = document.createElement('span');
-  timeSpan.textContent = n.time;
-  const tag = document.createElement('span');
-  tag.className = 'tag ' + n.s;
-  tag.textContent = n.s;
-  meta.appendChild(timeSpan);
-  meta.appendChild(tag);
-  const link = document.createElement('a');
-  link.href = n.l;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.textContent = (n.crit ? '⚠️ ' : '') + n.t;
-  item.appendChild(meta);
-  item.appendChild(link);
-  return item;
-}
-async function getNews() {
-  try {
-    const r = await fetch('/api/news');
-    const data = await r.json();
-    const items = data.items || [];
-    const container = document.getElementById('news-content');
-    const previousLastSeen = lastSeenTs;
-    let maxTs = lastSeenTs;
-    let freshCount = 0;
-    container.innerHTML = '';
-    items.forEach(n => {
-      const isFresh = previousLastSeen > 0 && n.ts > previousLastSeen;
-      if (isFresh) freshCount++;
-      if (n.ts > maxTs) maxTs = n.ts;
-      container.appendChild(buildNewsItem(n, isFresh));
-    });
-    lastSeenTs = maxTs;
-    const status = document.getElementById('status-news');
-    const cacheTag = data.cached ? `cache ${data.age}s` : 'fresh';
-    status.innerHTML =
-      `News: <span class="ok">${items.length}</span> · ${cacheTag}` +
-      (freshCount > 0 ? ` · <span class="warn">+${freshCount} new</span>` : '');
-    if (freshCount > 0) beep();
-  } catch (e) {
-    document.getElementById('status-news').innerHTML =
-      'News: <span class="err">offline</span>';
-  }
-}
-
-// ====== ECONOMIC CALENDAR (FRONT) ======
 const FLAGS = {
-  USD: '\u{1F1FA}\u{1F1F8}',
-  EUR: '\u{1F1EA}\u{1F1FA}',
-  GBP: '\u{1F1EC}\u{1F1E7}',
-  JPY: '\u{1F1EF}\u{1F1F5}',
-  CHF: '\u{1F1E8}\u{1F1ED}',
-  CAD: '\u{1F1E8}\u{1F1E6}',
-  AUD: '\u{1F1E6}\u{1F1FA}',
-  NZD: '\u{1F1F3}\u{1F1FF}',
-  CNY: '\u{1F1E8}\u{1F1F3}',
+  USD: "🇺🇸",
+  EUR: "🇪🇺",
+  GBP: "🇬🇧",
+  JPY: "🇯🇵",
+  CHF: "🇨🇭",
+  CAD: "🇨🇦",
+  AUD: "🇦🇺",
+  NZD: "🇳🇿",
+  CNY: "🇨🇳",
 };
 
-const CCY_LIST = ['USD','EUR','GBP','JPY','CHF','CAD','AUD','NZD','CNY'];
-const IMPACTS = ['High','Medium','Low'];
+const CCY_LIST = ["USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD","CNY"];
+const IMPACTS = ["High","Medium","Low"];
 
-// 🟩 Correction : tous les filtres activés par défaut
 const calFilters = {
-  impact: new Set(['High','Medium','Low']),
-  ccy: new Set(['USD','EUR','GBP','JPY','CHF','CAD','AUD','NZD','CNY']),
+  impact: new Set(["High","Medium","Low"]),
+  ccy: new Set(["USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD","CNY"]),
 };
 
 let calEvents = [];
@@ -1145,110 +1228,103 @@ let calLastSeenActual = new Set();
 let calPollTimer = null;
 let calFirstLoad = true;
 
-function persistCalFilters() {
-  savePrefs({ calImpact: [...calFilters.impact], calCcy: [...calFilters.ccy] });
-}
-
 function buildCalToolbar() {
-  const root = document.getElementById('cal-filters');
-  root.innerHTML = '';
+  const root = document.getElementById("cal-filters");
+  root.innerHTML = "";
 
   IMPACTS.forEach(imp => {
-    const c = document.createElement('span');
-    c.className = 'cal-chip' + (calFilters.impact.has(imp) ? ' on' : '');
+    const c = document.createElement("span");
+    c.className = "cal-chip" + (calFilters.impact.has(imp) ? " on" : "");
     c.textContent = imp.toUpperCase();
-    c.addEventListener('click', () => {
+    c.onclick = () => {
       if (calFilters.impact.has(imp)) calFilters.impact.delete(imp);
       else calFilters.impact.add(imp);
-      persistCalFilters();
       buildCalToolbar();
       renderCalendar();
-    });
+    };
     root.appendChild(c);
   });
 
-  const sep = document.createElement('span');
-  sep.className = 'cal-chip sep';
-  sep.textContent = '|';
+  const sep = document.createElement("span");
+  sep.className = "cal-chip sep";
+  sep.textContent = "|";
   root.appendChild(sep);
 
   CCY_LIST.forEach(ccy => {
-    const c = document.createElement('span');
-    c.className = 'cal-chip' + (calFilters.ccy.has(ccy) ? ' on' : '');
+    const c = document.createElement("span");
+    c.className = "cal-chip" + (calFilters.ccy.has(ccy) ? " on" : "");
     c.textContent = ccy;
-    c.addEventListener('click', () => {
+    c.onclick = () => {
       if (calFilters.ccy.has(ccy)) calFilters.ccy.delete(ccy);
       else calFilters.ccy.add(ccy);
-      persistCalFilters();
       buildCalToolbar();
       renderCalendar();
-    });
+    };
     root.appendChild(c);
   });
 }
 
 function calToNum(s) {
   if (!s) return null;
-  const m = String(s).match(/-?\d+(?:\.\d+)?/);
+  const m = String(s).match(/-?\d+(\.\d+)?/);
   if (!m) return null;
   let n = parseFloat(m[0]);
-  const u = String(s).slice(-1).toUpperCase();
-  if (u === 'T') n *= 1e12;
-  else if (u === 'B') n *= 1e9;
-  else if (u === 'M') n *= 1e6;
-  else if (u === 'K') n *= 1e3;
+  const u = s.slice(-1).toUpperCase();
+  if (u === "T") n *= 1e12;
+  else if (u === "B") n *= 1e9;
+  else if (u === "M") n *= 1e6;
+  else if (u === "K") n *= 1e3;
   return n;
 }
 
-function compareActual(actual, forecast) {
-  const a = calToNum(actual), f = calToNum(forecast);
-  if (a === null || f === null) return 'eq';
-  if (a > f) return 'up';
-  if (a < f) return 'down';
-  return 'eq';
+function compareActual(a, f) {
+  const A = calToNum(a), F = calToNum(f);
+  if (A === null || F === null) return "eq";
+  if (A > F) return "up";
+  if (A < F) return "down";
+  return "eq";
 }
 
 function fmtCountdown(secs) {
   if (secs < 0) secs = 0;
   const m = Math.floor(secs / 60);
   const s = secs % 60;
-  return `${m}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,"0")}`;
 }
 
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  return s.replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
   }[c]));
 }
 
 function renderCalendar() {
-  const root = document.getElementById('calendar-content');
+  const root = document.getElementById("calendar-content");
 
   if (!calEvents.length) {
-    root.innerHTML = '<div class="cal-empty">Chargement…</div>';
+    root.innerHTML = `<div class="cal-empty">Chargement…</div>`;
     return;
   }
 
-  // 🟩 Correction : filtres toujours valides
   const filtered = calEvents.filter(e =>
     calFilters.impact.has(e.impact) &&
     calFilters.ccy.has(e.country)
   );
 
   if (!filtered.length) {
-    root.innerHTML = '<div class="cal-empty">Aucun événement avec les filtres actuels.</div>';
+    root.innerHTML = `<div class="cal-empty">Aucun événement avec les filtres actuels.</div>`;
     return;
   }
 
   const now = Date.now() / 1000;
-  const newFreshTriggers = [];
-  let html = '';
-  let lastDay = '';
+  let html = "";
+  let lastDay = "";
+  const newFresh = [];
 
   filtered.forEach(e => {
     const dt = new Date(e.ts * 1000);
-    const dayKey = dt.toLocaleDateString('fr-FR', {
-      weekday:'long', day:'numeric', month:'long'
+    const dayKey = dt.toLocaleDateString("fr-FR", {
+      weekday:"long", day:"numeric", month:"long"
     });
 
     if (dayKey !== lastDay) {
@@ -1256,33 +1332,32 @@ function renderCalendar() {
       lastDay = dayKey;
     }
 
-    const localTime = dt.toLocaleTimeString('fr-FR', {
-      hour:'2-digit', minute:'2-digit'
+    const localTime = dt.toLocaleTimeString("fr-FR", {
+      hour:"2-digit", minute:"2-digit"
     });
 
-    const flag = FLAGS[e.country] || '\u{1F3F3}';
+    const flag = FLAGS[e.country] || "🏳️";
     const impClass = e.impact.toLowerCase();
     const isPast = !!e.actual || (e.ts < now - 60);
     const isDue = !e.actual && (e.ts - now) <= 75 && (e.ts - now) >= -10;
 
-    const cmp = e.actual ? compareActual(e.actual, e.forecast) : 'eq';
+    const cmp = e.actual ? compareActual(e.actual, e.forecast) : "eq";
     const fresh = !!e.actual && !calLastSeenActual.has(e.ts) && !calFirstLoad;
 
     if (e.actual) {
-      if (fresh) newFreshTriggers.push(e);
+      if (fresh) newFresh.push(e);
       calLastSeenActual.add(e.ts);
     }
 
-    const cls = ['cal-row'];
-    if (isPast && !fresh) cls.push('past');
-    if (isDue) cls.push('due');
-    if (fresh) cls.push('fresh-result');
+    const cls = ["cal-row"];
+    if (isPast && !fresh) cls.push("past");
+    if (isDue) cls.push("due");
+    if (fresh) cls.push("fresh-result");
 
-    let cdHtml = '';
+    let cdHtml = "";
     if (isDue) {
       const secs = Math.max(0, Math.floor(e.ts - now));
-      const urgent = secs < 30 ? ' urgent' : '';
-      cdHtml = `<span class="cal-countdown${urgent}" data-cd-target="${e.ts}">T-${fmtCountdown(secs)}</span>`;
+      cdHtml = `<span class="cal-countdown${secs < 30 ? " urgent" : ""}" data-cd="${e.ts}">T-${fmtCountdown(secs)}</span>`;
     }
 
     const actualHtml = e.actual
@@ -1297,30 +1372,34 @@ function renderCalendar() {
       ? `<span class="cal-num muted">${escapeHtml(e.previous)}</span>`
       : `<span class="cal-num muted">—</span>`;
 
-    const safeTitle = escapeHtml(e.title || '');
-
-    html += `<div class="${cls.join(' ')}">
-      <span class="cal-time"><span>${localTime}</span>${cdHtml}</span>
-      <span class="cal-flag-wrap"><span class="cal-flag">${flag}</span><span class="cal-ccy">${e.country}</span></span>
-      <span class="cal-title">
-        <span class="cal-impact ${impClass}"><i></i><i></i><i></i></span>
-        <span class="cal-title-text" title="${safeTitle}">${safeTitle}</span>
-      </span>
-      ${actualHtml}
-      ${forecastHtml}
-      ${previousHtml}
-    </div>`;
+    html += `
+      <div class="${cls.join(" ")}">
+        <span class="cal-time">
+          <span>${localTime}</span>
+          ${cdHtml}
+        </span>
+        <span class="cal-flag-wrap">
+          <span class="cal-flag">${flag}</span>
+          <span class="cal-ccy">${e.country}</span>
+        </span>
+        <span class="cal-title">
+          <span class="cal-impact ${impClass}">
+            <i></i><i></i><i></i>
+          </span>
+          <span class="cal-title-text" title="${escapeHtml(e.title)}">${escapeHtml(e.title)}</span>
+        </span>
+        ${actualHtml}
+        ${forecastHtml}
+        ${previousHtml}
+      </div>
+    `;
   });
 
   root.innerHTML = html;
 
-  if (!calFirstLoad && newFreshTriggers.some(e =>
-    e.impact === 'High' || e.impact === 'Medium'
-  )) {
-    if (soundEnabled) {
-      ensureAudio();
-      beep();
-    }
+  if (!calFirstLoad && newFresh.some(e => e.impact !== "Low") && soundEnabled) {
+    ensureAudio();
+    beep();
   }
 
   calFirstLoad = false;
@@ -1328,40 +1407,41 @@ function renderCalendar() {
 
 function tickCountdowns() {
   const now = Date.now() / 1000;
-  let crossedZero = false;
+  let reload = false;
 
-  document.querySelectorAll('[data-cd-target]').forEach(el => {
-    const ts = parseFloat(el.dataset.cdTarget);
+  document.querySelectorAll("[data-cd]").forEach(el => {
+    const ts = parseFloat(el.dataset.cd);
     const secs = Math.floor(ts - now);
 
     if (secs < -2) {
-      crossedZero = true;
+      reload = true;
       return;
     }
 
     el.textContent = `T-${fmtCountdown(Math.max(0, secs))}`;
-    if (secs < 30 && !el.classList.contains('urgent')) el.classList.add('urgent');
+    if (secs < 30) el.classList.add("urgent");
   });
 
-  if (crossedZero) fetchCalendar();
+  if (reload) fetchCalendar();
 }
+setInterval(tickCountdowns, 1000);
 
-function nextHotMomentSec() {
+function nextHotMoment() {
   const now = Date.now() / 1000;
   for (const e of calEvents) {
     if (e.actual) continue;
     if (!calFilters.impact.has(e.impact) || !calFilters.ccy.has(e.country)) continue;
-    const delta = e.ts - now;
-    if (delta < -120) continue;
-    if (delta <= 90) return 0;
-    return delta - 90;
+    const d = e.ts - now;
+    if (d < -120) continue;
+    if (d <= 90) return 0;
+    return d - 90;
   }
   return Infinity;
 }
 
 function scheduleCalPoll() {
   clearTimeout(calPollTimer);
-  const hot = nextHotMomentSec();
+  const hot = nextHotMoment();
   let delay;
 
   if (hot === 0) delay = 3000;
@@ -1373,18 +1453,20 @@ function scheduleCalPoll() {
 
 async function fetchCalendar() {
   try {
-    const r = await fetch('/api/calendar');
+    const r = await fetch("/api/calendar");
     const j = await r.json();
 
     calEvents = j.events || [];
 
-    document.getElementById('cal-live').innerHTML =
-      j.hot ? '<span style="color:var(--warn);">HOT</span>' : 'LIVE';
+    const dot = document.getElementById("cal-live-dot");
+    dot.classList.remove("offline", "hot");
+
+    if (j.hot) dot.classList.add("hot");
 
     renderCalendar();
   } catch (e) {
-    document.getElementById('cal-live').innerHTML =
-      '<span style="color:var(--sell);">OFFLINE</span>';
+    const dot = document.getElementById("cal-live-dot");
+    dot.classList.add("offline");
   } finally {
     scheduleCalPoll();
   }
@@ -1392,27 +1474,18 @@ async function fetchCalendar() {
 
 buildCalToolbar();
 fetchCalendar();
-setInterval(tickCountdowns, 1000);
 
-
-// ====== BOOT ======
-const startSymbol = currentSymbol;
-const startCard = document.querySelector(`.qcard[data-symbol="${startSymbol}"]`);
-initChart(startSymbol);
-selectCard(startCard || document.querySelector('.qcard'));
-updateClocks();
-getNews();
-setInterval(updateClocks, 1000);
-setInterval(getNews, 5000);
-</script>
+  </script>
 </body>
 </html>
 """
 
+
 @app.get("/", response_class=HTMLResponse)
-async def index() -> str:
+async def index():
     return INDEX_HTML
 
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
+
