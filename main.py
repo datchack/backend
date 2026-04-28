@@ -140,16 +140,35 @@ async def _fetch_finnhub_calendar():
 
     # Conversion pays → devise
     country_map = {
-        "AU": "AUD",
-        "NZ": "NZD",
-        "CN": "CNY",
-        "JP": "JPY",
-        "GB": "GBP",
-        "EU": "EUR",
-        "US": "USD",
-        "CA": "CAD",
-        "CH": "CHF",
-    }
+    # G10
+    "US": "USD",
+    "EU": "EUR",
+    "GB": "GBP",
+    "JP": "JPY",
+    "CH": "CHF",
+    "CA": "CAD",
+    "AU": "AUD",
+    "NZ": "NZD",
+    "CN": "CNY",
+
+    # Europe élargie
+    "IT": "EUR",
+    "PT": "EUR",
+    "NL": "EUR",
+    "SI": "EUR",
+    "IE": "EUR",
+
+    # Asie
+    "KR": "KRW",
+    "IN": "INR",
+    "VN": "VND",
+    "IL": "ILS",
+
+    # Afrique / Moyen-Orient
+    "ZA": "ZAR",
+    "EG": "EGP",
+    "TZ": "TZS",
+}
 
     for e in events:
         try:
@@ -1215,7 +1234,10 @@ const FLAGS = {
   CNY: "🇨🇳",
 };
 
-const CCY_LIST = ["USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD","CNY"];
+const CCY_LIST = [
+  "USD","EUR","GBP","JPY","CHF","CAD","AUD","NZD","CNY",
+  "KRW","INR","VND","ILS","ZAR","EGP","TZS"
+];
 const IMPACTS = ["High","Medium","Low"];
 
 const calFilters = {
