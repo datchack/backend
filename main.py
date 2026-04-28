@@ -1130,13 +1130,16 @@ const FLAGS = {
   NZD: '\u{1F1F3}\u{1F1FF}',
   CNY: '\u{1F1E8}\u{1F1F3}',
 };
+
 const CCY_LIST = ['USD','EUR','GBP','JPY','CHF','CAD','AUD','NZD','CNY'];
 const IMPACTS = ['High','Medium','Low'];
 
+// 🟩 Correction : tous les filtres activés par défaut
 const calFilters = {
-  impact: new Set(Array.isArray(PREFS.calImpact) ? PREFS.calImpact : ['High','Medium']),
-  ccy: new Set(Array.isArray(PREFS.calCcy) ? PREFS.calCcy : ['USD','EUR','GBP','JPY']),
+  impact: new Set(['High','Medium','Low']),
+  ccy: new Set(['USD','EUR','GBP','JPY','CHF','CAD','AUD','NZD','CNY']),
 };
+
 let calEvents = [];
 let calLastSeenActual = new Set();
 let calPollTimer = null;
@@ -1145,9 +1148,11 @@ let calFirstLoad = true;
 function persistCalFilters() {
   savePrefs({ calImpact: [...calFilters.impact], calCcy: [...calFilters.ccy] });
 }
+
 function buildCalToolbar() {
   const root = document.getElementById('cal-filters');
   root.innerHTML = '';
+
   IMPACTS.forEach(imp => {
     const c = document.createElement('span');
     c.className = 'cal-chip' + (calFilters.impact.has(imp) ? ' on' : '');
@@ -1161,10 +1166,12 @@ function buildCalToolbar() {
     });
     root.appendChild(c);
   });
+
   const sep = document.createElement('span');
   sep.className = 'cal-chip sep';
   sep.textContent = '|';
   root.appendChild(sep);
+
   CCY_LIST.forEach(ccy => {
     const c = document.createElement('span');
     c.className = 'cal-chip' + (calFilters.ccy.has(ccy) ? ' on' : '');
@@ -1179,8 +1186,9 @@ function buildCalToolbar() {
     root.appendChild(c);
   });
 }
+
 function calToNum(s) {
-  if (s === null || s === undefined || s === '') return null;
+  if (!s) return null;
   const m = String(s).match(/-?\d+(?:\.\d+)?/);
   if (!m) return null;
   let n = parseFloat(m[0]);
@@ -1191,6 +1199,7 @@ function calToNum(s) {
   else if (u === 'K') n *= 1e3;
   return n;
 }
+
 function compareActual(actual, forecast) {
   const a = calToNum(actual), f = calToNum(forecast);
   if (a === null || f === null) return 'eq';
@@ -1198,76 +1207,98 @@ function compareActual(actual, forecast) {
   if (a < f) return 'down';
   return 'eq';
 }
+
 function fmtCountdown(secs) {
   if (secs < 0) secs = 0;
   const m = Math.floor(secs / 60);
   const s = secs % 60;
   return `${m}:${String(s).padStart(2,'0')}`;
 }
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[c]));
 }
+
 function renderCalendar() {
   const root = document.getElementById('calendar-content');
+
   if (!calEvents.length) {
     root.innerHTML = '<div class="cal-empty">Chargement…</div>';
     return;
   }
+
+  // 🟩 Correction : filtres toujours valides
   const filtered = calEvents.filter(e =>
-    calFilters.impact.has(e.impact) && calFilters.ccy.has(e.country)
+    calFilters.impact.has(e.impact) &&
+    calFilters.ccy.has(e.country)
   );
+
   if (!filtered.length) {
     root.innerHTML = '<div class="cal-empty">Aucun événement avec les filtres actuels.</div>';
     return;
   }
+
   const now = Date.now() / 1000;
   const newFreshTriggers = [];
   let html = '';
   let lastDay = '';
+
   filtered.forEach(e => {
     const dt = new Date(e.ts * 1000);
     const dayKey = dt.toLocaleDateString('fr-FR', {
       weekday:'long', day:'numeric', month:'long'
     });
+
     if (dayKey !== lastDay) {
       html += `<div class="cal-day">${dayKey}</div>`;
       lastDay = dayKey;
     }
+
     const localTime = dt.toLocaleTimeString('fr-FR', {
       hour:'2-digit', minute:'2-digit'
     });
+
     const flag = FLAGS[e.country] || '\u{1F3F3}';
     const impClass = e.impact.toLowerCase();
     const isPast = !!e.actual || (e.ts < now - 60);
     const isDue = !e.actual && (e.ts - now) <= 75 && (e.ts - now) >= -10;
+
     const cmp = e.actual ? compareActual(e.actual, e.forecast) : 'eq';
     const fresh = !!e.actual && !calLastSeenActual.has(e.ts) && !calFirstLoad;
+
     if (e.actual) {
       if (fresh) newFreshTriggers.push(e);
       calLastSeenActual.add(e.ts);
     }
+
     const cls = ['cal-row'];
     if (isPast && !fresh) cls.push('past');
     if (isDue) cls.push('due');
     if (fresh) cls.push('fresh-result');
+
     let cdHtml = '';
     if (isDue) {
       const secs = Math.max(0, Math.floor(e.ts - now));
       const urgent = secs < 30 ? ' urgent' : '';
       cdHtml = `<span class="cal-countdown${urgent}" data-cd-target="${e.ts}">T-${fmtCountdown(secs)}</span>`;
     }
+
     const actualHtml = e.actual
       ? `<span class="cal-num ${cmp}">${escapeHtml(e.actual)}</span>`
       : `<span class="cal-num muted">—</span>`;
+
     const forecastHtml = e.forecast
       ? `<span class="cal-num">${escapeHtml(e.forecast)}</span>`
       : `<span class="cal-num muted">—</span>`;
+
     const previousHtml = e.previous
       ? `<span class="cal-num muted">${escapeHtml(e.previous)}</span>`
       : `<span class="cal-num muted">—</span>`;
+
     const safeTitle = escapeHtml(e.title || '');
+
     html += `<div class="${cls.join(' ')}">
       <span class="cal-time"><span>${localTime}</span>${cdHtml}</span>
       <span class="cal-flag-wrap"><span class="cal-flag">${flag}</span><span class="cal-ccy">${e.country}</span></span>
@@ -1280,7 +1311,9 @@ function renderCalendar() {
       ${previousHtml}
     </div>`;
   });
+
   root.innerHTML = html;
+
   if (!calFirstLoad && newFreshTriggers.some(e =>
     e.impact === 'High' || e.impact === 'Medium'
   )) {
@@ -1289,23 +1322,30 @@ function renderCalendar() {
       beep();
     }
   }
+
   calFirstLoad = false;
 }
+
 function tickCountdowns() {
   const now = Date.now() / 1000;
   let crossedZero = false;
+
   document.querySelectorAll('[data-cd-target]').forEach(el => {
     const ts = parseFloat(el.dataset.cdTarget);
     const secs = Math.floor(ts - now);
+
     if (secs < -2) {
       crossedZero = true;
       return;
     }
+
     el.textContent = `T-${fmtCountdown(Math.max(0, secs))}`;
     if (secs < 30 && !el.classList.contains('urgent')) el.classList.add('urgent');
   });
+
   if (crossedZero) fetchCalendar();
 }
+
 function nextHotMomentSec() {
   const now = Date.now() / 1000;
   for (const e of calEvents) {
@@ -1318,22 +1358,29 @@ function nextHotMomentSec() {
   }
   return Infinity;
 }
+
 function scheduleCalPoll() {
   clearTimeout(calPollTimer);
   const hot = nextHotMomentSec();
   let delay;
+
   if (hot === 0) delay = 3000;
   else if (hot < 60) delay = Math.max(2000, hot * 1000);
   else delay = 60000;
+
   calPollTimer = setTimeout(fetchCalendar, delay);
 }
+
 async function fetchCalendar() {
   try {
     const r = await fetch('/api/calendar');
     const j = await r.json();
+
     calEvents = j.events || [];
+
     document.getElementById('cal-live').innerHTML =
       j.hot ? '<span style="color:var(--warn);">HOT</span>' : 'LIVE';
+
     renderCalendar();
   } catch (e) {
     document.getElementById('cal-live').innerHTML =
@@ -1342,9 +1389,11 @@ async function fetchCalendar() {
     scheduleCalPoll();
   }
 }
+
 buildCalToolbar();
 fetchCalendar();
 setInterval(tickCountdowns, 1000);
+
 
 // ====== BOOT ======
 const startSymbol = currentSymbol;
