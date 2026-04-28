@@ -15,9 +15,8 @@ import uvicorn
 
 app = FastAPI()
 
-# Static + templates (Render-friendly paths)
+# Static + templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
 
 PARIS = ZoneInfo("Europe/Paris")
 
@@ -113,7 +112,7 @@ async def health():
     }
 
 
-# ====== ECONOMIC CALENDAR ======
+# ====== ECONOMIC CALENDAR (ForexFactory + fallback test) ======
 CALENDAR_JSON_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 CALENDAR_XML_URL  = "https://nfs.faireconomy.media/ff_calendar_thisweek.xml"
 BROWSER_UA = (
@@ -214,25 +213,54 @@ def _parse_ff_json(data: list) -> list[dict]:
 async def _fetch_calendar() -> list[dict]:
     headers = {"User-Agent": BROWSER_UA, "Accept": "application/json, text/xml, */*"}
     async with aiohttp.ClientSession(headers=headers) as session:
+        # 1) JSON
         try:
             async with session.get(CALENDAR_JSON_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status == 200:
                     data = await resp.json(content_type=None)
-                    parsed = _parse_ff_json(data)
+                    if isinstance(data, list):
+                        parsed = _parse_ff_json(data)
+                    else:
+                        parsed = _parse_ff_json(data.get("events", []))
                     if parsed:
                         return parsed
         except Exception:
             pass
 
+        # 2) XML
         try:
             async with session.get(CALENDAR_XML_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status != 200:
-                    return []
-                raw = await resp.read()
-                txt = raw.decode("windows-1252", errors="replace")
-                return _parse_ff_xml(txt)
+                if resp.status == 200:
+                    raw = await resp.read()
+                    txt = raw.decode("windows-1252", errors="replace")
+                    parsed = _parse_ff_xml(txt)
+                    if parsed:
+                        return parsed
         except Exception:
-            return []
+            pass
+
+    # 3) Fallback de TEST si rien ne marche (pour vérifier le frontend)
+    now = time.time()
+    return [
+        {
+            "title": "TEST NFP (EMPLOI NON AGRICOLE)",
+            "country": "USD",
+            "impact": "High",
+            "forecast": "200K",
+            "previous": "180K",
+            "actual": "220K",
+            "ts": now + 60,
+        },
+        {
+            "title": "TEST CPI (INFLATION)",
+            "country": "EUR",
+            "impact": "Medium",
+            "forecast": "2.0%",
+            "previous": "1.8%",
+            "actual": "2.3%",
+            "ts": now + 120,
+        },
+    ]
 
 
 @app.get("/api/calendar")
@@ -244,13 +272,19 @@ async def get_calendar():
     ttl = 10 if in_hot_window else 60
 
     if _calendar_cache["data"] and cache_age < ttl:
-        return {"events": _calendar_cache["data"], "cached": True, "age": int(cache_age), "hot": in_hot_window}
+        return {
+            "events": _calendar_cache["data"],
+            "cached": True,
+            "age": int(cache_age),
+            "hot": in_hot_window,
+            "stale": False,
+        }
 
     events = await _fetch_calendar()
     if events:
         _calendar_cache["data"] = events
         _calendar_cache["ts"] = now
-        nxt = next((e["ts"] for e in events if not e["actual"] and e["ts"] > now), 0.0)
+        nxt = next((e["ts"] for e in events if not e.get("actual") and e["ts"] > now), 0.0)
         _calendar_cache["next_event_ts"] = nxt
         _save_disk_cache()
     else:
@@ -259,13 +293,13 @@ async def get_calendar():
     return {
         "events": _calendar_cache["data"],
         "cached": not events,
-        "age": int(now - _calendar_cache["ts"]) if events else 0,
+        "age": int(now - _calendar_cache["ts"]),
         "hot": in_hot_window,
         "stale": not events and bool(_calendar_cache["data"]),
     }
 
 
-# ====== SERVE INDEX.HTML WITHOUT JINJA ======
+# ====== SERVE INDEX.HTML ======
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return FileResponse("templates/index.html")
