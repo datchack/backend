@@ -167,16 +167,43 @@ async function getNews() {
         const r = await fetch('/api/news');
         const data = await r.json();
 
+        const items = data.items || [];
         const container = document.getElementById('news-content');
+
         container.innerHTML = '';
 
-        (data.items || []).forEach(n => {
-            const div = document.createElement('div');
-            div.innerHTML = `<a href="${n.l}" target="_blank">${n.t}</a>`;
-            container.appendChild(div);
+        items.forEach(n => {
+            const item = document.createElement('div');
+            item.className = 'n-item' + (n.crit ? ' critical' : '');
+
+            const meta = document.createElement('div');
+            meta.className = 'n-meta';
+
+            const time = document.createElement('span');
+            time.textContent = n.time;
+
+            const tag = document.createElement('span');
+            tag.className = 'tag ' + n.s;
+            tag.textContent = n.s;
+
+            meta.appendChild(time);
+            meta.appendChild(tag);
+
+            const link = document.createElement('a');
+            link.href = n.l;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = n.t;
+
+            item.appendChild(meta);
+            item.appendChild(link);
+
+            container.appendChild(item);
         });
 
-    } catch {}
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 // ===================== CALENDAR =====================
@@ -204,25 +231,48 @@ async function fetchCalendar() {
 function renderCalendar() {
     const root = document.getElementById('calendar-content');
 
-    if (!calEvents.length) {
+    if (!Array.isArray(calEvents) || calEvents.length === 0) {
         root.innerHTML = '<div class="cal-empty">Chargement...</div>';
         return;
     }
 
     let html = '';
+    let lastDay = '';
 
     calEvents.forEach(e => {
-        const date = new Date(e.ts * 1000);
-        const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        const dt = new Date(e.ts * 1000);
+
+        const day = dt.toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        });
+
+        if (day !== lastDay) {
+            html += `<div class="cal-day">${day}</div>`;
+            lastDay = day;
+        }
+
+        const time = dt.toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        const impactClass =
+            e.impact === 'High' ? 'high' :
+            e.impact === 'Medium' ? 'medium' : 'low';
 
         html += `
         <div class="cal-row">
-            <span>${time}</span>
-            <span>${e.country}</span>
-            <span>${e.title}</span>
-            <span>${e.actual || '-'}</span>
-            <span>${e.forecast || '-'}</span>
-            <span>${e.previous || '-'}</span>
+            <span class="cal-time">${time}</span>
+            <span class="cal-flag">${e.country}</span>
+            <span class="cal-title">
+                <span class="cal-impact ${impactClass}"></span>
+                ${e.title}
+            </span>
+            <span class="cal-num">${e.actual || '-'}</span>
+            <span class="cal-num">${e.forecast || '-'}</span>
+            <span class="cal-num">${e.previous || '-'}</span>
         </div>`;
     });
 
