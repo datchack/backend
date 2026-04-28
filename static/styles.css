@@ -23,6 +23,9 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     overflow-x: hidden;
     font-size: 13px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .ticker-tape {
@@ -166,14 +169,15 @@ body {
     flex-direction: column;
     gap: 6px;
     padding: 0 6px 6px;
+    flex: 1;
+    min-height: 0;
 }
 
 @media (min-width: 1180px) {
     .main-layout {
         display: grid;
         grid-template-columns: minmax(320px, 1.2fr) minmax(520px, 2.1fr) minmax(320px, 1.2fr);
-        height: calc(100vh - 278px);
-        min-height: 620px;
+        min-height: 0;
     }
 }
 
@@ -509,6 +513,9 @@ body {
     font-family: "Courier New", monospace;
     letter-spacing: 0.4px;
     min-height: 42px;
+    position: relative;
+    z-index: 20;
+    flex-shrink: 0;
 }
 
 .status-bar .ok { color: var(--buy); }
