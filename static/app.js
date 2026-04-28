@@ -332,12 +332,20 @@ function renderAccountState() {
     renderAccessGate();
 }
 
-function toggleAccountPanel(forceOpen = null) {
+function toggleAccountPanel(forceOpen = null, heroOpen = false) {
     const panel = document.getElementById('account-panel');
     if (!panel) return;
 
     const shouldOpen = forceOpen === null ? panel.classList.contains('hidden') : forceOpen;
     panel.classList.toggle('hidden', !shouldOpen);
+    panel.classList.toggle('hero-open', shouldOpen && heroOpen);
+
+    if (shouldOpen) {
+        const emailEl = document.getElementById('account-email');
+        if (emailEl && !accountState.authenticated) {
+            window.setTimeout(() => emailEl.focus(), 30);
+        }
+    }
 }
 
 async function fetchAccountState() {
@@ -389,7 +397,7 @@ async function submitAccountForm(event) {
         if (hasTerminalAccess()) {
             bootTerminalApp();
             renderAccessGate();
-            toggleAccountPanel(false);
+            toggleAccountPanel(false, false);
         }
     } catch (error) {
         setAccountMessage(error.message || 'Erreur compte', 'err');
@@ -417,7 +425,7 @@ function bindAccountControls() {
 
     if (toggle) {
         toggle.addEventListener('click', () => {
-            toggleAccountPanel();
+            toggleAccountPanel(null, false);
             renderAccountState();
         });
     }
@@ -438,15 +446,15 @@ function bindAccountControls() {
     if (startTrialBtn) {
         startTrialBtn.addEventListener('click', () => {
             setAccountMode('register');
-            toggleAccountPanel(true);
-            setAccountMessage('');
+            toggleAccountPanel(true, true);
+            setAccountMessage('Cree ton compte pour activer les 7 jours gratuits.');
         });
     }
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
             setAccountMode('login');
-            toggleAccountPanel(true);
-            setAccountMessage('');
+            toggleAccountPanel(true, true);
+            setAccountMessage('Connecte-toi pour retrouver ton acces.');
         });
     }
 
@@ -454,7 +462,7 @@ function bindAccountControls() {
         if (!panel || panel.classList.contains('hidden')) return;
         const slot = document.querySelector('.account-slot');
         if (slot && !slot.contains(event.target)) {
-            toggleAccountPanel(false);
+            toggleAccountPanel(false, false);
         }
     });
 

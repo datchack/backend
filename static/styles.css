@@ -745,6 +745,17 @@ body.gated .main-layout > .layout-splitter {
     z-index: 40;
 }
 
+body.gated .account-panel.hero-open {
+    position: fixed;
+    right: 50%;
+    bottom: 50%;
+    transform: translate(50%, 50%);
+    width: min(420px, calc(100vw - 24px));
+    z-index: 60;
+    border-color: rgba(162, 89, 255, 0.45);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+}
+
 .account-panel.hidden,
 .account-user.hidden {
     display: none;
