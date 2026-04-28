@@ -20,11 +20,23 @@ function savePrefs(patch) {
 }
 
 const PREFS = loadPrefs();
+const DEFAULT_LAYOUT = {
+    leftWidth: 340,
+    rightWidth: 340,
+    insightWidth: 320,
+    collapsed: {
+        left: false,
+        right: false,
+        chart: false,
+        insight: false,
+    },
+};
 
 let currentSymbol = PREFS.symbol || 'OANDA:XAUUSD';
 let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let currentCenterTab = PREFS.centerTab || 'bias';
+let layoutState = loadLayoutPrefs();
 let lastSeenNewsTs = 0;
 let calEvents = [];
 let contextState = null;
@@ -41,6 +53,29 @@ const MARKETS = {
     TKY: { tz: 'Asia/Tokyo', label: 'TOKYO', open: [9, 0], close: [15, 0] },
     SYD: { tz: 'Australia/Sydney', label: 'SYDNEY', open: [10, 0], close: [16, 0] },
 };
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+function loadLayoutPrefs() {
+    const raw = PREFS.layout || {};
+    return {
+        leftWidth: clamp(Number(raw.leftWidth) || DEFAULT_LAYOUT.leftWidth, 260, 520),
+        rightWidth: clamp(Number(raw.rightWidth) || DEFAULT_LAYOUT.rightWidth, 260, 520),
+        insightWidth: clamp(Number(raw.insightWidth) || DEFAULT_LAYOUT.insightWidth, 260, 520),
+        collapsed: {
+            left: !!raw.collapsed?.left,
+            right: !!raw.collapsed?.right,
+            chart: !!raw.collapsed?.chart,
+            insight: !!raw.collapsed?.insight,
+        },
+    };
+}
+
+function persistLayout() {
+    savePrefs({ layout: layoutState });
+}
 
 function ensureAudio() {
     if (!audioCtx) {
@@ -109,6 +144,125 @@ function renderSoundToggle() {
 
     soundEl.textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF';
     soundEl.style.color = soundEnabled ? '#22c55e' : '';
+}
+
+function updateToggleButtons(panel, collapsed) {
+    document.querySelectorAll(`.panel-btn[data-toggle-panel="${panel}"]`).forEach((button) => {
+        button.textContent = collapsed ? '+' : '-';
+        button.title = collapsed ? 'Ouvrir le panel' : 'Reduire le panel';
+    });
+}
+
+function applyLayoutState() {
+    const root = document.documentElement;
+    const mainLayout = document.querySelector('.main-layout');
+    const centerShell = document.querySelector('.center-shell');
+
+    root.style.setProperty('--left-width', `${layoutState.leftWidth}px`);
+    root.style.setProperty('--right-width', `${layoutState.rightWidth}px`);
+    root.style.setProperty('--insight-width', `${layoutState.insightWidth}px`);
+
+    if (mainLayout) {
+        mainLayout.dataset.leftCollapsed = String(layoutState.collapsed.left);
+        mainLayout.dataset.rightCollapsed = String(layoutState.collapsed.right);
+    }
+
+    if (centerShell) {
+        centerShell.dataset.chartCollapsed = String(layoutState.collapsed.chart);
+        centerShell.dataset.insightCollapsed = String(layoutState.collapsed.insight);
+    }
+
+    ['left', 'right', 'chart', 'insight'].forEach((panel) => {
+        const el = document.querySelector(`[data-layout-panel="${panel}"]`);
+        if (el) {
+            el.dataset.collapsed = String(layoutState.collapsed[panel]);
+        }
+        updateToggleButtons(panel, layoutState.collapsed[panel]);
+    });
+}
+
+function togglePanel(panel) {
+    if (panel === 'chart' && !layoutState.collapsed.chart && layoutState.collapsed.insight) {
+        layoutState.collapsed.insight = false;
+    }
+    if (panel === 'insight' && !layoutState.collapsed.insight && layoutState.collapsed.chart) {
+        layoutState.collapsed.chart = false;
+    }
+
+    layoutState.collapsed[panel] = !layoutState.collapsed[panel];
+    applyLayoutState();
+    persistLayout();
+}
+
+function resetLayout() {
+    layoutState = {
+        leftWidth: DEFAULT_LAYOUT.leftWidth,
+        rightWidth: DEFAULT_LAYOUT.rightWidth,
+        insightWidth: DEFAULT_LAYOUT.insightWidth,
+        collapsed: { ...DEFAULT_LAYOUT.collapsed },
+    };
+    applyLayoutState();
+    persistLayout();
+}
+
+function bindLayoutControls() {
+    document.querySelectorAll('[data-toggle-panel]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const panel = button.dataset.togglePanel;
+            if (!panel) return;
+            togglePanel(panel);
+        });
+    });
+
+    ['layout-reset', 'layout-reset-status'].forEach((id) => {
+        const button = document.getElementById(id);
+        if (!button) return;
+        button.addEventListener('click', resetLayout);
+    });
+
+    applyLayoutState();
+}
+
+function bindResizers() {
+    document.querySelectorAll('[data-resize]').forEach((handle) => {
+        handle.addEventListener('pointerdown', (event) => {
+            const mode = handle.dataset.resize;
+            const mainLayout = document.querySelector('.main-layout');
+            const centerShell = document.querySelector('.center-shell');
+
+            if (!mode || !mainLayout || !centerShell) return;
+            if ((mode === 'left' || mode === 'right') && window.innerWidth < 1180) return;
+            if (mode === 'insight' && (window.innerWidth < 1400 || layoutState.collapsed.chart || layoutState.collapsed.insight)) return;
+
+            event.preventDefault();
+            handle.classList.add('dragging');
+
+            const onMove = (moveEvent) => {
+                if (mode === 'left') {
+                    const rect = mainLayout.getBoundingClientRect();
+                    layoutState.leftWidth = clamp(moveEvent.clientX - rect.left, 260, 520);
+                } else if (mode === 'right') {
+                    const rect = mainLayout.getBoundingClientRect();
+                    layoutState.rightWidth = clamp(rect.right - moveEvent.clientX, 260, 520);
+                } else if (mode === 'insight') {
+                    const rect = centerShell.getBoundingClientRect();
+                    layoutState.insightWidth = clamp(rect.right - moveEvent.clientX, 260, Math.min(520, rect.width - 260));
+                }
+
+                applyLayoutState();
+            };
+
+            const onUp = () => {
+                handle.classList.remove('dragging');
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                persistLayout();
+            };
+
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+        });
+    });
 }
 
 function setCenterTab(tab) {
@@ -759,6 +913,8 @@ function init() {
     renderSoundToggle();
     renderCalendarFilters();
     bindQuoteCards();
+    bindLayoutControls();
+    bindResizers();
     bindCenterTabs();
     bindCommandInput();
     bindSoundPicker();
@@ -772,6 +928,7 @@ function init() {
 
     window.setInterval(updateClocks, 1000);
     window.setInterval(getNews, NEWS_REFRESH_MS);
+    window.addEventListener('resize', applyLayoutState);
 }
 
 init();

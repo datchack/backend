@@ -98,10 +98,14 @@
     </div>
 
     <div class="main-layout">
-        <div class="col col-left">
+        <div class="col col-left" data-layout-panel="left">
+            <button type="button" class="panel-rail" data-toggle-panel="left" title="Ouvrir ou reduire le calendrier">CAL</button>
             <div class="p-header">
                 <span>CALENDRIER ECONOMIQUE</span>
-                <span class="live" id="cal-live">LIVE</span>
+                <span class="p-header-tools">
+                    <span class="live" id="cal-live">LIVE</span>
+                    <button type="button" class="panel-btn" data-toggle-panel="left" title="Reduire le calendrier">-</button>
+                </span>
             </div>
             <div class="week-bar">
                 <span id="week-range">SEMAINE EN COURS</span>
@@ -118,14 +122,23 @@
             </div>
             <div id="calendar-content" class="scroll"></div>
         </div>
+        <div class="layout-splitter" data-resize="left" title="Ajuster le calendrier"></div>
 
         <div class="col col-center" id="chart_container">
             <div class="p-header">
                 <span id="chart-symbol">- CHART -</span>
-                <span class="live">LIVE</span>
+                <span class="p-header-tools">
+                    <span class="live">LIVE</span>
+                    <button type="button" class="panel-btn" id="layout-reset" title="Reinitialiser la disposition">R</button>
+                </span>
             </div>
             <div class="center-shell">
-                <div class="chart-stage">
+                <div class="chart-stage" data-layout-panel="chart">
+                    <button type="button" class="panel-rail panel-rail-inner" data-toggle-panel="chart" title="Ouvrir ou reduire le graphique">CHART</button>
+                    <div class="stage-toolbar">
+                        <span>CHART VIEW</span>
+                        <button type="button" class="panel-btn" data-toggle-panel="chart" title="Reduire le graphique">-</button>
+                    </div>
                     <div class="center-snapshot">
                         <span id="snapshot-bias" class="desk-pill neutral">BIAS -</span>
                         <span id="snapshot-session" class="desk-pill">SESSION -</span>
@@ -133,7 +146,13 @@
                     </div>
                     <div id="tv_main_wrap" class="chart-surface"></div>
                 </div>
-                <div class="insight-panel">
+                <div class="layout-splitter inner-splitter" data-resize="insight" title="Ajuster le panel bias"></div>
+                <div class="insight-panel" data-layout-panel="insight">
+                    <button type="button" class="panel-rail panel-rail-inner" data-toggle-panel="insight" title="Ouvrir ou reduire le panel bias">BIAS</button>
+                    <div class="stage-toolbar insight-toolbar">
+                        <span>BIAS DESK</span>
+                        <button type="button" class="panel-btn" data-toggle-panel="insight" title="Reduire le panel bias">-</button>
+                    </div>
                     <div class="panel-tabs" role="tablist" aria-label="Navigation analyse gold">
                         <button type="button" class="panel-tab active" data-center-tab="bias">Bias</button>
                         <button type="button" class="panel-tab" data-center-tab="drivers">Drivers</button>
@@ -174,11 +193,16 @@
                 </div>
             </div>
         </div>
+        <div class="layout-splitter" data-resize="right" title="Ajuster le fil news"></div>
 
-        <div class="col col-right">
+        <div class="col col-right" data-layout-panel="right">
+            <button type="button" class="panel-rail" data-toggle-panel="right" title="Ouvrir ou reduire les news">NEWS</button>
             <div class="p-header">
                 <span>FIL INFO MULTI-SOURCE</span>
-                <span class="live">LIVE</span>
+                <span class="p-header-tools">
+                    <span class="live">LIVE</span>
+                    <button type="button" class="panel-btn" data-toggle-panel="right" title="Reduire les news">-</button>
+                </span>
             </div>
             <div class="news-toolbar">
                 <div id="news-priority-summary" class="news-summary">PRIORITE -</div>
@@ -210,6 +234,7 @@
                     <option value="alert">ALERT</option>
                 </select>
             </label>
+            <button type="button" id="layout-reset-status" class="status-item status-button" title="Reinitialiser la disposition">RESET LAYOUT</button>
             <span id="status-clock" class="status-item status-clock">--:--:--</span>
         </div>
     </div>

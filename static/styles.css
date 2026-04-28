@@ -13,6 +13,11 @@
     --buy: #00f2ad;
     --sell: #ff4d6d;
     --info: #4facfe;
+    --left-width: 340px;
+    --right-width: 340px;
+    --insight-width: 320px;
+    --rail-width: 44px;
+    --splitter-size: 6px;
 }
 
 * { box-sizing: border-box; }
@@ -175,9 +180,15 @@ body {
 @media (min-width: 1180px) {
     .main-layout {
         display: grid;
-        grid-template-columns: minmax(320px, 1.2fr) minmax(520px, 2.1fr) minmax(320px, 1.2fr);
+        grid-template-columns: var(--left-width) var(--splitter-size) minmax(0, 1fr) var(--splitter-size) var(--right-width);
         min-height: 0;
+        gap: 0;
     }
+}
+
+.layout-splitter,
+.panel-rail {
+    display: none;
 }
 
 .col {
@@ -201,6 +212,43 @@ body {
         min-height: 0;
         height: 100%;
     }
+
+    .layout-splitter {
+        display: block;
+        cursor: col-resize;
+        background: linear-gradient(180deg, transparent 0%, rgba(162, 89, 255, 0.18) 20%, rgba(162, 89, 255, 0.18) 80%, transparent 100%);
+        border-radius: 999px;
+        margin: 14px 0;
+        opacity: 0.55;
+        transition: opacity 0.15s, background 0.15s;
+    }
+
+    .layout-splitter:hover,
+    .layout-splitter.dragging {
+        opacity: 1;
+        background: linear-gradient(180deg, transparent 0%, rgba(162, 89, 255, 0.45) 20%, rgba(162, 89, 255, 0.45) 80%, transparent 100%);
+    }
+
+    .col[data-collapsed="true"] > :not(.panel-rail) {
+        display: none;
+    }
+
+    .col[data-collapsed="true"] .panel-rail {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        cursor: pointer;
+    }
 }
 
 .p-header {
@@ -215,6 +263,12 @@ body {
     color: var(--muted);
     letter-spacing: 0.6px;
     text-transform: uppercase;
+}
+
+.p-header-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .p-header .live {
@@ -237,6 +291,25 @@ body {
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
+}
+
+.panel-btn,
+.status-button {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text);
+    border-radius: 3px;
+    min-height: 22px;
+    min-width: 22px;
+    padding: 0 6px;
+    font: inherit;
+    cursor: pointer;
+}
+
+.panel-btn:hover,
+.status-button:hover {
+    border-color: var(--border-hot);
 }
 
 .scroll {
@@ -587,6 +660,10 @@ body {
     user-select: none;
 }
 
+.status-button {
+    white-space: nowrap;
+}
+
 .status-select-wrap {
     gap: 6px;
     padding-right: 4px;
@@ -785,24 +862,24 @@ body {
 }
 
 .center-shell {
-    display: flex;
+    display: grid;
     flex: 1;
     min-height: 0;
     gap: 6px;
     padding: 6px;
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .chart-stage,
 .insight-panel {
     min-height: 0;
+    min-width: 0;
 }
 
 .chart-stage {
-    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-width: 0;
 }
 
 .center-snapshot {
@@ -812,14 +889,20 @@ body {
 }
 
 .insight-panel {
-    width: 320px;
-    max-width: 100%;
     display: flex;
     flex-direction: column;
     border: 1px solid var(--border);
     border-radius: 4px;
     background: var(--card-3);
     overflow: hidden;
+}
+
+.stage-toolbar {
+    display: none;
+}
+
+.inner-splitter {
+    margin: 0;
 }
 
 .panel-tabs {
@@ -853,15 +936,90 @@ body {
 }
 
 @media (max-width: 1399px) {
-    .center-shell {
-        flex-direction: column;
-    }
-
-    .insight-panel {
-        width: 100%;
-    }
-
     .chart-surface {
         min-height: 360px;
+    }
+}
+
+@media (min-width: 1400px) {
+    .center-shell {
+        grid-template-columns: minmax(0, 1fr) var(--splitter-size) var(--insight-width);
+        gap: 0;
+    }
+
+    .stage-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 34px;
+        padding: 0 10px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--card-3);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+    }
+
+    .insight-toolbar {
+        border: 0;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
+    }
+
+    .inner-splitter {
+        display: block;
+    }
+
+    .chart-stage[data-collapsed="true"] > :not(.panel-rail),
+    .insight-panel[data-collapsed="true"] > :not(.panel-rail) {
+        display: none;
+    }
+
+    .chart-stage[data-collapsed="true"] .panel-rail,
+    .insight-panel[data-collapsed="true"] .panel-rail {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--card-3);
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        cursor: pointer;
+    }
+
+    .center-shell[data-chart-collapsed="true"] {
+        grid-template-columns: var(--rail-width) var(--splitter-size) minmax(260px, 1fr);
+    }
+
+    .center-shell[data-insight-collapsed="true"] {
+        grid-template-columns: minmax(260px, 1fr) var(--splitter-size) var(--rail-width);
+    }
+
+    .center-shell[data-chart-collapsed="true"] .inner-splitter,
+    .center-shell[data-insight-collapsed="true"] .inner-splitter {
+        cursor: default;
+        opacity: 0.3;
+    }
+
+    .main-layout[data-left-collapsed="true"] {
+        grid-template-columns: var(--rail-width) var(--splitter-size) minmax(0, 1fr) var(--splitter-size) var(--right-width);
+    }
+
+    .main-layout[data-right-collapsed="true"] {
+        grid-template-columns: var(--left-width) var(--splitter-size) minmax(0, 1fr) var(--splitter-size) var(--rail-width);
+    }
+
+    .main-layout[data-left-collapsed="true"][data-right-collapsed="true"] {
+        grid-template-columns: var(--rail-width) var(--splitter-size) minmax(0, 1fr) var(--splitter-size) var(--rail-width);
     }
 }
