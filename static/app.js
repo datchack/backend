@@ -222,6 +222,27 @@ function buildImpactDots(level) {
     return `<span class="cal-impact ${level.toLowerCase()}"><i></i><i></i><i></i></span>`;
 }
 
+function getDateKeyFromTs(ts, timeZone = 'Europe/Paris') {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+    return formatter.format(new Date(ts * 1000));
+}
+
+function getDateKeyFromIso(isoString, timeZone = 'Europe/Paris') {
+    const date = new Date(isoString);
+    return getDateKeyFromTs(Math.floor(date.getTime() / 1000), timeZone);
+}
+
+function addDays(date, days) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
+}
+
 function renderCalendarFilters() {
     const root = document.getElementById('cal-filters');
     if (!root) return;
@@ -271,49 +292,86 @@ function renderCalendar() {
     }
 
     const nowTs = Math.floor(Date.now() / 1000);
-    let lastDay = '';
-    let html = '';
+    const timeZone = calendarMeta.timezone || 'Europe/Paris';
+    const eventsByDay = new Map();
 
     filtered.forEach((event) => {
-        const dt = new Date(event.ts * 1000);
-        const day = dt.toLocaleDateString('fr-FR', {
+        const key = getDateKeyFromTs(event.ts, timeZone);
+        if (!eventsByDay.has(key)) {
+            eventsByDay.set(key, []);
+        }
+        eventsByDay.get(key).push(event);
+    });
+
+    let weekStartDate = calendarMeta.weekStart ? new Date(calendarMeta.weekStart) : null;
+    if (!weekStartDate || Number.isNaN(weekStartDate.getTime())) {
+        const fallback = new Date();
+        const offset = (fallback.getDay() + 6) % 7;
+        fallback.setHours(0, 0, 0, 0);
+        fallback.setDate(fallback.getDate() - offset);
+        weekStartDate = fallback;
+    }
+
+    let html = '';
+
+    for (let index = 0; index < 7; index += 1) {
+        const dayDate = addDays(weekStartDate, index);
+        const dayLabel = dayDate.toLocaleDateString('fr-FR', {
             weekday: 'long',
             day: 'numeric',
             month: 'long',
         });
+        const dayKey = getDateKeyFromIso(dayDate.toISOString(), timeZone);
+        const dayEvents = eventsByDay.get(dayKey) || [];
 
-        if (day !== lastDay) {
-            html += `<div class="cal-day">${day}</div>`;
-            lastDay = day;
+        html += `<div class="cal-day">${dayLabel}</div>`;
+
+        if (dayEvents.length === 0) {
+            html += `
+            <div class="cal-row cal-row-empty">
+                <span class="cal-time">--:--</span>
+                <span class="cal-flag">-</span>
+                <span class="cal-title">
+                    <span class="cal-title-text">Aucun evenement programme</span>
+                </span>
+                <span class="cal-num">-</span>
+                <span class="cal-num">-</span>
+                <span class="cal-num">-</span>
+            </div>`;
+            continue;
         }
 
-        const time = dt.toLocaleTimeString('fr-FR', {
-            hour: '2-digit',
-            minute: '2-digit',
+        dayEvents.forEach((event) => {
+            const dt = new Date(event.ts * 1000);
+            const time = dt.toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone,
+            });
+
+            const dueSoon = event.ts >= nowTs && event.ts - nowTs <= 1800;
+            const isPast = event.ts < nowTs;
+            const rowClasses = [
+                'cal-row',
+                getCalendarBiasClass(event),
+                dueSoon ? 'due' : '',
+                isPast ? 'past' : '',
+            ].filter(Boolean).join(' ');
+
+            html += `
+            <div class="${rowClasses}">
+                <span class="cal-time">${time}</span>
+                <span class="cal-flag">${event.country || '-'}</span>
+                <span class="cal-title">
+                    ${buildImpactDots(event.impact)}
+                    <span class="cal-title-text">${event.title || '-'}</span>
+                </span>
+                <span class="cal-num">${formatValue(event.actual, event.unit)}</span>
+                <span class="cal-num">${formatValue(event.forecast, event.unit)}</span>
+                <span class="cal-num">${formatValue(event.previous, event.unit)}</span>
+            </div>`;
         });
-
-        const dueSoon = event.ts >= nowTs && event.ts - nowTs <= 1800;
-        const isPast = event.ts < nowTs;
-        const rowClasses = [
-            'cal-row',
-            getCalendarBiasClass(event),
-            dueSoon ? 'due' : '',
-            isPast ? 'past' : '',
-        ].filter(Boolean).join(' ');
-
-        html += `
-        <div class="${rowClasses}">
-            <span class="cal-time">${time}</span>
-            <span class="cal-flag">${event.country || '-'}</span>
-            <span class="cal-title">
-                ${buildImpactDots(event.impact)}
-                <span class="cal-title-text">${event.title || '-'}</span>
-            </span>
-            <span class="cal-num">${formatValue(event.actual, event.unit)}</span>
-            <span class="cal-num">${formatValue(event.forecast, event.unit)}</span>
-            <span class="cal-num">${formatValue(event.previous, event.unit)}</span>
-        </div>`;
-    });
+    }
 
     root.innerHTML = html;
 }
