@@ -283,15 +283,12 @@ body {
 .desk-pill.neutral { color: var(--warn); border-color: rgba(255, 204, 0, 0.25); }
 
 .desk-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 6px;
-    padding: 6px;
-    border-bottom: 1px solid var(--border);
-}
-
-@media (min-width: 1500px) {
-    .desk-grid { grid-template-columns: 1.05fr 1.2fr 1fr; }
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px;
 }
 
 .desk-card {
@@ -300,6 +297,11 @@ body {
     border-radius: 4px;
     padding: 10px;
     min-height: 118px;
+    display: none;
+}
+
+.desk-card.active {
+    display: block;
 }
 
 .desk-card-head {
@@ -454,7 +456,11 @@ body {
 
 .chart-surface {
     flex: 1;
-    min-height: 320px;
+    min-height: 420px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    background: #090c12;
 }
 
 .n-item {
@@ -776,4 +782,86 @@ body {
 
 @media (max-width: 1179px) {
     .col-center { order: -1; }
+}
+
+.center-shell {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 6px;
+    padding: 6px;
+}
+
+.chart-stage,
+.insight-panel {
+    min-height: 0;
+}
+
+.chart-stage {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.center-snapshot {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.insight-panel {
+    width: 320px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card-3);
+    overflow: hidden;
+}
+
+.panel-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    padding: 1px;
+    background: var(--border);
+}
+
+.panel-tab {
+    appearance: none;
+    border: none;
+    background: var(--card-2);
+    color: var(--muted);
+    min-height: 34px;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    text-transform: uppercase;
+}
+
+.panel-tab:hover {
+    color: var(--text);
+}
+
+.panel-tab.active {
+    background: rgba(162, 89, 255, 0.18);
+    color: var(--text);
+}
+
+@media (max-width: 1399px) {
+    .center-shell {
+        flex-direction: column;
+    }
+
+    .insight-panel {
+        width: 100%;
+    }
+
+    .chart-surface {
+        min-height: 360px;
+    }
 }

@@ -124,39 +124,55 @@
                 <span id="chart-symbol">- CHART -</span>
                 <span class="live">LIVE</span>
             </div>
-            <div class="desk-grid">
-                <div class="desk-card bias-card" id="bias-card">
-                    <div class="desk-card-head">
-                        <span>GOLD BIAS</span>
-                        <span id="bias-score" class="desk-pill neutral">0</span>
+            <div class="center-shell">
+                <div class="chart-stage">
+                    <div class="center-snapshot">
+                        <span id="snapshot-bias" class="desk-pill neutral">BIAS -</span>
+                        <span id="snapshot-session" class="desk-pill">SESSION -</span>
+                        <span id="snapshot-vol" class="desk-pill">VOL -</span>
                     </div>
-                    <div class="bias-main">
-                        <div id="bias-label" class="bias-label">NEUTRAL</div>
-                        <div id="bias-tone" class="bias-tone">Lecture en attente</div>
-                        <div id="bias-reasons" class="bias-reasons"></div>
-                    </div>
-                    <div class="bias-sub">
-                        <span id="confidence-badge" class="desk-pill">CONF -</span>
-                        <span id="volatility-badge" class="desk-pill">VOL -</span>
-                        <span id="session-active" class="desk-pill">SESSION -</span>
-                    </div>
+                    <div id="tv_main_wrap" class="chart-surface"></div>
                 </div>
-                <div class="desk-card driver-card">
-                    <div class="desk-card-head">
-                        <span>GOLD DRIVERS</span>
-                        <span class="desk-pill">LIVE</span>
+                <div class="insight-panel">
+                    <div class="panel-tabs" role="tablist" aria-label="Navigation analyse gold">
+                        <button type="button" class="panel-tab active" data-center-tab="bias">Bias</button>
+                        <button type="button" class="panel-tab" data-center-tab="drivers">Drivers</button>
+                        <button type="button" class="panel-tab" data-center-tab="watch">Watch</button>
                     </div>
-                    <div id="drivers-grid" class="drivers-grid"></div>
-                </div>
-                <div class="desk-card watch-card">
-                    <div class="desk-card-head">
-                        <span>XAU WATCH</span>
-                        <span class="desk-pill">CORR.</span>
+                    <div class="desk-grid">
+                        <div class="desk-card bias-card active" id="bias-card" data-panel="bias">
+                            <div class="desk-card-head">
+                                <span>GOLD BIAS</span>
+                                <span id="bias-score" class="desk-pill neutral">0</span>
+                            </div>
+                            <div class="bias-main">
+                                <div id="bias-label" class="bias-label">NEUTRAL</div>
+                                <div id="bias-tone" class="bias-tone">Lecture en attente</div>
+                                <div id="bias-reasons" class="bias-reasons"></div>
+                            </div>
+                            <div class="bias-sub">
+                                <span id="confidence-badge" class="desk-pill">CONF -</span>
+                                <span id="volatility-badge" class="desk-pill">VOL -</span>
+                                <span id="session-active" class="desk-pill">SESSION -</span>
+                            </div>
+                        </div>
+                        <div class="desk-card driver-card" data-panel="drivers">
+                            <div class="desk-card-head">
+                                <span>GOLD DRIVERS</span>
+                                <span class="desk-pill">LIVE</span>
+                            </div>
+                            <div id="drivers-grid" class="drivers-grid"></div>
+                        </div>
+                        <div class="desk-card watch-card" data-panel="watch">
+                            <div class="desk-card-head">
+                                <span>XAU WATCH</span>
+                                <span class="desk-pill">CORR.</span>
+                            </div>
+                            <div id="watchlist-grid" class="watchlist-grid"></div>
+                        </div>
                     </div>
-                    <div id="watchlist-grid" class="watchlist-grid"></div>
                 </div>
             </div>
-            <div id="tv_main_wrap" class="chart-surface"></div>
         </div>
 
         <div class="col col-right">

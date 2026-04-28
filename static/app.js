@@ -24,6 +24,7 @@ const PREFS = loadPrefs();
 let currentSymbol = PREFS.symbol || 'OANDA:XAUUSD';
 let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
+let currentCenterTab = PREFS.centerTab || 'bias';
 let lastSeenNewsTs = 0;
 let calEvents = [];
 let contextState = null;
@@ -108,6 +109,34 @@ function renderSoundToggle() {
 
     soundEl.textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF';
     soundEl.style.color = soundEnabled ? '#22c55e' : '';
+}
+
+function setCenterTab(tab) {
+    currentCenterTab = tab;
+    savePrefs({ centerTab: tab });
+
+    document.querySelectorAll('[data-center-tab]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.centerTab === tab);
+    });
+
+    document.querySelectorAll('[data-panel]').forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.panel === tab);
+    });
+}
+
+function bindCenterTabs() {
+    const tabs = document.querySelectorAll('[data-center-tab]');
+    if (!tabs.length) return;
+
+    tabs.forEach((button) => {
+        button.addEventListener('click', () => {
+            const { centerTab } = button.dataset;
+            if (!centerTab) return;
+            setCenterTab(centerTab);
+        });
+    });
+
+    setCenterTab(currentCenterTab);
 }
 
 function initChart(symbol) {
@@ -476,6 +505,9 @@ function renderBiasCard(context) {
     const volEl = document.getElementById('volatility-badge');
     const sessionEl = document.getElementById('session-active');
     const statusContext = document.getElementById('status-context');
+    const snapshotBias = document.getElementById('snapshot-bias');
+    const snapshotSession = document.getElementById('snapshot-session');
+    const snapshotVol = document.getElementById('snapshot-vol');
 
     if (!card || !scoreEl || !labelEl || !toneEl || !reasonsEl || !confidenceEl || !volEl || !sessionEl) return;
 
@@ -493,6 +525,17 @@ function renderBiasCard(context) {
     confidenceEl.className = `desk-pill ${toneClass}`;
     volEl.textContent = `VOL ${context.volatility}`;
     sessionEl.textContent = context.session;
+
+    if (snapshotBias) {
+        snapshotBias.textContent = `${context.bias.toUpperCase()} ${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}`;
+        snapshotBias.className = `desk-pill ${toneClass}`;
+    }
+    if (snapshotSession) {
+        snapshotSession.textContent = context.session || 'SESSION -';
+    }
+    if (snapshotVol) {
+        snapshotVol.textContent = `VOL ${context.volatility || '-'}`;
+    }
 
     if (statusContext) {
         statusContext.textContent = `Bias: ${context.bias} (${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}) - ${context.confidence || 0}%`;
@@ -716,6 +759,7 @@ function init() {
     renderSoundToggle();
     renderCalendarFilters();
     bindQuoteCards();
+    bindCenterTabs();
     bindCommandInput();
     bindSoundPicker();
     bindSoundToggle();
