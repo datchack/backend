@@ -117,27 +117,30 @@ _calendar_cache = {"data": [], "ts": 0.0}
 CAL_TTL = 30  # rafraîchit toutes les 30 secondes
 
 
-async def _fetch_finnhub_calendar() -> list[dict]:
+async def _fetch_finnhub_calendar() -> dict:
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(FINNHUB_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status != 200:
-                    return []
+                    return {}
                 data = await resp.json()
         except Exception:
-            return []
+            return {}
 
     events = data.get("economicCalendar", [])
-    out = []
+    grouped = {}
 
     for e in events:
         # Convert timestamp
         try:
-            ts = datetime.fromisoformat(e["time"].replace("Z", "+00:00")).timestamp()
+            dt = datetime.fromisoformat(e["time"].replace("Z", "+00:00"))
         except Exception:
             continue
 
-        out.append({
+        date_key = dt.strftime("%Y-%m-%d")
+        ts = dt.timestamp()
+
+        item = {
             "title": e.get("event", ""),
             "country": e.get("country", "").upper(),
             "impact": e.get("impact", "Low").capitalize(),
@@ -145,10 +148,19 @@ async def _fetch_finnhub_calendar() -> list[dict]:
             "previous": e.get("previous", ""),
             "actual": e.get("actual", ""),
             "ts": ts,
-        })
+        }
 
-    out.sort(key=lambda x: x["ts"])
-    return out
+        if date_key not in grouped:
+            grouped[date_key] = []
+
+        grouped[date_key].append(item)
+
+    # Tri par timestamp dans chaque journée
+    for d in grouped:
+        grouped[d].sort(key=lambda x: x["ts"])
+
+    return grouped
+
 
 
 @app.get("/api/calendar")
@@ -156,28 +168,25 @@ async def get_calendar():
     now = time.time()
     cache_age = now - _calendar_cache["ts"]
 
-    # Serve cache if fresh
     if _calendar_cache["data"] and cache_age < CAL_TTL:
         return {
-            "events": _calendar_cache["data"],
+            "days": _calendar_cache["data"],
             "cached": True,
             "age": int(cache_age),
-            "hot": False,
         }
 
-    # Fetch fresh data
-    events = await _fetch_finnhub_calendar()
+    days = await _fetch_finnhub_calendar()
 
-    if events:
-        _calendar_cache["data"] = events
+    if days:
+        _calendar_cache["data"] = days
         _calendar_cache["ts"] = now
 
     return {
-        "events": _calendar_cache["data"],
+        "days": _calendar_cache["data"],
         "cached": False,
         "age": 0,
-        "hot": False,
     }
+
 
 
 
