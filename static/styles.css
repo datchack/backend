@@ -498,24 +498,101 @@ body {
 .n-item a:hover { color: var(--accent); }
 
 .status-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 10px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 6px 10px;
     background: var(--panel);
     border-top: 1px solid var(--border);
     font-size: 10px;
     color: var(--muted);
     font-family: "Courier New", monospace;
     letter-spacing: 0.4px;
-    min-height: 24px;
-    flex-wrap: wrap;
-    gap: 6px;
+    min-height: 42px;
 }
 
 .status-bar .ok { color: var(--buy); }
 .status-bar .warn { color: var(--warn); }
 .status-bar .err { color: var(--sell); }
+
+.status-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.status-group-center {
+    justify-content: flex-start;
+}
+
+.status-group-right {
+    justify-content: flex-start;
+}
+
+.status-item,
+.status-select-wrap {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.status-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.status-select-wrap {
+    gap: 6px;
+    padding-right: 4px;
+}
+
+.status-label {
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.status-select-wrap select {
+    background: #0a0a0a;
+    color: #e7e7e7;
+    border: 1px solid #2a2a2a;
+    font-family: inherit;
+    font-size: 10px;
+    padding: 1px 6px;
+    cursor: pointer;
+    outline: none;
+}
+
+.status-clock {
+    color: var(--text);
+    min-width: 74px;
+    justify-content: center;
+}
+
+@media (min-width: 1080px) {
+    .status-bar {
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+    }
+
+    .status-group-left {
+        justify-content: flex-start;
+    }
+
+    .status-group-center {
+        justify-content: center;
+    }
+
+    .status-group-right {
+        justify-content: flex-end;
+    }
+}
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-thumb { background: #2a2f3a; border-radius: 2px; }

@@ -171,18 +171,29 @@
     </div>
 
     <div class="status-bar">
-        <span><span class="ok">CONNECTED</span> - 8 sources news - cache 30s</span>
-        <span id="status-news">News: -</span>
-        <span id="status-context">Bias: -</span>
-        <span id="status-sound" style="cursor:pointer;user-select:none;" title="Activer/couper le son sur nouvelles">SOUND OFF</span>
-        <select id="sound-pick" title="Choisir le son d'alerte" style="background:#0a0a0a;color:#e7e7e7;border:1px solid #2a2a2a;font-family:inherit;font-size:11px;padding:1px 4px;cursor:pointer;">
-            <option value="ping">PING</option>
-            <option value="chime" selected>CHIME</option>
-            <option value="siren">SIREN</option>
-            <option value="bloop">BLOOP</option>
-            <option value="alert">ALERT</option>
-        </select>
-        <span id="status-clock">--:--:--</span>
+        <div class="status-group status-group-left">
+            <span class="status-item"><span class="ok">CONNECTED</span></span>
+            <span class="status-item">8 SOURCES NEWS</span>
+            <span class="status-item">CACHE 30S</span>
+        </div>
+        <div class="status-group status-group-center">
+            <span id="status-news" class="status-item">News: -</span>
+            <span id="status-context" class="status-item">Bias: -</span>
+        </div>
+        <div class="status-group status-group-right">
+            <span id="status-sound" class="status-item status-toggle" title="Activer/couper le son sur nouvelles">SOUND OFF</span>
+            <label class="status-select-wrap" for="sound-pick">
+                <span class="status-label">ALERTE</span>
+                <select id="sound-pick" title="Choisir le son d'alerte">
+                    <option value="ping">PING</option>
+                    <option value="chime" selected>CHIME</option>
+                    <option value="siren">SIREN</option>
+                    <option value="bloop">BLOOP</option>
+                    <option value="alert">ALERT</option>
+                </select>
+            </label>
+            <span id="status-clock" class="status-item status-clock">--:--:--</span>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>
