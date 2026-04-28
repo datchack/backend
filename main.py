@@ -108,159 +108,77 @@ async def health():
     }
 
 
-# ====== ECONOMIC CALENDAR (Forex Factory weekly feed — JSON primary, XML fallback) ======
-CALENDAR_JSON_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-CALENDAR_XML_URL  = "https://nfs.faireconomy.media/ff_calendar_thisweek.xml"
-BROWSER_UA = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-)
-ET_TZ = ZoneInfo("America/New_York")
-CALENDAR_DISK_CACHE = "/tmp/tt_calendar_cache.json"
-_calendar_cache: dict = {"data": [], "ts": 0.0, "next_event_ts": 0.0}
+# ====== ECONOMIC CALENDAR (Finnhub API) ======
+
+FINNHUB_API_KEY = "d49nh5hr01qlaebi8n50d49nh5hr01qlaebi8n5g"
+FINNHUB_URL = f"https://finnhub.io/api/v1/calendar/economic?token={FINNHUB_API_KEY}"
+
+_calendar_cache = {"data": [], "ts": 0.0}
+CAL_TTL = 30  # rafraîchit toutes les 30 secondes
 
 
-def _load_disk_cache() -> None:
-    try:
-        if os.path.exists(CALENDAR_DISK_CACHE):
-            with open(CALENDAR_DISK_CACHE, "r") as f:
-                cached = json.load(f)
-            if isinstance(cached, dict) and isinstance(cached.get("data"), list):
-                _calendar_cache["data"] = cached["data"]
-                _calendar_cache["ts"] = float(cached.get("ts") or 0.0)
-                _calendar_cache["next_event_ts"] = float(cached.get("next_event_ts") or 0.0)
-    except Exception:
-        pass
-
-
-def _save_disk_cache() -> None:
-    try:
-        with open(CALENDAR_DISK_CACHE, "w") as f:
-            json.dump(_calendar_cache, f)
-    except Exception:
-        pass
-
-
-_load_disk_cache()
-
-
-def _parse_ff_xml(xml_text: str) -> list[dict]:
-    try:
-        root = ET.fromstring(xml_text)
-    except Exception:
-        return []
-    out: list[dict] = []
-    for ev in root.findall("event"):
-        def g(tag: str) -> str:
-            el = ev.find(tag)
-            return (el.text or "").strip() if el is not None and el.text else ""
-        date_s = g("date")     # "04-26-2026"
-        time_s = g("time")     # "8:00pm" / "All Day" / "Tentative"
-        if not date_s:
-            continue
+async def _fetch_finnhub_calendar() -> list[dict]:
+    async with aiohttp.ClientSession() as session:
         try:
-            month, day, year = [int(x) for x in date_s.split("-")]
-        except Exception:
-            continue
-        time_norm = time_s.lower().replace(" ", "")
-        if time_norm in ("", "allday", "tentative"):
-            dt = datetime(year, month, day, 0, 0, tzinfo=ET_TZ)
-        else:
-            try:
-                dt = datetime.strptime(time_norm, "%I:%M%p").replace(
-                    year=year, month=month, day=day, tzinfo=ET_TZ
-                )
-            except Exception:
-                dt = datetime(year, month, day, 0, 0, tzinfo=ET_TZ)
-        out.append({
-            "title": g("title"),
-            "country": g("country").upper(),
-            "impact": (g("impact") or "Low").capitalize(),
-            "forecast": g("forecast"),
-            "previous": g("previous"),
-            "actual": g("actual"),
-            "ts": dt.timestamp(),
-        })
-    out.sort(key=lambda x: x["ts"])
-    return out
-
-
-def _parse_ff_json(data: list) -> list[dict]:
-    out: list[dict] = []
-    for e in data:
-        try:
-            dt = datetime.fromisoformat(e["date"])
-            ts = dt.timestamp()
-        except Exception:
-            continue
-        out.append({
-            "title": e.get("title", "") or "",
-            "country": (e.get("country", "") or "").upper(),
-            "impact": (e.get("impact", "") or "Low").capitalize(),
-            "forecast": e.get("forecast", "") or "",
-            "previous": e.get("previous", "") or "",
-            "actual": e.get("actual", "") or "",
-            "ts": ts,
-        })
-    out.sort(key=lambda x: x["ts"])
-    return out
-
-
-async def _fetch_calendar() -> list[dict]:
-    headers = {"User-Agent": BROWSER_UA, "Accept": "application/json, text/xml, */*"}
-    async with aiohttp.ClientSession(headers=headers) as session:
-        # Try JSON first (richer / native ISO dates)
-        try:
-            async with session.get(CALENDAR_JSON_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200:
-                    data = await resp.json(content_type=None)
-                    parsed = _parse_ff_json(data)
-                    if parsed:
-                        return parsed
-        except Exception:
-            pass
-        # Fallback to XML when JSON is unavailable / rate-limited
-        try:
-            async with session.get(CALENDAR_XML_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            async with session.get(FINNHUB_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status != 200:
                     return []
-                raw = await resp.read()
-                txt = raw.decode("windows-1252", errors="replace")
-                return _parse_ff_xml(txt)
+                data = await resp.json()
         except Exception:
             return []
+
+    events = data.get("economicCalendar", [])
+    out = []
+
+    for e in events:
+        # Convert timestamp
+        try:
+            ts = datetime.fromisoformat(e["time"].replace("Z", "+00:00")).timestamp()
+        except Exception:
+            continue
+
+        out.append({
+            "title": e.get("event", ""),
+            "country": e.get("country", "").upper(),
+            "impact": e.get("impact", "Low").capitalize(),
+            "forecast": e.get("forecast", ""),
+            "previous": e.get("previous", ""),
+            "actual": e.get("actual", ""),
+            "ts": ts,
+        })
+
+    out.sort(key=lambda x: x["ts"])
+    return out
 
 
 @app.get("/api/calendar")
 async def get_calendar():
     now = time.time()
-    upcoming_ts = _calendar_cache.get("next_event_ts", 0.0)
     cache_age = now - _calendar_cache["ts"]
-    # Adaptive cache: 10s when an event is between -90s and +120s of now, else 60s
-    in_hot_window = bool(upcoming_ts and -90 < (upcoming_ts - now) < 120)
-    ttl = 10 if in_hot_window else 60
 
-    if _calendar_cache["data"] and cache_age < ttl:
-        return {"events": _calendar_cache["data"], "cached": True, "age": int(cache_age), "hot": in_hot_window}
+    # Serve cache if fresh
+    if _calendar_cache["data"] and cache_age < CAL_TTL:
+        return {
+            "events": _calendar_cache["data"],
+            "cached": True,
+            "age": int(cache_age),
+            "hot": False,
+        }
 
-    events = await _fetch_calendar()
+    # Fetch fresh data
+    events = await _fetch_finnhub_calendar()
+
     if events:
         _calendar_cache["data"] = events
         _calendar_cache["ts"] = now
-        nxt = next((e["ts"] for e in events if not e["actual"] and e["ts"] > now), 0.0)
-        _calendar_cache["next_event_ts"] = nxt
-        _save_disk_cache()
-    else:
-        # Source unreachable / rate-limited → keep serving last known data, mark TS
-        # so we don't keep hammering it within the same TTL.
-        _calendar_cache["ts"] = now
+
     return {
         "events": _calendar_cache["data"],
-        "cached": not events,
-        "age": int(now - _calendar_cache["ts"]) if events else 0,
-        "hot": in_hot_window,
-        "stale": not events and bool(_calendar_cache["data"]),
+        "cached": False,
+        "age": 0,
+        "hot": False,
     }
+
 
 
 INDEX_HTML = r"""<!DOCTYPE html>
