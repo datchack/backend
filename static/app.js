@@ -471,26 +471,31 @@ function renderBiasCard(context) {
     const scoreEl = document.getElementById('bias-score');
     const labelEl = document.getElementById('bias-label');
     const toneEl = document.getElementById('bias-tone');
+    const reasonsEl = document.getElementById('bias-reasons');
+    const confidenceEl = document.getElementById('confidence-badge');
     const volEl = document.getElementById('volatility-badge');
     const sessionEl = document.getElementById('session-active');
     const statusContext = document.getElementById('status-context');
 
-    if (!card || !scoreEl || !labelEl || !toneEl || !volEl || !sessionEl) return;
+    if (!card || !scoreEl || !labelEl || !toneEl || !reasonsEl || !confidenceEl || !volEl || !sessionEl) return;
 
     const toneClass = context.bias === 'Bullish' ? 'bullish' : context.bias === 'Bearish' ? 'bearish' : 'neutral';
     card.classList.remove('bullish', 'bearish', 'neutral');
     card.classList.add(toneClass);
 
-    scoreEl.textContent = `${context.score > 0 ? '+' : ''}${context.score}`;
+    scoreEl.textContent = `${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}`;
     scoreEl.className = `desk-pill ${toneClass}`;
     labelEl.textContent = context.bias.toUpperCase();
     labelEl.className = `bias-label ${toneClass}`;
-    toneEl.textContent = `${context.tone.toUpperCase()} - ${context.gold ? `Gold ${formatSignedPercent(context.gold.change_pct)}` : 'Gold feed live'}`;
+    toneEl.textContent = `${context.tone.toUpperCase()} - ${context.summary || (context.gold ? `Gold ${formatSignedPercent(context.gold.change_pct)}` : 'Gold feed live')}`;
+    reasonsEl.innerHTML = (context.reasons || []).slice(0, 3).map((reason) => `<span class="bias-reason">${reason}</span>`).join('');
+    confidenceEl.textContent = `CONF ${context.confidence || 0}%`;
+    confidenceEl.className = `desk-pill ${toneClass}`;
     volEl.textContent = `VOL ${context.volatility}`;
     sessionEl.textContent = context.session;
 
     if (statusContext) {
-        statusContext.textContent = `Bias: ${context.bias} (${context.score > 0 ? '+' : ''}${context.score})`;
+        statusContext.textContent = `Bias: ${context.bias} (${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}) - ${context.confidence || 0}%`;
     }
 }
 

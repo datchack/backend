@@ -311,76 +311,197 @@ async def fetch_market_snapshot(session: aiohttp.ClientSession, symbol: str) -> 
     }
 
 
+def evaluate_driver(
+    *,
+    key: str,
+    label: str,
+    value: float,
+    change_pct: float,
+    bullish_when: str,
+    weight: float,
+    strong_threshold: float,
+    medium_threshold: float,
+    bullish_note: str,
+    bearish_note: str,
+    neutral_note: str,
+) -> dict:
+    magnitude = abs(change_pct)
+    if magnitude >= strong_threshold:
+        intensity = 1.0
+    elif magnitude >= medium_threshold:
+        intensity = 0.5
+    else:
+        intensity = 0.0
+
+    direction = 0
+    if intensity > 0:
+        if bullish_when == "down":
+            direction = 1 if change_pct < 0 else -1
+        else:
+            direction = 1 if change_pct > 0 else -1
+
+    contribution = round(direction * weight * intensity, 2)
+    bias = "bullish" if contribution > 0 else "bearish" if contribution < 0 else "neutral"
+    note = bullish_note if contribution > 0 else bearish_note if contribution < 0 else neutral_note
+
+    return {
+        "key": key,
+        "label": label,
+        "value": value,
+        "change_pct": round(change_pct, 3),
+        "bias": bias,
+        "contribution": contribution,
+        "weight": weight,
+        "note": note,
+    }
+
+
 def build_gold_context(markets: dict[str, dict]) -> dict:
     gold = markets.get("gold")
+    silver = markets.get("silver")
     dxy = markets.get("dxy")
     us10y = markets.get("us10y")
     oil = markets.get("oil")
     spy = markets.get("spy")
     qqq = markets.get("qqq")
 
-    score = 0
     drivers = []
 
     if dxy:
-        impact = 1 if dxy["change_pct"] < 0 else -1 if dxy["change_pct"] > 0 else 0
-        score += impact
-        drivers.append({
-            "key": "dxy",
-            "label": "Dollar",
-            "value": dxy["price"],
-            "change_pct": dxy["change_pct"],
-            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
-            "note": "Dollar down helps gold" if impact > 0 else "Dollar up pressures gold" if impact < 0 else "Dollar flat",
-        })
+        drivers.append(evaluate_driver(
+            key="dxy",
+            label="Dollar",
+            value=dxy["price"],
+            change_pct=dxy["change_pct"],
+            bullish_when="down",
+            weight=3.0,
+            strong_threshold=0.25,
+            medium_threshold=0.10,
+            bullish_note="Dollar softer supports gold",
+            bearish_note="Dollar strength pressures gold",
+            neutral_note="Dollar impact limited",
+        ))
 
     if us10y:
-        impact = 1 if us10y["change_pct"] < 0 else -1 if us10y["change_pct"] > 0 else 0
-        score += impact
-        drivers.append({
-            "key": "us10y",
-            "label": "US10Y",
-            "value": us10y["price"],
-            "change_pct": us10y["change_pct"],
-            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
-            "note": "Yields down supports gold" if impact > 0 else "Yields up pressures gold" if impact < 0 else "Yields flat",
-        })
+        drivers.append(evaluate_driver(
+            key="us10y",
+            label="US10Y",
+            value=us10y["price"],
+            change_pct=us10y["change_pct"],
+            bullish_when="down",
+            weight=3.0,
+            strong_threshold=0.30,
+            medium_threshold=0.12,
+            bullish_note="Yields easing supports gold",
+            bearish_note="Yields rising pressures gold",
+            neutral_note="Yield pressure mixed",
+        ))
+
+    if gold:
+        drivers.append(evaluate_driver(
+            key="gold_momo",
+            label="Gold",
+            value=gold["price"],
+            change_pct=gold["change_pct"],
+            bullish_when="up",
+            weight=2.0,
+            strong_threshold=0.90,
+            medium_threshold=0.35,
+            bullish_note="Gold momentum confirms buyers",
+            bearish_note="Gold momentum confirms sellers",
+            neutral_note="Gold momentum undecided",
+        ))
+
+    if silver:
+        drivers.append(evaluate_driver(
+            key="silver",
+            label="Silver",
+            value=silver["price"],
+            change_pct=silver["change_pct"],
+            bullish_when="up",
+            weight=1.0,
+            strong_threshold=1.00,
+            medium_threshold=0.40,
+            bullish_note="Silver confirms metals bid",
+            bearish_note="Silver weakens metals tone",
+            neutral_note="Silver not confirming",
+        ))
 
     if oil:
-        impact = 1 if oil["change_pct"] > 0.4 else -1 if oil["change_pct"] < -0.4 else 0
-        score += impact
-        drivers.append({
-            "key": "oil",
-            "label": "WTI",
-            "value": oil["price"],
-            "change_pct": oil["change_pct"],
-            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
-            "note": "Energy stress can lift gold" if impact > 0 else "Oil easing cools stress" if impact < 0 else "Oil steady",
-        })
+        drivers.append(evaluate_driver(
+            key="oil",
+            label="WTI",
+            value=oil["price"],
+            change_pct=oil["change_pct"],
+            bullish_when="up",
+            weight=1.0,
+            strong_threshold=1.20,
+            medium_threshold=0.50,
+            bullish_note="Energy stress can lift gold",
+            bearish_note="Oil easing cools stress bid",
+            neutral_note="Oil impact limited",
+        ))
 
-    risk_change = None
     if spy and qqq:
         risk_change = (spy["change_pct"] + qqq["change_pct"]) / 2
-        impact = 1 if risk_change < -0.35 else -1 if risk_change > 0.35 else 0
-        score += impact
-        drivers.append({
-            "key": "risk",
-            "label": "Risk",
-            "value": round(risk_change, 3),
-            "change_pct": round(risk_change, 3),
-            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
-            "note": "Equities under pressure" if impact > 0 else "Risk appetite firm" if impact < 0 else "Risk mixed",
-        })
+        drivers.append(evaluate_driver(
+            key="risk",
+            label="Risk",
+            value=round(risk_change, 3),
+            change_pct=risk_change,
+            bullish_when="down",
+            weight=1.5,
+            strong_threshold=0.90,
+            medium_threshold=0.35,
+            bullish_note="Risk-off tone supports gold",
+            bearish_note="Risk appetite weighs on gold",
+            neutral_note="Risk tone mixed",
+        ))
 
-    if score >= 2:
+    score = round(sum(driver["contribution"] for driver in drivers), 2)
+    max_score = round(sum(driver["weight"] for driver in drivers), 2) or 1.0
+
+    if score >= 2.5:
         bias = "Bullish"
-        tone = "supportive"
-    elif score <= -2:
+        tone = "macro support building"
+    elif score <= -2.5:
         bias = "Bearish"
-        tone = "defensive"
+        tone = "macro pressure building"
     else:
         bias = "Neutral"
-        tone = "balanced"
+        tone = "signals mixed"
+
+    directional_drivers = [driver for driver in drivers if driver["contribution"] != 0]
+    if directional_drivers:
+        bias_sign = 1 if score > 0 else -1 if score < 0 else 0
+        aligned = sum(
+            1 for driver in directional_drivers
+            if (driver["contribution"] > 0 and bias_sign > 0) or (driver["contribution"] < 0 and bias_sign < 0)
+        )
+        alignment_ratio = aligned / len(directional_drivers) if bias_sign != 0 else 0.5
+    else:
+        alignment_ratio = 0.0
+
+    magnitude_ratio = min(1.0, abs(score) / max_score)
+    if bias == "Neutral":
+        confidence = int(round((0.25 + magnitude_ratio * 0.35 + alignment_ratio * 0.15) * 100))
+    else:
+        confidence = int(round((magnitude_ratio * 0.6 + alignment_ratio * 0.4) * 100))
+    confidence = max(18, min(confidence, 92))
+
+    top_reasons = [
+        driver["note"]
+        for driver in sorted(directional_drivers, key=lambda item: abs(item["contribution"]), reverse=True)[:3]
+    ]
+    if not top_reasons:
+        top_reasons = ["Cross-asset signals are not decisive"]
+
+    if bias == "Bullish":
+        summary = " / ".join(top_reasons[:2])
+    elif bias == "Bearish":
+        summary = " / ".join(top_reasons[:2])
+    else:
+        summary = " / ".join(top_reasons[:2])
 
     session_flags = {
         "asia": datetime.now(PARIS).hour < 8,
@@ -405,6 +526,9 @@ def build_gold_context(markets: dict[str, dict]) -> dict:
         "bias": bias,
         "score": score,
         "tone": tone,
+        "confidence": confidence,
+        "summary": summary,
+        "reasons": top_reasons,
         "volatility": volatility,
         "session": active_session,
         "drivers": drivers,
