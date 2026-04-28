@@ -1,6 +1,7 @@
 const PREFS_KEY = 'tt_prefs_v1';
 const CALENDAR_REFRESH_MS = 60000;
 const NEWS_REFRESH_MS = 8000;
+const CONTEXT_REFRESH_MS = 15000;
 const IMPACT_LEVELS = ['High', 'Medium', 'Low'];
 
 function loadPrefs() {
@@ -25,6 +26,7 @@ let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let lastSeenNewsTs = 0;
 let calEvents = [];
+let contextState = null;
 let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null };
 let audioCtx = null;
 
@@ -112,6 +114,8 @@ function initChart(symbol) {
     currentSymbol = symbol;
 
     const wrap = document.getElementById('tv_main_wrap');
+    if (!wrap) return;
+
     wrap.innerHTML = '<div id="tv_main" style="height:100%;"></div>';
 
     const symbolLabel = document.getElementById('chart-symbol');
@@ -162,6 +166,18 @@ function isMarketOpen(parts, market) {
     return nowMinutes >= openMinutes && nowMinutes < closeMinutes;
 }
 
+function getActiveSessionLabel() {
+    if (contextState?.session) {
+        return contextState.session;
+    }
+
+    const hour = new Date().getHours();
+    if (hour >= 14 && hour < 17) return 'LONDON / NEW YORK';
+    if (hour >= 17 && hour < 22) return 'NEW YORK';
+    if (hour >= 8 && hour < 14) return 'LONDON';
+    return 'ASIA';
+}
+
 function updateClocks() {
     Object.entries(MARKETS).forEach(([key, market]) => {
         const parts = getTzParts(market.tz);
@@ -184,13 +200,27 @@ function updateClocks() {
             second: '2-digit',
         }).format(new Date());
     }
+
+    const sessionBadge = document.getElementById('session-badge');
+    if (sessionBadge) {
+        sessionBadge.textContent = getActiveSessionLabel();
+    }
 }
 
-function formatValue(value, unit) {
+function formatValue(value, unit = '') {
     if (value === null || value === undefined || value === '') {
         return '-';
     }
-    return unit ? `${value}${unit}` : String(value);
+    const text = typeof value === 'number' ? value.toLocaleString('en-US', { maximumFractionDigits: 3 }) : String(value);
+    return unit ? `${text}${unit}` : text;
+}
+
+function formatSignedPercent(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return '-';
+    }
+    const num = Number(value);
+    return `${num > 0 ? '+' : ''}${num.toFixed(2)}%`;
 }
 
 function parseComparable(value) {
@@ -271,9 +301,27 @@ function renderCalendarFilters() {
     });
 }
 
+function renderWeekRange() {
+    const weekEl = document.getElementById('week-range');
+    if (!weekEl) return;
+
+    if (!calendarMeta.weekStart || !calendarMeta.weekEnd) {
+        weekEl.textContent = 'SEMAINE EN COURS';
+        return;
+    }
+
+    const start = new Date(calendarMeta.weekStart);
+    const end = addDays(new Date(calendarMeta.weekEnd), -1);
+    const startLabel = start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    const endLabel = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    weekEl.textContent = `SEMAINE DU ${startLabel.toUpperCase()} AU ${endLabel.toUpperCase()}`;
+}
+
 function renderCalendar() {
     const root = document.getElementById('calendar-content');
     if (!root) return;
+
+    renderWeekRange();
 
     if (calendarMeta.error && calEvents.length === 0) {
         root.innerHTML = `<div class="cal-empty">Erreur calendrier: ${calendarMeta.error}</div>`;
@@ -418,6 +466,115 @@ async function fetchCalendar() {
     window.setTimeout(fetchCalendar, CALENDAR_REFRESH_MS);
 }
 
+function renderBiasCard(context) {
+    const card = document.getElementById('bias-card');
+    const scoreEl = document.getElementById('bias-score');
+    const labelEl = document.getElementById('bias-label');
+    const toneEl = document.getElementById('bias-tone');
+    const volEl = document.getElementById('volatility-badge');
+    const sessionEl = document.getElementById('session-active');
+    const statusContext = document.getElementById('status-context');
+
+    if (!card || !scoreEl || !labelEl || !toneEl || !volEl || !sessionEl) return;
+
+    const toneClass = context.bias === 'Bullish' ? 'bullish' : context.bias === 'Bearish' ? 'bearish' : 'neutral';
+    card.classList.remove('bullish', 'bearish', 'neutral');
+    card.classList.add(toneClass);
+
+    scoreEl.textContent = `${context.score > 0 ? '+' : ''}${context.score}`;
+    scoreEl.className = `desk-pill ${toneClass}`;
+    labelEl.textContent = context.bias.toUpperCase();
+    labelEl.className = `bias-label ${toneClass}`;
+    toneEl.textContent = `${context.tone.toUpperCase()} - ${context.gold ? `Gold ${formatSignedPercent(context.gold.change_pct)}` : 'Gold feed live'}`;
+    volEl.textContent = `VOL ${context.volatility}`;
+    sessionEl.textContent = context.session;
+
+    if (statusContext) {
+        statusContext.textContent = `Bias: ${context.bias} (${context.score > 0 ? '+' : ''}${context.score})`;
+    }
+}
+
+function renderDrivers(context) {
+    const root = document.getElementById('drivers-grid');
+    if (!root) return;
+
+    root.innerHTML = (context.drivers || []).map((driver) => `
+        <div class="driver-item ${driver.bias}">
+            <div class="driver-top">
+                <span class="driver-label">${driver.label}</span>
+                <span class="driver-change ${driver.bias}">${formatSignedPercent(driver.change_pct)}</span>
+            </div>
+            <div class="driver-value">${formatValue(driver.value)}</div>
+            <div class="driver-note">${driver.note}</div>
+        </div>
+    `).join('');
+}
+
+function renderWatchlist(context) {
+    const root = document.getElementById('watchlist-grid');
+    if (!root) return;
+
+    root.innerHTML = (context.watchlist || []).map((item) => {
+        const direction = item.change_pct > 0 ? 'up' : item.change_pct < 0 ? 'down' : 'flat';
+        return `
+        <button type="button" class="watch-item" data-symbol="${item.symbol}">
+            <span class="watch-label">${item.label}</span>
+            <span class="watch-price">${formatValue(item.price)}</span>
+            <span class="watch-change ${direction}">${formatSignedPercent(item.change_pct)}</span>
+        </button>`;
+    }).join('');
+
+    root.querySelectorAll('[data-symbol]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const symbol = button.dataset.symbol;
+            if (!symbol) return;
+
+            const tvMap = {
+                'GC=F': 'COMEX:GC1!',
+                'SI=F': 'COMEX:SI1!',
+                'DX-Y.NYB': 'CAPITALCOM:DXY',
+                '^TNX': 'TVC:US10Y',
+                'CL=F': 'NYMEX:CL1!',
+                'SPY': 'AMEX:SPY',
+                'QQQ': 'NASDAQ:QQQ',
+            };
+            changeChart(tvMap[symbol] || symbol);
+        });
+    });
+}
+
+async function fetchContext() {
+    try {
+        const response = await fetch('/api/context', { cache: 'no-store' });
+        const payload = await response.json();
+        contextState = payload;
+        renderBiasCard(payload);
+        renderDrivers(payload);
+        renderWatchlist(payload);
+        updateClocks();
+    } catch (error) {
+        console.error(error);
+    }
+
+    window.setTimeout(fetchContext, CONTEXT_REFRESH_MS);
+}
+
+function sourceClass(source) {
+    return source.replace(/[^A-Z0-9_-]/gi, '_');
+}
+
+function renderNewsSummaries(items) {
+    const priorityEl = document.getElementById('news-priority-summary');
+    const officialEl = document.getElementById('official-summary');
+    if (!priorityEl || !officialEl) return;
+
+    const high = items.filter((item) => item.priority === 'high').length;
+    const official = items.filter((item) => (item.tags || []).includes('OFFICIAL')).length;
+
+    priorityEl.textContent = `HIGH ${high}`;
+    officialEl.textContent = `OFFICIAL ${official}`;
+}
+
 async function getNews() {
     try {
         const response = await fetch('/api/news');
@@ -429,6 +586,7 @@ async function getNews() {
         container.innerHTML = '';
 
         let freshCount = 0;
+        renderNewsSummaries(items);
 
         items.forEach((itemData) => {
             const item = document.createElement('div');
@@ -437,7 +595,7 @@ async function getNews() {
                 freshCount += 1;
             }
 
-            item.className = `n-item${itemData.crit ? ' critical' : ''}${isFresh ? ' fresh' : ''}`;
+            item.className = `n-item ${itemData.priority || 'low'}${itemData.crit ? ' critical' : ''}${isFresh ? ' fresh' : ''}`;
 
             const meta = document.createElement('div');
             meta.className = 'n-meta';
@@ -445,12 +603,24 @@ async function getNews() {
             const time = document.createElement('span');
             time.textContent = itemData.time;
 
-            const tag = document.createElement('span');
-            tag.className = `tag ${itemData.s}`;
-            tag.textContent = itemData.s;
+            const source = document.createElement('span');
+            source.className = `tag ${sourceClass(itemData.s)}`;
+            source.textContent = itemData.s;
+
+            const priority = document.createElement('span');
+            priority.className = `tag priority ${itemData.priority || 'low'}`;
+            priority.textContent = (itemData.priority || 'low').toUpperCase();
 
             meta.appendChild(time);
-            meta.appendChild(tag);
+            meta.appendChild(source);
+            meta.appendChild(priority);
+
+            (itemData.tags || []).slice(0, 3).forEach((tagName) => {
+                const tag = document.createElement('span');
+                tag.className = `tag topic ${tagName.toLowerCase()}`;
+                tag.textContent = tagName;
+                meta.appendChild(tag);
+            });
 
             const link = document.createElement('a');
             link.href = itemData.l;
@@ -469,7 +639,8 @@ async function getNews() {
 
         const statusNews = document.getElementById('status-news');
         if (statusNews) {
-            statusNews.textContent = `News: ${items.length} items${data.cached ? ` - cache ${data.age}s` : ''}`;
+            const highCount = items.filter((item) => item.priority === 'high').length;
+            statusNews.textContent = `News: ${items.length} items - high ${highCount}${data.cached ? ` - cache ${data.age}s` : ''}`;
         }
 
         if (freshCount > 0) {
@@ -548,6 +719,7 @@ function init() {
     updateClocks();
     getNews();
     fetchCalendar();
+    fetchContext();
 
     window.setInterval(updateClocks, 1000);
     window.setInterval(getNews, NEWS_REFRESH_MS);

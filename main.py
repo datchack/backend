@@ -40,6 +40,18 @@ CALENDAR_TZ = PARIS
 
 _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
+_context_cache: dict = {"data": None, "ts": 0.0}
+CONTEXT_CACHE_TTL = 30
+
+MARKET_SYMBOLS = {
+    "gold": {"symbol": "GC=F", "label": "GOLD"},
+    "silver": {"symbol": "SI=F", "label": "SILVER"},
+    "dxy": {"symbol": "DX-Y.NYB", "label": "DXY"},
+    "us10y": {"symbol": "^TNX", "label": "US10Y"},
+    "oil": {"symbol": "CL=F", "label": "WTI"},
+    "spy": {"symbol": "SPY", "label": "SPY"},
+    "qqq": {"symbol": "QQQ", "label": "QQQ"},
+}
 
 
 def parse_fmp_datetime(raw_date: str) -> datetime | None:
@@ -97,13 +109,52 @@ def get_current_week_bounds(now: datetime | None = None) -> tuple[datetime, date
 
 
 def _format_news_item(name: str, title: str, link: str, dt: datetime) -> dict:
+    title_upper = title.upper()
     return {
         "s": name,
         "t": title,
         "l": link,
         "time": dt.astimezone(PARIS).strftime("%H:%M:%S"),
         "ts": dt.timestamp(),
-        "crit": any(keyword in title.upper() for keyword in ALERTS_CRITICAL),
+        "crit": any(keyword in title_upper for keyword in ALERTS_CRITICAL),
+        **classify_news_item(name, title_upper),
+    }
+
+
+def classify_news_item(source: str, title_upper: str) -> dict:
+    categories = []
+    score = 0
+
+    if any(keyword in title_upper for keyword in ("FED", "FOMC", "POWELL", "RATE", "MONETARY POLICY")):
+        categories.append("FED")
+        score += 5
+    if any(keyword in title_upper for keyword in ("CPI", "PCE", "NFP", "PAYROLLS", "INFLATION", "UNEMPLOYMENT", "JOBLESS", "GDP", "PMI", "RETAIL SALES")):
+        categories.append("MACRO")
+        score += 4
+    if any(keyword in title_upper for keyword in ("IRAN", "ISRAEL", "GAZA", "UKRAINE", "RUSSIA", "CHINA", "MISSILE", "ATTACK", "SANCTION", "WAR", "OIL")):
+        categories.append("GEO")
+        score += 4
+    if any(keyword in title_upper for keyword in ("GOLD", "XAU", "BULLION", "TREASURY YIELD", "DOLLAR")):
+        categories.append("XAU")
+        score += 3
+    if source in {"FED", "TREASURY", "DOL"}:
+        categories.append("OFFICIAL")
+        score += 2
+
+    if not categories:
+        categories.append("MARKETS")
+        score += 1
+
+    if score >= 7:
+        priority = "high"
+    elif score >= 4:
+        priority = "medium"
+    else:
+        priority = "low"
+
+    return {
+        "priority": priority,
+        "tags": list(dict.fromkeys(categories)),
     }
 
 
@@ -224,6 +275,170 @@ async def fetch_calendar() -> tuple[list[dict], str | None]:
     return filtered_events, None
 
 
+async def fetch_market_snapshot(session: aiohttp.ClientSession, symbol: str) -> dict | None:
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5d"
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            if resp.status != 200:
+                return None
+            payload = await resp.json()
+    except Exception:
+        return None
+
+    try:
+        result = payload["chart"]["result"][0]
+        meta = result["meta"]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+    current = meta.get("regularMarketPrice")
+    previous = meta.get("chartPreviousClose")
+    if current is None or previous in (None, 0):
+        return None
+
+    change = current - previous
+    change_pct = (change / previous) * 100
+
+    return {
+        "symbol": symbol,
+        "price": round(float(current), 4),
+        "previous_close": round(float(previous), 4),
+        "change": round(float(change), 4),
+        "change_pct": round(float(change_pct), 3),
+        "high": meta.get("regularMarketDayHigh"),
+        "low": meta.get("regularMarketDayLow"),
+        "time": meta.get("regularMarketTime"),
+    }
+
+
+def build_gold_context(markets: dict[str, dict]) -> dict:
+    gold = markets.get("gold")
+    dxy = markets.get("dxy")
+    us10y = markets.get("us10y")
+    oil = markets.get("oil")
+    spy = markets.get("spy")
+    qqq = markets.get("qqq")
+
+    score = 0
+    drivers = []
+
+    if dxy:
+        impact = 1 if dxy["change_pct"] < 0 else -1 if dxy["change_pct"] > 0 else 0
+        score += impact
+        drivers.append({
+            "key": "dxy",
+            "label": "Dollar",
+            "value": dxy["price"],
+            "change_pct": dxy["change_pct"],
+            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
+            "note": "Dollar down helps gold" if impact > 0 else "Dollar up pressures gold" if impact < 0 else "Dollar flat",
+        })
+
+    if us10y:
+        impact = 1 if us10y["change_pct"] < 0 else -1 if us10y["change_pct"] > 0 else 0
+        score += impact
+        drivers.append({
+            "key": "us10y",
+            "label": "US10Y",
+            "value": us10y["price"],
+            "change_pct": us10y["change_pct"],
+            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
+            "note": "Yields down supports gold" if impact > 0 else "Yields up pressures gold" if impact < 0 else "Yields flat",
+        })
+
+    if oil:
+        impact = 1 if oil["change_pct"] > 0.4 else -1 if oil["change_pct"] < -0.4 else 0
+        score += impact
+        drivers.append({
+            "key": "oil",
+            "label": "WTI",
+            "value": oil["price"],
+            "change_pct": oil["change_pct"],
+            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
+            "note": "Energy stress can lift gold" if impact > 0 else "Oil easing cools stress" if impact < 0 else "Oil steady",
+        })
+
+    risk_change = None
+    if spy and qqq:
+        risk_change = (spy["change_pct"] + qqq["change_pct"]) / 2
+        impact = 1 if risk_change < -0.35 else -1 if risk_change > 0.35 else 0
+        score += impact
+        drivers.append({
+            "key": "risk",
+            "label": "Risk",
+            "value": round(risk_change, 3),
+            "change_pct": round(risk_change, 3),
+            "bias": "bullish" if impact > 0 else "bearish" if impact < 0 else "neutral",
+            "note": "Equities under pressure" if impact > 0 else "Risk appetite firm" if impact < 0 else "Risk mixed",
+        })
+
+    if score >= 2:
+        bias = "Bullish"
+        tone = "supportive"
+    elif score <= -2:
+        bias = "Bearish"
+        tone = "defensive"
+    else:
+        bias = "Neutral"
+        tone = "balanced"
+
+    session_flags = {
+        "asia": datetime.now(PARIS).hour < 8,
+        "london": 8 <= datetime.now(PARIS).hour < 14,
+        "ny_overlap": 14 <= datetime.now(PARIS).hour < 17,
+        "ny_pm": 17 <= datetime.now(PARIS).hour < 22,
+    }
+    if session_flags["ny_overlap"]:
+        active_session = "LONDON / NEW YORK"
+        volatility = "HIGH"
+    elif session_flags["ny_pm"]:
+        active_session = "NEW YORK"
+        volatility = "ELEVATED"
+    elif session_flags["london"]:
+        active_session = "LONDON"
+        volatility = "ACTIVE"
+    else:
+        active_session = "ASIA"
+        volatility = "QUIET"
+
+    return {
+        "bias": bias,
+        "score": score,
+        "tone": tone,
+        "volatility": volatility,
+        "session": active_session,
+        "drivers": drivers,
+        "watchlist": [
+            {"key": key, "label": cfg["label"], **markets[key]}
+            for key, cfg in MARKET_SYMBOLS.items()
+            if key in markets
+        ],
+        "gold": gold,
+    }
+
+
+async def fetch_xau_context() -> dict:
+    now = time.time()
+    if _context_cache["data"] and (now - _context_cache["ts"]) < CONTEXT_CACHE_TTL:
+        return _context_cache["data"]
+
+    async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0 TradingTerminal"}) as session:
+        snapshots = await asyncio.gather(*(
+            fetch_market_snapshot(session, cfg["symbol"])
+            for cfg in MARKET_SYMBOLS.values()
+        ))
+
+    markets = {
+        key: snapshot
+        for (key, _cfg), snapshot in zip(MARKET_SYMBOLS.items(), snapshots)
+        if snapshot
+    }
+    context = build_gold_context(markets)
+    _context_cache["data"] = context
+    _context_cache["ts"] = now
+    return context
+
+
 @app.get("/api/news")
 async def get_news():
     now = time.time()
@@ -282,6 +497,12 @@ async def health():
         "cached_items": len(_news_cache["data"]),
         "cache_age": int(time.time() - _news_cache["ts"]) if _news_cache["ts"] else None,
     }
+
+
+@app.get("/api/context")
+async def get_context():
+    context = await fetch_xau_context()
+    return context
 
 
 @app.get("/", response_class=HTMLResponse)

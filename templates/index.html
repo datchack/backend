@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TERMINAL HAUTE FREQUENCE</title>
-
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <link rel="stylesheet" href="/static/styles.css">
 </head>
@@ -17,11 +16,11 @@
                 "symbols": [
                     {"proName": "OANDA:XAUUSD", "title": "XAU/USD"},
                     {"proName": "OANDA:XAGUSD", "title": "SILVER"},
-                    {"proName": "TVC:USOIL", "title": "OIL"},
+                    {"proName": "TVC:USOIL", "title": "WTI"},
                     {"proName": "CAPITALCOM:DXY", "title": "DXY"},
-                    {"proName": "NASDAQ:TLT", "title": "US10Y"},
-                    {"proName": "NASDAQ:QQQ", "title": "NASDAQ"},
-                    {"proName": "AMEX:SPY", "title": "S&P 500"}
+                    {"proName": "NASDAQ:TLT", "title": "TLT"},
+                    {"proName": "AMEX:SPY", "title": "SPY"},
+                    {"proName": "NASDAQ:QQQ", "title": "QQQ"}
                 ],
                 "showSymbolLogo": false,
                 "isTransparent": true,
@@ -36,7 +35,7 @@
     <div class="top-bar">
         <div class="cmd-bar">
             <span class="prompt">&gt;</span>
-            <input id="cmd" type="text" placeholder="Saisir un symbole (ex: NASDAQ:AAPL, BINANCE:SOLUSDT, FX:EURJPY) puis Entree..." autocomplete="off" spellcheck="false">
+            <input id="cmd" type="text" placeholder="Saisir un symbole (ex: OANDA:XAUUSD, CAPITALCOM:DXY, AMEX:SPY) puis Entree..." autocomplete="off" spellcheck="false">
             <span class="hint">Entree pour charger</span>
         </div>
         <div class="clocks">
@@ -54,53 +53,46 @@
             {"symbol": "OANDA:XAUUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
-
         <div class="qcard" data-symbol="OANDA:XAGUSD">
             <div class="click-overlay"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
             {"symbol": "OANDA:XAGUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
-
         <div class="qcard" data-symbol="CAPITALCOM:DXY">
             <div class="click-overlay"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
             {"symbol": "CAPITALCOM:DXY", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
-
         <div class="qcard" data-symbol="TVC:USOIL">
             <div class="click-overlay"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
             {"symbol": "TVC:USOIL", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
-
         <div class="qcard" data-symbol="FX:EURUSD">
             <div class="click-overlay"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
             {"symbol": "FX:EURUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
-
         <div class="qcard" data-symbol="NASDAQ:TLT">
             <div class="click-overlay"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
             {"symbol": "NASDAQ:TLT", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
-
         <div class="qcard" data-symbol="AMEX:SPY">
             <div class="click-overlay"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
             {"symbol": "AMEX:SPY", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
-
-        <div class="qcard" data-symbol="BINANCE:BTCUSDT">
+        <div class="qcard" data-symbol="NASDAQ:QQQ">
             <div class="click-overlay"></div>
             <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
-            {"symbol": "BINANCE:BTCUSDT", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            {"symbol": "NASDAQ:QQQ", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
             </script>
         </div>
     </div>
@@ -110,6 +102,10 @@
             <div class="p-header">
                 <span>CALENDRIER ECONOMIQUE</span>
                 <span class="live" id="cal-live">LIVE</span>
+            </div>
+            <div class="week-bar">
+                <span id="week-range">SEMAINE EN COURS</span>
+                <span id="session-badge" class="session-badge">SESSION -</span>
             </div>
             <div class="cal-toolbar" id="cal-filters"></div>
             <div class="cal-head-row">
@@ -124,12 +120,52 @@
         </div>
 
         <div class="col col-center" id="chart_container">
-            <div class="p-header"><span id="chart-symbol">- CHART -</span><span class="live">LIVE</span></div>
-            <div id="tv_main_wrap" style="flex:1; min-height:0;"></div>
+            <div class="p-header">
+                <span id="chart-symbol">- CHART -</span>
+                <span class="live">LIVE</span>
+            </div>
+            <div class="desk-grid">
+                <div class="desk-card bias-card" id="bias-card">
+                    <div class="desk-card-head">
+                        <span>GOLD BIAS</span>
+                        <span id="bias-score" class="desk-pill neutral">0</span>
+                    </div>
+                    <div class="bias-main">
+                        <div id="bias-label" class="bias-label">NEUTRAL</div>
+                        <div id="bias-tone" class="bias-tone">Lecture en attente</div>
+                    </div>
+                    <div class="bias-sub">
+                        <span id="volatility-badge" class="desk-pill">VOL -</span>
+                        <span id="session-active" class="desk-pill">SESSION -</span>
+                    </div>
+                </div>
+                <div class="desk-card driver-card">
+                    <div class="desk-card-head">
+                        <span>GOLD DRIVERS</span>
+                        <span class="desk-pill">LIVE</span>
+                    </div>
+                    <div id="drivers-grid" class="drivers-grid"></div>
+                </div>
+                <div class="desk-card watch-card">
+                    <div class="desk-card-head">
+                        <span>XAU WATCH</span>
+                        <span class="desk-pill">CORR.</span>
+                    </div>
+                    <div id="watchlist-grid" class="watchlist-grid"></div>
+                </div>
+            </div>
+            <div id="tv_main_wrap" class="chart-surface"></div>
         </div>
 
         <div class="col col-right">
-            <div class="p-header"><span>FIL INFO MULTI-SOURCE</span><span class="live">LIVE</span></div>
+            <div class="p-header">
+                <span>FIL INFO MULTI-SOURCE</span>
+                <span class="live">LIVE</span>
+            </div>
+            <div class="news-toolbar">
+                <div id="news-priority-summary" class="news-summary">PRIORITE -</div>
+                <div id="official-summary" class="news-summary">OFFICIAL -</div>
+            </div>
             <div id="news-content" class="scroll"></div>
         </div>
     </div>
@@ -137,6 +173,7 @@
     <div class="status-bar">
         <span><span class="ok">CONNECTED</span> - 8 sources news - cache 30s</span>
         <span id="status-news">News: -</span>
+        <span id="status-context">Bias: -</span>
         <span id="status-sound" style="cursor:pointer;user-select:none;" title="Activer/couper le son sur nouvelles">SOUND OFF</span>
         <select id="sound-pick" title="Choisir le son d'alerte" style="background:#0a0a0a;color:#e7e7e7;border:1px solid #2a2a2a;font-family:inherit;font-size:11px;padding:1px 4px;cursor:pointer;">
             <option value="ping">PING</option>
