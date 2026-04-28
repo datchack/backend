@@ -1,21 +1,17 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from datetime import datetime, timezone
 import asyncio
-import json
-import os
 import time
-from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 import aiohttp
 import feedparser
 import uvicorn
-from bs4 import BeautifulSoup  # pip install beautifulsoup4
+from fastapi import FastAPI
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
-# Static + templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 PARIS = ZoneInfo("Europe/Paris")
@@ -35,8 +31,57 @@ NEWS_SOURCES = {
     "CNBC": "https://news.google.com/rss/search?q=markets+source:cnbc&hl=en-US&gl=US&ceid=US:en",
 }
 
+FMP_API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
+FMP_URL = f"https://financialmodelingprep.com/stable/economic-calendar?country=US&apikey={FMP_API_KEY}"
+
 _news_cache: dict = {"data": [], "ts": 0.0}
-NEWS_CACHE_TTL = 30  # secondes
+NEWS_CACHE_TTL = 30
+
+
+def parse_fmp_datetime(raw_date: str) -> datetime | None:
+    if not raw_date:
+        return None
+
+    candidates = (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d",
+    )
+    for fmt in candidates:
+        try:
+            return datetime.strptime(raw_date, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
+
+
+def normalize_calendar_event(event: dict) -> dict | None:
+    dt = parse_fmp_datetime(event.get("date", ""))
+    if not dt:
+        return None
+
+    impact_raw = str(event.get("impact", "")).lower()
+    if "high" in impact_raw:
+        impact = "High"
+    elif "medium" in impact_raw:
+        impact = "Medium"
+    else:
+        impact = "Low"
+
+    estimate = event.get("estimate")
+
+    return {
+        "title": event.get("event") or "",
+        "country": event.get("country") or "US",
+        "currency": event.get("currency") or "",
+        "impact": impact,
+        "actual": event.get("actual"),
+        "forecast": estimate,
+        "previous": event.get("previous"),
+        "unit": event.get("unit"),
+        "ts": int(dt.timestamp()),
+        "date_utc": dt.isoformat(),
+    }
 
 
 async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> list[dict]:
@@ -54,17 +99,18 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> 
         return []
 
     items: list[dict] = []
-    for e in feed.entries[:8]:
-        published = getattr(e, "published_parsed", None)
+    for entry in feed.entries[:8]:
+        published = getattr(entry, "published_parsed", None)
         if not published:
             continue
+
         try:
             dt = datetime(*published[:6], tzinfo=timezone.utc)
         except Exception:
             continue
 
-        title = getattr(e, "title", "") or ""
-        link = getattr(e, "link", "") or ""
+        title = getattr(entry, "title", "") or ""
+        link = getattr(entry, "link", "") or ""
         if not title or not link:
             continue
 
@@ -74,9 +120,35 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, url: str) -> 
             "l": link,
             "time": dt.astimezone(PARIS).strftime("%H:%M:%S"),
             "ts": dt.timestamp(),
-            "crit": any(k in title.upper() for k in ALERTS_CRITICAL),
+            "crit": any(keyword in title.upper() for keyword in ALERTS_CRITICAL),
         })
     return items
+
+
+async def fetch_calendar() -> list[dict]:
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(FMP_URL, timeout=20) as resp:
+                if resp.status != 200:
+                    return []
+                payload = await resp.json()
+        except Exception:
+            return []
+
+    raw_events = payload.get("value", payload) if isinstance(payload, dict) else payload
+    if not isinstance(raw_events, list):
+        return []
+
+    events: list[dict] = []
+    for event in raw_events:
+        if not isinstance(event, dict):
+            continue
+        normalized = normalize_calendar_event(event)
+        if normalized:
+            events.append(normalized)
+
+    events.sort(key=lambda item: item["ts"])
+    return events
 
 
 @app.get("/api/news")
@@ -90,17 +162,39 @@ async def get_news():
         }
 
     async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0 TradingTerminal"}) as session:
-        results = await asyncio.gather(
-            *(_fetch_source(session, n, u) for n, u in NEWS_SOURCES.items())
-        )
+        results = await asyncio.gather(*(_fetch_source(session, name, url) for name, url in NEWS_SOURCES.items()))
 
-    all_news = [item for sublist in results for item in sublist]
-    all_news.sort(key=lambda x: x["ts"], reverse=True)
+    all_news = [item for chunk in results for item in chunk]
+    all_news.sort(key=lambda item: item["ts"], reverse=True)
     all_news = all_news[:80]
 
     _news_cache["data"] = all_news
     _news_cache["ts"] = now
     return {"items": all_news, "cached": False, "age": 0}
+
+
+@app.get("/api/calendar")
+async def get_calendar():
+    events = await fetch_calendar()
+    if not events:
+        return {
+            "events": [],
+            "count": 0,
+            "timezone": "UTC",
+            "hot": False,
+            "error": "Calendar feed unavailable",
+        }
+
+    now_ts = int(time.time())
+    hot = any(0 <= (event["ts"] - now_ts) <= 3600 for event in events)
+
+    return {
+        "events": events,
+        "count": len(events),
+        "timezone": "UTC",
+        "hot": hot,
+        "error": None,
+    }
 
 
 @app.get("/api/health")
@@ -112,131 +206,6 @@ async def health():
     }
 
 
-# ============================================================
-# ===============   ECONOMIC CALENDAR (MyFXBook HTML)   ======
-# ============================================================
-
-FMP_API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
-FMP_URL = f"https://financialmodelingprep.com/stable/economic-calendar?country=US&apikey={FMP_API_KEY}"
-
-
-@app.get("/api/calendar")
-async def get_calendar():
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(FMP_URL, timeout=10) as resp:
-                data = await resp.json()
-
-        events = []
-
-        for e in data:
-            try:
-                # ⚠️ FMP renvoie souvent "2026-04-28 14:30:00"
-                dt = datetime.fromisoformat(e["date"])
-
-                impact_raw = (e.get("impact") or "").lower()
-
-                if "high" in impact_raw:
-                    impact = "High"
-                elif "medium" in impact_raw:
-                    impact = "Medium"
-                else:
-                    impact = "Low"
-
-                events.append({
-                    "title": e.get("event", ""),
-                    "country": e.get("country", "US"),
-                    "impact": impact,
-                    "actual": e.get("actual", ""),
-                    "forecast": e.get("forecast", ""),
-                    "previous": e.get("previous", ""),
-                    "ts": dt.timestamp()
-                })
-
-            except:
-                continue
-
-        # 🔥 TRI IMPORTANT
-        events.sort(key=lambda x: x["ts"])
-
-        return {
-            "events": events,
-            "count": len(events)
-        }
-
-    except Exception as e:
-        return {
-            "events": [],
-            "error": str(e)
-        }
-
-
-async def _fetch_calendar():
-    API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
-    url = f"https://financialmodelingprep.com/stable/economic-calendar?country=US&apikey={API_KEY}"
-
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get(url, timeout=20) as resp:
-                if resp.status != 200:
-                    return []
-                data = await resp.json()
-        except Exception as e:
-            print("Request error:", e)
-            return []
-
-    events = []
-
-    for e in data:
-        try:
-            raw_date = e.get("date", "")
-
-            # 🔥 FIX IMPORTANT : gestion multi-format
-            dt = None
-            for fmt in (
-                "%Y-%m-%d %H:%M:%S",
-                "%Y-%m-%dT%H:%M:%S",
-                "%Y-%m-%d"
-            ):
-                try:
-                    dt = datetime.strptime(raw_date, fmt)
-                    break
-                except:
-                    continue
-
-            if not dt:
-                continue
-
-            ts = int(dt.replace(tzinfo=timezone.utc).timestamp())
-
-            impact_raw = str(e.get("impact", "")).lower()
-
-            if "high" in impact_raw:
-                impact = "High"
-            elif "medium" in impact_raw:
-                impact = "Medium"
-            else:
-                impact = "Low"
-
-            events.append({
-                "title": e.get("event", ""),
-                "country": e.get("country", "US"),
-                "impact": impact,
-                "actual": e.get("actual", ""),
-                "forecast": e.get("forecast", ""),   # ✅ FIX ICI
-                "previous": e.get("previous", ""),
-                "ts": ts,
-            })
-
-        except:
-            continue
-
-    # 🔥 TRI GARANTI
-    events.sort(key=lambda x: x["ts"])
-
-    return events
-
-# ====== SERVE INDEX.HTML ======
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return FileResponse("templates/index.html")

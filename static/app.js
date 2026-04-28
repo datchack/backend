@@ -1,28 +1,44 @@
-// ===================== STATE =====================
 const PREFS_KEY = 'tt_prefs_v1';
+const CALENDAR_REFRESH_MS = 60000;
+const NEWS_REFRESH_MS = 8000;
+const IMPACT_LEVELS = ['High', 'Medium', 'Low'];
 
 function loadPrefs() {
-    try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; }
-    catch { return {}; }
+    try {
+        return JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
+    } catch {
+        return {};
+    }
 }
 
 function savePrefs(patch) {
     try {
-        const cur = loadPrefs();
-        localStorage.setItem(PREFS_KEY, JSON.stringify({ ...cur, ...patch }));
+        const current = loadPrefs();
+        localStorage.setItem(PREFS_KEY, JSON.stringify({ ...current, ...patch }));
     } catch {}
 }
 
 const PREFS = loadPrefs();
 
-let lastSeenTs = 0;
-let currentSymbol = PREFS.symbol || "OANDA:XAUUSD";
+let currentSymbol = PREFS.symbol || 'OANDA:XAUUSD';
 let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
-
+let lastSeenNewsTs = 0;
+let calEvents = [];
+let calendarMeta = { timezone: 'UTC', error: null, count: 0 };
 let audioCtx = null;
 
-// ===================== AUDIO =====================
+const calFilters = {
+    impact: new Set(PREFS.impactFilters || IMPACT_LEVELS),
+};
+
+const MARKETS = {
+    NY: { tz: 'America/New_York', label: 'NEW YORK', open: [9, 30], close: [16, 0] },
+    LDN: { tz: 'Europe/London', label: 'LONDON', open: [8, 0], close: [16, 30] },
+    TKY: { tz: 'Asia/Tokyo', label: 'TOKYO', open: [9, 0], close: [15, 0] },
+    SYD: { tz: 'Australia/Sydney', label: 'SYDNEY', open: [10, 0], close: [16, 0] },
+};
+
 function ensureAudio() {
     if (!audioCtx) {
         try {
@@ -31,24 +47,26 @@ function ensureAudio() {
             audioCtx = null;
         }
     }
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
 }
 
 function tone(freq, startOffset, duration, peak, type) {
     const now = audioCtx.currentTime;
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
+    const oscillator = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
 
-    o.type = type;
-    o.frequency.value = freq;
+    oscillator.type = type;
+    oscillator.frequency.value = freq;
 
-    g.gain.setValueAtTime(0.0001, now + startOffset);
-    g.gain.exponentialRampToValueAtTime(peak, now + startOffset + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
+    gain.gain.setValueAtTime(0.0001, now + startOffset);
+    gain.gain.exponentialRampToValueAtTime(peak, now + startOffset + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
 
-    o.connect(g).connect(audioCtx.destination);
-    o.start(now + startOffset);
-    o.stop(now + startOffset + duration + 0.02);
+    oscillator.connect(gain).connect(audioCtx.destination);
+    oscillator.start(now + startOffset);
+    oscillator.stop(now + startOffset + duration + 0.02);
 }
 
 function playSound(kind) {
@@ -58,25 +76,21 @@ function playSound(kind) {
         case 'ping':
             tone(1760, 0, 0.18, 0.22, 'sine');
             break;
-
         case 'chime':
             tone(880, 0, 0.2, 0.25, 'sine');
             tone(1320, 0.12, 0.2, 0.25, 'sine');
             break;
-
         case 'siren':
-            [0, 0.18, 0.36].forEach(t => {
-                tone(700, t, 0.1, 0.22, 'square');
-                tone(1100, t + 0.09, 0.1, 0.22, 'square');
+            [0, 0.18, 0.36].forEach((offset) => {
+                tone(700, offset, 0.1, 0.22, 'square');
+                tone(1100, offset + 0.09, 0.1, 0.22, 'square');
             });
             break;
-
         case 'bloop':
             tone(440, 0, 0.15, 0.22, 'triangle');
             break;
-
         case 'alert':
-            [0, 0.14, 0.28].forEach(t => tone(2000, t, 0.08, 0.28, 'sawtooth'));
+            [0, 0.14, 0.28].forEach((offset) => tone(2000, offset, 0.08, 0.28, 'sawtooth'));
             break;
     }
 }
@@ -86,174 +100,186 @@ function beep() {
     playSound(soundType);
 }
 
-// ===================== SOUND UI =====================
-const soundEl = document.getElementById('status-sound');
-
 function renderSoundToggle() {
+    const soundEl = document.getElementById('status-sound');
     if (!soundEl) return;
-    soundEl.textContent = soundEnabled ? '🔔 SOUND ON' : '🔇 SOUND OFF';
+
+    soundEl.textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF';
     soundEl.style.color = soundEnabled ? '#22c55e' : '';
 }
 
-soundEl?.addEventListener('click', () => {
-    soundEnabled = !soundEnabled;
-    savePrefs({ soundEnabled });
-    renderSoundToggle();
-    ensureAudio();
-    beep();
-});
-
-renderSoundToggle();
-
-// ===================== CHART =====================
 function initChart(symbol) {
     currentSymbol = symbol;
-    const wrap = document.getElementById('tv_main_wrap');
 
+    const wrap = document.getElementById('tv_main_wrap');
     wrap.innerHTML = '<div id="tv_main" style="height:100%;"></div>';
-    document.getElementById('chart-symbol').textContent = symbol;
+
+    const symbolLabel = document.getElementById('chart-symbol');
+    if (symbolLabel) {
+        symbolLabel.textContent = symbol;
+    }
 
     new TradingView.widget({
         autosize: true,
         symbol,
-        interval: "1",
-        theme: "dark",
-        style: "1",
-        locale: "fr",
-        container_id: "tv_main",
+        interval: '1',
+        theme: 'dark',
+        style: '1',
+        locale: 'fr',
+        container_id: 'tv_main',
         hide_side_toolbar: false,
         allow_symbol_change: true,
         details: true,
-        studies: ["Volume@tv-basicstudies"]
+        studies: ['Volume@tv-basicstudies'],
     });
 }
 
 function changeChart(symbol) {
     initChart(symbol);
     savePrefs({ symbol });
+
+    document.querySelectorAll('.qcard').forEach((card) => {
+        card.classList.toggle('active', card.dataset.symbol === symbol);
+    });
 }
 
-// ===================== CLOCKS =====================
-const MARKETS = {
-    NY:  { tz: 'America/New_York', open: [9,30], close: [16,0] },
-    LDN: { tz: 'Europe/London', open: [8,0], close: [16,30] },
-    TKY: { tz: 'Asia/Tokyo', open: [9,0], close: [15,0] },
-    SYD: { tz: 'Australia/Sydney', open: [10,0], close: [16,0] },
-};
-
-function getTz(tz) {
-    const fmt = new Intl.DateTimeFormat('en-GB', {
+function getTzParts(tz) {
+    const formatter = new Intl.DateTimeFormat('en-GB', {
         timeZone: tz,
         hour12: false,
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
     });
 
-    return Object.fromEntries(fmt.formatToParts(new Date()).map(p => [p.type, p.value]));
+    return Object.fromEntries(formatter.formatToParts(new Date()).map((part) => [part.type, part.value]));
+}
+
+function isMarketOpen(parts, market) {
+    const nowMinutes = (Number(parts.hour) * 60) + Number(parts.minute);
+    const openMinutes = (market.open[0] * 60) + market.open[1];
+    const closeMinutes = (market.close[0] * 60) + market.close[1];
+    return nowMinutes >= openMinutes && nowMinutes < closeMinutes;
 }
 
 function updateClocks() {
-    for (const [k, m] of Object.entries(MARKETS)) {
-        const p = getTz(m.tz);
-        const el = document.getElementById('time-' + k);
-        if (el) el.textContent = `${p.hour}:${p.minute}:${p.second}`;
+    Object.entries(MARKETS).forEach(([key, market]) => {
+        const parts = getTzParts(market.tz);
+        const timeEl = document.getElementById(`time-${key}`);
+        const clockEl = document.getElementById(`mk-${key}`);
+
+        if (timeEl) {
+            timeEl.textContent = `${parts.hour}:${parts.minute}:${parts.second}`;
+        }
+        if (clockEl) {
+            clockEl.classList.toggle('open', isMarketOpen(parts, market));
+        }
+    });
+
+    const statusClock = document.getElementById('status-clock');
+    if (statusClock) {
+        statusClock.textContent = new Intl.DateTimeFormat('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        }).format(new Date());
     }
 }
 
-// ===================== NEWS =====================
-async function getNews() {
-    try {
-        const r = await fetch('/api/news');
-        const data = await r.json();
+function formatValue(value, unit) {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+    return unit ? `${value}${unit}` : String(value);
+}
 
-        const items = data.items || [];
-        const container = document.getElementById('news-content');
+function parseComparable(value) {
+    if (value === null || value === undefined || value === '') {
+        return NaN;
+    }
+    return Number.parseFloat(String(value).replace(/[^\d.-]/g, ''));
+}
 
-        container.innerHTML = '';
+function getCalendarBiasClass(event) {
+    const actual = parseComparable(event.actual);
+    const forecast = parseComparable(event.forecast);
+    if (Number.isNaN(actual) || Number.isNaN(forecast)) {
+        return '';
+    }
 
-        items.forEach(n => {
-            const item = document.createElement('div');
-            item.className = 'n-item' + (n.crit ? ' critical' : '');
+    const title = (event.title || '').toLowerCase();
+    const negativeHigher = ['unemployment', 'claims', 'jobless', 'inventories', 'stock change'];
+    const lowerIsBetter = negativeHigher.some((keyword) => title.includes(keyword));
+    const betterThanForecast = lowerIsBetter ? actual < forecast : actual > forecast;
 
-            const meta = document.createElement('div');
-            meta.className = 'n-meta';
+    if (actual === forecast) {
+        return '';
+    }
+    return betterThanForecast ? 'cal-green' : 'cal-red';
+}
 
-            const time = document.createElement('span');
-            time.textContent = n.time;
+function buildImpactDots(level) {
+    return `<span class="cal-impact ${level.toLowerCase()}"><i></i><i></i><i></i></span>`;
+}
 
-            const tag = document.createElement('span');
-            tag.className = 'tag ' + n.s;
-            tag.textContent = n.s;
+function renderCalendarFilters() {
+    const root = document.getElementById('cal-filters');
+    if (!root) return;
 
-            meta.appendChild(time);
-            meta.appendChild(tag);
+    root.innerHTML = IMPACT_LEVELS.map((level) => `
+        <button class="cal-chip ${calFilters.impact.has(level) ? 'on' : ''}" data-impact="${level}" type="button">
+            ${level}
+        </button>
+    `).join('');
 
-            const link = document.createElement('a');
-            link.href = n.l;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.textContent = n.t;
+    root.querySelectorAll('[data-impact]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const { impact } = button.dataset;
+            if (!impact) return;
 
-            item.appendChild(meta);
-            item.appendChild(link);
+            if (calFilters.impact.has(impact) && calFilters.impact.size > 1) {
+                calFilters.impact.delete(impact);
+            } else {
+                calFilters.impact.add(impact);
+            }
 
-            container.appendChild(item);
+            savePrefs({ impactFilters: [...calFilters.impact] });
+            renderCalendarFilters();
+            renderCalendar();
         });
-
-    } catch (e) {
-        console.error(e);
-    }
-}
-
-// ===================== CALENDAR =====================
-const calFilters = {
-    impact: new Set(['High', 'Medium', 'Low'])
-};
-
-let calEvents = [];
-
-async function fetchCalendar() {
-    try {
-        const r = await fetch('/api/calendar', { cache: "no-store" });
-        const j = await r.json();
-
-        calEvents = Array.isArray(j.events) ? j.events : [];
-
-        document.getElementById('cal-live').innerHTML =
-            j.hot ? '<span style="color:#f59e0b">HOT</span>' : 'LIVE';
-
-        renderCalendar();
-
-    } catch (e) {
-        console.error(e);
-    }
-
-    setTimeout(fetchCalendar, 60000);
+    });
 }
 
 function renderCalendar() {
     const root = document.getElementById('calendar-content');
+    if (!root) return;
 
-    if (!Array.isArray(calEvents) || calEvents.length === 0) {
-        root.innerHTML = '<div class="cal-empty">Chargement...</div>';
+    if (calendarMeta.error && calEvents.length === 0) {
+        root.innerHTML = `<div class="cal-empty">Erreur calendrier: ${calendarMeta.error}</div>`;
         return;
     }
 
-    const filtered = calEvents.filter(e =>
-        calFilters.impact.has(e.impact)
-    );
+    if (!Array.isArray(calEvents) || calEvents.length === 0) {
+        root.innerHTML = '<div class="cal-empty">Aucun evenement disponible.</div>';
+        return;
+    }
 
-    let html = '';
+    const filtered = calEvents.filter((event) => calFilters.impact.has(event.impact));
+    if (filtered.length === 0) {
+        root.innerHTML = '<div class="cal-empty">Aucun evenement pour ce filtre.</div>';
+        return;
+    }
+
+    const nowTs = Math.floor(Date.now() / 1000);
     let lastDay = '';
+    let html = '';
 
-    filtered.forEach(e => {
-        const dt = new Date(e.ts * 1000);
-
+    filtered.forEach((event) => {
+        const dt = new Date(event.ts * 1000);
         const day = dt.toLocaleDateString('fr-FR', {
             weekday: 'long',
             day: 'numeric',
-            month: 'long'
+            month: 'long',
         });
 
         if (day !== lastDay) {
@@ -263,81 +289,208 @@ function renderCalendar() {
 
         const time = dt.toLocaleTimeString('fr-FR', {
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
         });
 
-        const impactClass =
-            e.impact === 'High' ? 'high' :
-            e.impact === 'Medium' ? 'medium' : 'low';
-
-        // ==============================
-        // 🔥 LOGIQUE ÉCONOMIQUE PROPRE
-        // ==============================
-        let colorClass = '';
-
-        const actual = parseFloat(String(e.actual).replace(/[^\d.-]/g, ''));
-        const forecast = parseFloat(String(e.forecast).replace(/[^\d.-]/g, ''));
-        const previous = parseFloat(String(e.previous).replace(/[^\d.-]/g, ''));
-
-        if (!isNaN(actual) && !isNaN(forecast)) {
-
-            const title = (e.title || '').toLowerCase();
-
-            // ⚠️ UNEMPLOYMENT / CLAIMS → PLUS HAUT = NÉGATIF
-            const negativeHigher = [
-                "unemployment",
-                "claims",
-                "jobless",
-                "jobless claims"
-            ];
-
-            const isNegativeHigher = negativeHigher.some(k =>
-                title.includes(k)
-            );
-
-            if (isNegativeHigher) {
-                colorClass = actual > forecast ? 'cal-red' : 'cal-green';
-            }
-
-            // 📈 GDP / INFLATION / SALES → PLUS HAUT = POSITIF
-            else if (
-                title.includes("gdp") ||
-                title.includes("inflation") ||
-                title.includes("cpi") ||
-                title.includes("retail") ||
-                title.includes("sales")
-            ) {
-                colorClass = actual > forecast ? 'cal-green' : 'cal-red';
-            }
-
-            // ⚙️ DEFAULT LOGIC
-            else {
-                colorClass = actual > forecast ? 'cal-green' : 'cal-red';
-            }
-        }
+        const dueSoon = event.ts >= nowTs && event.ts - nowTs <= 1800;
+        const isPast = event.ts < nowTs;
+        const rowClasses = [
+            'cal-row',
+            getCalendarBiasClass(event),
+            dueSoon ? 'due' : '',
+            isPast ? 'past' : '',
+        ].filter(Boolean).join(' ');
 
         html += `
-        <div class="cal-row ${colorClass}">
+        <div class="${rowClasses}">
             <span class="cal-time">${time}</span>
-            <span class="cal-flag">${e.country}</span>
+            <span class="cal-flag">${event.country || '-'}</span>
             <span class="cal-title">
-                <span class="cal-impact ${impactClass}"></span>
-                ${e.title}
+                ${buildImpactDots(event.impact)}
+                <span class="cal-title-text">${event.title || '-'}</span>
             </span>
-            <span class="cal-num">${e.actual || '-'}</span>
-            <span class="cal-num">${e.forecast || '-'}</span>
-            <span class="cal-num">${e.previous || '-'}</span>
+            <span class="cal-num">${formatValue(event.actual, event.unit)}</span>
+            <span class="cal-num">${formatValue(event.forecast, event.unit)}</span>
+            <span class="cal-num">${formatValue(event.previous, event.unit)}</span>
         </div>`;
     });
 
     root.innerHTML = html;
 }
 
-// ===================== INIT =====================
-initChart(currentSymbol);
-updateClocks();
-getNews();
-fetchCalendar();
+function updateCalendarStatus(meta) {
+    const liveEl = document.getElementById('cal-live');
+    if (!liveEl) return;
 
-setInterval(updateClocks, 1000);
-setInterval(getNews, 8000);
+    if (meta.error) {
+        liveEl.textContent = 'ERROR';
+        liveEl.style.color = '#ff4d6d';
+        return;
+    }
+
+    liveEl.textContent = meta.hot ? 'HOT' : 'LIVE';
+    liveEl.style.color = meta.hot ? '#f59e0b' : '#22c55e';
+}
+
+async function fetchCalendar() {
+    try {
+        const response = await fetch('/api/calendar', { cache: 'no-store' });
+        const payload = await response.json();
+
+        calEvents = Array.isArray(payload.events) ? payload.events : [];
+        calendarMeta = {
+            timezone: payload.timezone || 'UTC',
+            error: payload.error || null,
+            count: payload.count || 0,
+            hot: !!payload.hot,
+        };
+
+        updateCalendarStatus(calendarMeta);
+        renderCalendar();
+    } catch (error) {
+        console.error(error);
+        calendarMeta = { timezone: 'UTC', error: 'Requete impossible', count: 0, hot: false };
+        calEvents = [];
+        updateCalendarStatus(calendarMeta);
+        renderCalendar();
+    }
+
+    window.setTimeout(fetchCalendar, CALENDAR_REFRESH_MS);
+}
+
+async function getNews() {
+    try {
+        const response = await fetch('/api/news');
+        const data = await response.json();
+        const items = data.items || [];
+        const container = document.getElementById('news-content');
+
+        if (!container) return;
+        container.innerHTML = '';
+
+        let freshCount = 0;
+
+        items.forEach((itemData) => {
+            const item = document.createElement('div');
+            const isFresh = itemData.ts > lastSeenNewsTs;
+            if (isFresh) {
+                freshCount += 1;
+            }
+
+            item.className = `n-item${itemData.crit ? ' critical' : ''}${isFresh ? ' fresh' : ''}`;
+
+            const meta = document.createElement('div');
+            meta.className = 'n-meta';
+
+            const time = document.createElement('span');
+            time.textContent = itemData.time;
+
+            const tag = document.createElement('span');
+            tag.className = `tag ${itemData.s}`;
+            tag.textContent = itemData.s;
+
+            meta.appendChild(time);
+            meta.appendChild(tag);
+
+            const link = document.createElement('a');
+            link.href = itemData.l;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = itemData.t;
+
+            item.appendChild(meta);
+            item.appendChild(link);
+            container.appendChild(item);
+        });
+
+        if (items.length) {
+            lastSeenNewsTs = Math.max(lastSeenNewsTs, items[0].ts || 0);
+        }
+
+        const statusNews = document.getElementById('status-news');
+        if (statusNews) {
+            statusNews.textContent = `News: ${items.length} items${data.cached ? ` - cache ${data.age}s` : ''}`;
+        }
+
+        if (freshCount > 0) {
+            ensureAudio();
+            beep();
+        }
+    } catch (error) {
+        console.error(error);
+        const statusNews = document.getElementById('status-news');
+        if (statusNews) {
+            statusNews.textContent = 'News: erreur de chargement';
+        }
+    }
+}
+
+function bindQuoteCards() {
+    document.querySelectorAll('.qcard').forEach((card) => {
+        card.addEventListener('click', () => {
+            const symbol = card.dataset.symbol;
+            if (symbol) {
+                changeChart(symbol);
+            }
+        });
+    });
+}
+
+function bindCommandInput() {
+    const input = document.getElementById('cmd');
+    if (!input) return;
+
+    input.value = currentSymbol;
+    input.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+
+        const value = input.value.trim().toUpperCase();
+        if (!value) return;
+        changeChart(value);
+    });
+}
+
+function bindSoundPicker() {
+    const select = document.getElementById('sound-pick');
+    if (!select) return;
+
+    select.value = soundType;
+    select.addEventListener('change', () => {
+        soundType = select.value;
+        savePrefs({ soundType });
+        ensureAudio();
+        beep();
+    });
+}
+
+function bindSoundToggle() {
+    const soundEl = document.getElementById('status-sound');
+    if (!soundEl) return;
+
+    soundEl.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        savePrefs({ soundEnabled });
+        renderSoundToggle();
+        ensureAudio();
+        beep();
+    });
+}
+
+function init() {
+    renderSoundToggle();
+    renderCalendarFilters();
+    bindQuoteCards();
+    bindCommandInput();
+    bindSoundPicker();
+    bindSoundToggle();
+
+    initChart(currentSymbol);
+    updateClocks();
+    getNews();
+    fetchCalendar();
+
+    window.setInterval(updateClocks, 1000);
+    window.setInterval(getNews, NEWS_REFRESH_MS);
+}
+
+init();
