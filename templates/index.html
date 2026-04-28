@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TERMINAL HAUTE FRÉQUENCE</title>
+
+</head>
+<body>
+
+    <!-- TICKER TAPE -->
+    <div class="ticker-tape">
+        <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+            {
+              "symbols": [
+                {"proName": "OANDA:XAUUSD", "title": "XAU/USD"},
+                {"proName": "OANDA:XAGUSD", "title": "SILVER"},
+                {"proName": "TVC:USOIL", "title": "OIL"},
+                {"proName": "CAPITALCOM:DXY", "title": "DXY"},
+                {"proName": "NASDAQ:TLT", "title": "US10Y"},
+                {"proName": "NASDAQ:QQQ", "title": "NASDAQ"},
+                {"proName": "AMEX:SPY", "title": "S&P 500"}
+              ],
+              "showSymbolLogo": false,
+              "isTransparent": true,
+              "displayMode": "regular",
+              "colorTheme": "dark",
+              "locale": "fr"
+            }
+            </script>
+        </div>
+    </div>
+
+    <!-- TOP BAR : COMMAND + WORLD CLOCKS -->
+    <div class="top-bar">
+        <div class="cmd-bar">
+            <span class="prompt">&gt;</span>
+            <input id="cmd" type="text" placeholder="Saisir un symbole (ex: NASDAQ:AAPL, BINANCE:SOLUSDT, FX:EURJPY) puis Entrée…" autocomplete="off" spellcheck="false">
+            <span class="hint">↵ pour charger</span>
+        </div>
+        <div class="clocks">
+            <div class="clock" id="mk-NY"><span><span class="dot"></span><span class="city">NEW YORK</span></span><span class="time" id="time-NY">--:--:--</span></div>
+            <div class="clock" id="mk-LDN"><span><span class="dot"></span><span class="city">LONDON</span></span><span class="time" id="time-LDN">--:--:--</span></div>
+            <div class="clock" id="mk-TKY"><span><span class="dot"></span><span class="city">TOKYO</span></span><span class="time" id="time-TKY">--:--:--</span></div>
+            <div class="clock" id="mk-SYD"><span><span class="dot"></span><span class="city">SYDNEY</span></span><span class="time" id="time-SYD">--:--:--</span></div>
+        </div>
+    </div>
+
+    <!-- QUOTE GRID (8 cards) -->
+    <div class="header">
+        <div class="qcard active" data-symbol="OANDA:XAUUSD">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "OANDA:XAUUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+        <div class="qcard" data-symbol="OANDA:XAGUSD">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "OANDA:XAGUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+        <div class="qcard" data-symbol="CAPITALCOM:DXY">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "CAPITALCOM:DXY", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+        <div class="qcard" data-symbol="TVC:USOIL">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "TVC:USOIL", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+        <div class="qcard" data-symbol="FX:EURUSD">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "FX:EURUSD", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+        <div class="qcard" data-symbol="NASDAQ:TLT">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "NASDAQ:TLT", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+        <div class="qcard" data-symbol="AMEX:SPY">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "AMEX:SPY", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+        <div class="qcard" data-symbol="BINANCE:BTCUSDT">
+            <div class="click-overlay"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+            {"symbol": "BINANCE:BTCUSDT", "colorTheme": "dark", "isTransparent": true, "locale": "fr", "width": "100%"}
+            </script>
+        </div>
+    </div>
+
+    <!-- MAIN PANELS -->
+    <div class="main-layout">
+        <div class="col col-left">
+            <div class="p-header">
+                <span>📅 CALENDRIER ÉCONOMIQUE</span>
+                <span class="live" id="cal-live">LIVE</span>
+            </div>
+            <div class="cal-toolbar" id="cal-filters"></div>
+            <div class="cal-head-row">
+                <span>HEURE</span>
+                <span></span>
+                <span>ÉVÉNEMENT</span>
+                <span style="text-align:right;">ACTUEL</span>
+                <span style="text-align:right;">PRÉV.</span>
+                <span style="text-align:right;">PRÉC.</span>
+            </div>
+            <div id="calendar-content" class="scroll"></div>
+        </div>
+        <div class="col col-center" id="chart_container">
+            <div class="p-header"><span id="chart-symbol">— CHART —</span><span class="live">LIVE</span></div>
+            <div id="tv_main_wrap" style="flex:1; min-height:0;"></div>
+        </div>
+        <div class="col col-right">
+            <div class="p-header"><span>🚨 FIL INFO MULTI-SOURCE</span><span class="live">LIVE</span></div>
+            <div id="news-content" class="scroll"></div>
+        </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+        <span>● <span class="ok">CONNECTED</span> · 6 sources RSS · cache 30s</span>
+        <span id="status-news">News: —</span>
+        <span id="status-sound" style="cursor:pointer;user-select:none;" title="Activer/couper le son sur nouvelles">🔇 SOUND OFF</span>
+        <select id="sound-pick" title="Choisir le son d'alerte" style="background:#0a0a0a;color:#e7e7e7;border:1px solid #2a2a2a;font-family:inherit;font-size:11px;padding:1px 4px;cursor:pointer;">
+            <option value="ping">PING</option>
+            <option value="chime" selected>CHIME</option>
+            <option value="siren">SIREN</option>
+            <option value="bloop">BLOOP</option>
+            <option value="alert">ALERT</option>
+        </select>
+        <span id="status-clock">--:--:--</span>
+    </div>
+
+    
+<link rel="stylesheet" href="/static/styles.css">
+<script src="/static/app.js"></script>
+</body>
+</html>
