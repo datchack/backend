@@ -5,13 +5,13 @@ import asyncio
 import json
 import os
 import time
-import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import aiohttp
 import feedparser
 import uvicorn
+from bs4 import BeautifulSoup  # pip install beautifulsoup4
 
 app = FastAPI()
 
@@ -112,9 +112,8 @@ async def health():
     }
 
 
-# ====== ECONOMIC CALENDAR (ForexFactory + fallback test) ======
-CALENDAR_JSON_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
-CALENDAR_XML_URL  = "https://nfs.faireconomy.media/ff_calendar_thisweek.xml"
+# ====== ECONOMIC CALENDAR (ForexFactory HTML, PRO) ======
+FF_URL = "https://www.forexfactory.com/calendar?week=this"
 BROWSER_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -148,119 +147,131 @@ def _save_disk_cache() -> None:
 _load_disk_cache()
 
 
-def _parse_ff_xml(xml_text: str) -> list[dict]:
-    try:
-        root = ET.fromstring(xml_text)
-    except Exception:
+def _parse_ff_html(html: str) -> list[dict]:
+    """
+    Parse le HTML ForexFactory et renvoie une liste d'événements
+    au format attendu par ton frontend :
+    ts, country, impact, title, actual, forecast, previous
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    events: list[dict] = []
+
+    # FF structure typique : lignes avec class "calendar__row"
+    rows = soup.select(".calendar__row")
+    if not rows:
         return []
-    out: list[dict] = []
-    for ev in root.findall("event"):
-        def g(tag: str) -> str:
-            el = ev.find(tag)
-            return (el.text or "").strip() if el is not None and el.text else ""
-        date_s = g("date")
-        time_s = g("time")
-        if not date_s:
+
+    current_date = None  # date du jour courant dans le calendrier
+
+    for row in rows:
+        # Certaines lignes sont des séparateurs de jour
+        day_cell = row.select_one(".calendar__cell.calendar__date")
+        if day_cell and day_cell.get_text(strip=True):
+            # Exemple de texte : "Mon Jan 6"
+            current_date = day_cell.get_text(strip=True)
             continue
-        try:
-            month, day, year = [int(x) for x in date_s.split("-")]
-        except Exception:
+
+        # On ne parse que les vraies lignes d'événements
+        time_cell = row.select_one(".calendar__cell.calendar__time")
+        country_cell = row.select_one(".calendar__cell.calendar__country")
+        impact_cell = row.select_one(".calendar__cell.calendar__impact")
+        event_cell = row.select_one(".calendar__cell.calendar__event")
+        actual_cell = row.select_one(".calendar__cell.calendar__actual")
+        forecast_cell = row.select_one(".calendar__cell.calendar__forecast")
+        previous_cell = row.select_one(".calendar__cell.calendar__previous")
+
+        if not event_cell or not country_cell or not time_cell:
             continue
-        time_norm = time_s.lower().replace(" ", "")
-        if time_norm in ("", "allday", "tentative"):
-            dt = datetime(year, month, day, 0, 0, tzinfo=ET_TZ)
+
+        title = event_cell.get_text(strip=True)
+        if not title:
+            continue
+
+        country = country_cell.get_text(strip=True).upper() or "USD"
+
+        impact_text = impact_cell.get_text(strip=True) if impact_cell else ""
+        # FF utilise souvent des icônes, on normalise
+        if "High" in impact_text:
+            impact = "High"
+        elif "Medium" in impact_text:
+            impact = "Medium"
+        elif "Low" in impact_text:
+            impact = "Low"
+        else:
+            impact = "Low"
+
+        time_text = time_cell.get_text(strip=True)
+        # Gestion des cas "All Day", "Tentative", etc.
+        if time_text.lower() in ("all day", "allday", "tentative", ""):
+            hour = 0
+            minute = 0
         else:
             try:
-                dt = datetime.strptime(time_norm, "%I:%M%p").replace(
-                    year=year, month=month, day=day, tzinfo=ET_TZ
-                )
+                # FF : "2:30pm", "8:00am"
+                dt_time = datetime.strptime(time_text.lower().replace(" ", ""), "%I:%M%p")
+                hour = dt_time.hour
+                minute = dt_time.minute
             except Exception:
-                dt = datetime(year, month, day, 0, 0, tzinfo=ET_TZ)
-        out.append({
-            "title": g("title"),
-            "country": g("country").upper(),
-            "impact": (g("impact") or "Low").capitalize(),
-            "forecast": g("forecast"),
-            "previous": g("previous"),
-            "actual": g("actual"),
-            "ts": dt.timestamp(),
-        })
-    out.sort(key=lambda x: x["ts"])
-    return out
+                hour = 0
+                minute = 0
 
+        # current_date peut être du style "Mon Jan 6"
+        if current_date:
+            try:
+                # On ajoute l'année courante
+                year = datetime.now(ET_TZ).year
+                dt_day = datetime.strptime(f"{current_date} {year}", "%a %b %d %Y")
+            except Exception:
+                dt_day = datetime.now(ET_TZ)
+        else:
+            dt_day = datetime.now(ET_TZ)
 
-def _parse_ff_json(data: list) -> list[dict]:
-    out: list[dict] = []
-    for e in data:
-        try:
-            dt = datetime.fromisoformat(e["date"])
-            ts = dt.timestamp()
-        except Exception:
-            continue
-        out.append({
-            "title": e.get("title", "") or "",
-            "country": (e.get("country", "") or "").upper(),
-            "impact": (e.get("impact", "") or "Low").capitalize(),
-            "forecast": e.get("forecast", "") or "",
-            "previous": e.get("previous", "") or "",
-            "actual": e.get("actual", "") or "",
+        dt = datetime(
+            dt_day.year, dt_day.month, dt_day.day,
+            hour, minute, tzinfo=ET_TZ
+        )
+        ts = dt.timestamp()
+
+        def clean(cell):
+            if not cell:
+                return ""
+            return cell.get_text(strip=True) or ""
+
+        actual = clean(actual_cell)
+        forecast = clean(forecast_cell)
+        previous = clean(previous_cell)
+
+        events.append({
+            "title": title,
+            "country": country,
+            "impact": impact,
+            "forecast": forecast,
+            "previous": previous,
+            "actual": actual,
             "ts": ts,
         })
-    out.sort(key=lambda x: x["ts"])
-    return out
+
+    events.sort(key=lambda x: x["ts"])
+    return events
 
 
 async def _fetch_calendar() -> list[dict]:
-    headers = {"User-Agent": BROWSER_UA, "Accept": "application/json, text/xml, */*"}
+    headers = {
+        "User-Agent": BROWSER_UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://www.forexfactory.com/",
+    }
     async with aiohttp.ClientSession(headers=headers) as session:
-        # 1) JSON
         try:
-            async with session.get(CALENDAR_JSON_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200:
-                    data = await resp.json(content_type=None)
-                    if isinstance(data, list):
-                        parsed = _parse_ff_json(data)
-                    else:
-                        parsed = _parse_ff_json(data.get("events", []))
-                    if parsed:
-                        return parsed
+            async with session.get(FF_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status != 200:
+                    return []
+                html = await resp.text()
         except Exception:
-            pass
+            return []
 
-        # 2) XML
-        try:
-            async with session.get(CALENDAR_XML_URL, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200:
-                    raw = await resp.read()
-                    txt = raw.decode("windows-1252", errors="replace")
-                    parsed = _parse_ff_xml(txt)
-                    if parsed:
-                        return parsed
-        except Exception:
-            pass
-
-    # 3) Fallback de TEST si rien ne marche (pour vérifier le frontend)
-    now = time.time()
-    return [
-        {
-            "title": "TEST NFP (EMPLOI NON AGRICOLE)",
-            "country": "USD",
-            "impact": "High",
-            "forecast": "200K",
-            "previous": "180K",
-            "actual": "220K",
-            "ts": now + 60,
-        },
-        {
-            "title": "TEST CPI (INFLATION)",
-            "country": "EUR",
-            "impact": "Medium",
-            "forecast": "2.0%",
-            "previous": "1.8%",
-            "actual": "2.3%",
-            "ts": now + 120,
-        },
-    ]
+    events = _parse_ff_html(html)
+    return events
 
 
 @app.get("/api/calendar")
@@ -268,9 +279,12 @@ async def get_calendar():
     now = time.time()
     upcoming_ts = _calendar_cache.get("next_event_ts", 0.0)
     cache_age = now - _calendar_cache["ts"]
+
+    # Hot window : event dans ±90s → on rafraîchit plus souvent
     in_hot_window = bool(upcoming_ts and -90 < (upcoming_ts - now) < 120)
     ttl = 10 if in_hot_window else 60
 
+    # Cache encore valide
     if _calendar_cache["data"] and cache_age < ttl:
         return {
             "events": _calendar_cache["data"],
@@ -280,15 +294,17 @@ async def get_calendar():
             "stale": False,
         }
 
+    # Sinon, on refetch
     events = await _fetch_calendar()
     if events:
         _calendar_cache["data"] = events
         _calendar_cache["ts"] = now
+        # prochain event sans actual
         nxt = next((e["ts"] for e in events if not e.get("actual") and e["ts"] > now), 0.0)
         _calendar_cache["next_event_ts"] = nxt
         _save_disk_cache()
     else:
-        _calendar_cache["ts"] = now
+        _calendar_cache["ts"] = now  # on marque l'heure du dernier essai
 
     return {
         "events": _calendar_cache["data"],
