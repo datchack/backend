@@ -116,7 +116,7 @@ async def health():
 # ===============   ECONOMIC CALENDAR (MyFXBook HTML)   ======
 # ============================================================
 
-FMP_API_KEY = "TA_CLE_ICI"
+FMP_API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
 FMP_URL = f"https://financialmodelingprep.com/stable/economic-calendar?country=US&apikey={FMP_API_KEY}"
 
 
