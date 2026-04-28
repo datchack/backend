@@ -1027,84 +1027,215 @@ INDEX_HTML = r"""<!DOCTYPE html>
             impact: new Set(Array.isArray(PREFS.calImpact) ? PREFS.calImpact : ['High','Medium']),
             ccy:    new Set(Array.isArray(PREFS.calCcy)    ? PREFS.calCcy    : ['USD','EUR','GBP','JPY']),
         };
-        async function loadCalendar() {
-    const container = document.getElementById("calendar-container");
-    container.innerHTML = "<div class='loading'>Chargement du calendrier...</div>";
+        let calEvents = [];
+        let calLastSeenActual = new Set();
+        let calPollTimer = null;
+        let calFirstLoad = true;
 
-    try {
-        const res = await fetch("/api/calendar");
-        const data = await res.json();
-
-        const days = data.days || {};
-
-        container.innerHTML = "";
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const formatDateTitle = (dateStr) => {
-            const d = new Date(dateStr);
-            const diff = (d - today) / 86400000;
-
-            if (diff === 0) return "Aujourd’hui";
-            if (diff === 1) return "Demain";
-
-            return d.toLocaleDateString("fr-FR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long"
-            });
-        };
-
-        for (const dateStr of Object.keys(days).sort()) {
-            const events = days[dateStr];
-            if (!events || events.length === 0) continue;
-
-            const dayBlock = document.createElement("div");
-            dayBlock.className = "calendar-day-block";
-
-            const title = document.createElement("h2");
-            title.className = "calendar-day-title";
-            title.textContent = formatDateTitle(dateStr);
-
-            dayBlock.appendChild(title);
-
-            events.forEach(ev => {
-                const row = document.createElement("div");
-                row.className = "calendar-row";
-
-                const time = new Date(ev.ts * 1000).toLocaleTimeString("fr-FR", {
-                    hour: "2-digit",
-                    minute: "2-digit"
+        function persistCalFilters() {
+            savePrefs({ calImpact: [...calFilters.impact], calCcy: [...calFilters.ccy] });
+        }
+        function buildCalToolbar() {
+            const root = document.getElementById('cal-filters');
+            root.innerHTML = '';
+            IMPACTS.forEach(imp => {
+                const c = document.createElement('span');
+                c.className = 'cal-chip' + (calFilters.impact.has(imp) ? ' on' : '');
+                c.textContent = imp.toUpperCase();
+                c.addEventListener('click', () => {
+                    if (calFilters.impact.has(imp)) calFilters.impact.delete(imp);
+                    else calFilters.impact.add(imp);
+                    persistCalFilters();
+                    buildCalToolbar();
+                    renderCalendar();
                 });
-
-                row.innerHTML = `
-                    <div class="cal-time">${time}</div>
-                    <div class="cal-flag">${ev.country}</div>
-                    <div class="cal-impact impact-${ev.impact.toLowerCase()}">${ev.impact}</div>
-                    <div class="cal-title">${ev.title}</div>
-                    <div class="cal-forecast">${ev.forecast || "-"}</div>
-                    <div class="cal-previous">${ev.previous || "-"}</div>
-                    <div class="cal-actual">${ev.actual || "-"}</div>
-                `;
-
-                dayBlock.appendChild(row);
+                root.appendChild(c);
             });
-
-            container.appendChild(dayBlock);
+            const sep = document.createElement('span');
+            sep.className = 'cal-chip sep';
+            sep.textContent = '|';
+            root.appendChild(sep);
+            CCY_LIST.forEach(ccy => {
+                const c = document.createElement('span');
+                c.className = 'cal-chip' + (calFilters.ccy.has(ccy) ? ' on' : '');
+                c.textContent = ccy;
+                c.addEventListener('click', () => {
+                    if (calFilters.ccy.has(ccy)) calFilters.ccy.delete(ccy);
+                    else calFilters.ccy.add(ccy);
+                    persistCalFilters();
+                    buildCalToolbar();
+                    renderCalendar();
+                });
+                root.appendChild(c);
+            });
         }
-
-        if (container.innerHTML.trim() === "") {
-            container.innerHTML = "<div class='empty'>Aucun événement disponible.</div>";
+        function calToNum(s) {
+            if (s === null || s === undefined || s === '') return null;
+            const m = String(s).match(/-?\d+(?:\.\d+)?/);
+            if (!m) return null;
+            let n = parseFloat(m[0]);
+            const u = String(s).slice(-1).toUpperCase();
+            if (u === 'T') n *= 1e12;
+            else if (u === 'B') n *= 1e9;
+            else if (u === 'M') n *= 1e6;
+            else if (u === 'K') n *= 1e3;
+            return n;
         }
+        function compareActual(actual, forecast) {
+            const a = calToNum(actual), f = calToNum(forecast);
+            if (a === null || f === null) return 'eq';
+            if (a > f) return 'up';
+            if (a < f) return 'down';
+            return 'eq';
+        }
+        function fmtCountdown(secs) {
+            if (secs < 0) secs = 0;
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            return `${m}:${String(s).padStart(2,'0')}`;
+        }
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function renderCalendar() {
+            const root = document.getElementById('calendar-content');
+            if (!calEvents.length) {
+                root.innerHTML = '<div class="cal-empty">Chargement…</div>';
+                return;
+            }
+            const filtered = calEvents.filter(e =>
+                calFilters.impact.has(e.impact) && calFilters.ccy.has(e.country)
+            );
+            if (!filtered.length) {
+                root.innerHTML = '<div class="cal-empty">Aucun événement avec les filtres actuels.</div>';
+                return;
+            }
+            const now = Date.now() / 1000;
+            const newFreshTriggers = [];
+            let html = '';
+            let lastDay = '';
+            filtered.forEach(e => {
+                const dt = new Date(e.ts * 1000);
+                const dayKey = dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+                if (dayKey !== lastDay) {
+                    html += `<div class="cal-day">${dayKey}</div>`;
+                    lastDay = dayKey;
+                }
+                const localTime = dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+                const flag = FLAGS[e.country] || '\u{1F3F3}';
+                const impClass = e.impact.toLowerCase();
+                const isPast = !!e.actual || (e.ts < now - 60);
+                const isDue  = !e.actual && (e.ts - now) <= 75 && (e.ts - now) >= -10;
+                const cmp = e.actual ? compareActual(e.actual, e.forecast) : 'eq';
+                const fresh = !!e.actual && !calLastSeenActual.has(e.ts) && !calFirstLoad;
+                if (e.actual) {
+                    if (fresh) newFreshTriggers.push(e);
+                    calLastSeenActual.add(e.ts);
+                }
+                const cls = ['cal-row'];
+                if (isPast && !fresh) cls.push('past');
+                if (isDue) cls.push('due');
+                if (fresh) cls.push('fresh-result');
 
-    } catch (err) {
-        container.innerHTML = "<div class='error'>Erreur lors du chargement du calendrier.</div>";
-    }
-}
+                let cdHtml = '';
+                if (isDue) {
+                    const secs = Math.max(0, Math.floor(e.ts - now));
+                    const urgent = secs < 30 ? ' urgent' : '';
+                    cdHtml = `<span class="cal-countdown${urgent}" data-cd-target="${e.ts}">T-${fmtCountdown(secs)}</span>`;
+                }
+                const actualHtml = e.actual
+                    ? `<span class="cal-num ${cmp}">${escapeHtml(e.actual)}</span>`
+                    : `<span class="cal-num muted">—</span>`;
+                const forecastHtml = e.forecast
+                    ? `<span class="cal-num">${escapeHtml(e.forecast)}</span>`
+                    : `<span class="cal-num muted">—</span>`;
+                const previousHtml = e.previous
+                    ? `<span class="cal-num muted">${escapeHtml(e.previous)}</span>`
+                    : `<span class="cal-num muted">—</span>`;
+                const safeTitle = escapeHtml(e.title || '');
 
-setInterval(loadCalendar, 30000);
-loadCalendar();
+                html += `<div class="${cls.join(' ')}">
+                    <span class="cal-time"><span>${localTime}</span>${cdHtml}</span>
+                    <span class="cal-flag-wrap"><span class="cal-flag">${flag}</span><span class="cal-ccy">${e.country}</span></span>
+                    <span class="cal-title">
+                        <span class="cal-impact ${impClass}"><i></i><i></i><i></i></span>
+                        <span class="cal-title-text" title="${safeTitle}">${safeTitle}</span>
+                    </span>
+                    ${actualHtml}
+                    ${forecastHtml}
+                    ${previousHtml}
+                </div>`;
+            });
+            root.innerHTML = html;
+
+            // Sound triggers (only after first load — avoid mass-flash on first paint)
+            if (!calFirstLoad && newFreshTriggers.some(e => e.impact === 'High' || e.impact === 'Medium')) {
+                if (soundEnabled) { ensureAudio(); beep(); }
+            }
+            calFirstLoad = false;
+        }
+        function tickCountdowns() {
+            const now = Date.now() / 1000;
+            let crossedZero = false;
+            document.querySelectorAll('[data-cd-target]').forEach(el => {
+                const ts = parseFloat(el.dataset.cdTarget);
+                const secs = Math.floor(ts - now);
+                if (secs < -2) { crossedZero = true; return; }
+                el.textContent = `T-${fmtCountdown(Math.max(0, secs))}`;
+                if (secs < 30 && !el.classList.contains('urgent')) el.classList.add('urgent');
+            });
+            if (crossedZero) fetchCalendar();
+        }
+        function nextHotMomentSec() {
+            // Returns: 0 if currently in hot window (event within ±90s), else seconds until hot window starts
+            const now = Date.now() / 1000;
+            for (const e of calEvents) {
+                if (e.actual) continue;
+                if (!calFilters.impact.has(e.impact) || !calFilters.ccy.has(e.country)) continue;
+                const delta = e.ts - now;
+                if (delta < -120) continue;
+                if (delta <= 90) return 0;
+                return delta - 90;
+            }
+            return Infinity;
+        }
+        function scheduleCalPoll() {
+            clearTimeout(calPollTimer);
+            const hot = nextHotMomentSec();
+            let delay;
+            if (hot === 0) delay = 3000;
+            else if (hot < 60) delay = Math.max(2000, hot * 1000);
+            else delay = 60000;
+            calPollTimer = setTimeout(fetchCalendar, delay);
+        }
+        async function fetchCalendar() {
+            try {
+                const r = await fetch('/api/calendar');
+                const j = await r.json();
+                calEvents = j.events || [];
+                document.getElementById('cal-live').innerHTML = j.hot
+                    ? '<span style="color:var(--warn);">HOT</span>' : 'LIVE';
+                renderCalendar();
+            } catch (e) {
+                document.getElementById('cal-live').innerHTML = '<span style="color:var(--sell);">OFFLINE</span>';
+            } finally {
+                scheduleCalPoll();
+            }
+        }
+        buildCalToolbar();
+        fetchCalendar();
+        setInterval(tickCountdowns, 1000);
+
+        // ====== BOOT ======
+        const startSymbol = currentSymbol;
+        const startCard = document.querySelector(`.qcard[data-symbol="${startSymbol}"]`);
+        initChart(startSymbol);
+        selectCard(startCard || document.querySelector('.qcard'));
+        updateClocks();
+        getNews();
+        setInterval(updateClocks, 1000);
+        setInterval(getNews, 5000);   // safe — server-side cache makes this cheap
+    </script>
 </body>
 </html>
 """
