@@ -846,7 +846,11 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, config: dict 
 async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
     country_key = ",".join(sorted(set(countries or ["US"])))
     now = time.time()
-    cached = _calendar_cache.get(country_key)
+    week_start, week_end = get_current_week_bounds()
+    from_date = week_start.date().isoformat()
+    to_date = (week_end - timedelta(days=1)).date().isoformat()
+    cache_key = f"{country_key}:{from_date}:{to_date}"
+    cached = _calendar_cache.get(cache_key)
     if cached and (now - cached["ts"]) < CALENDAR_CACHE_TTL:
         return cached["events"], cached["error"]
 
@@ -854,12 +858,17 @@ async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
     async with aiohttp.ClientSession() as session:
         payloads = []
         for country in countries or ["US"]:
-            url = f"https://financialmodelingprep.com/stable/economic-calendar?country={country}&apikey={FMP_API_KEY}"
+            params = {
+                "country": country,
+                "from": from_date,
+                "to": to_date,
+                "apikey": FMP_API_KEY,
+            }
             try:
-                async with session.get(url, timeout=20) as resp:
+                async with session.get("https://financialmodelingprep.com/stable/economic-calendar", params=params, timeout=20) as resp:
                     if resp.status == 429:
                         error = "Limite API calendrier atteinte"
-                        _calendar_cache[country_key] = {"events": [], "error": error, "ts": now}
+                        _calendar_cache[cache_key] = {"events": [], "error": error, "ts": now}
                         return [], error
                     if resp.status != 200:
                         errors.append(f"{country}: HTTP {resp.status}")
@@ -873,7 +882,7 @@ async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
         error = "Calendar feed unavailable"
         if errors:
             error = f"Calendar feed unavailable ({', '.join(errors[:3])})"
-        _calendar_cache[country_key] = {"events": [], "error": error, "ts": now}
+        _calendar_cache[cache_key] = {"events": [], "error": error, "ts": now}
         return [], error
 
     events: list[dict] = []
@@ -888,7 +897,6 @@ async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
             if normalized:
                 events.append(normalized)
 
-    week_start, week_end = get_current_week_bounds()
     week_start_ts = int(week_start.timestamp())
     week_end_ts = int(week_end.timestamp())
 
@@ -897,7 +905,7 @@ async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
         if week_start_ts <= event["ts"] < week_end_ts
     ]
     filtered_events.sort(key=lambda item: item["ts"])
-    _calendar_cache[country_key] = {"events": filtered_events, "error": None, "ts": now}
+    _calendar_cache[cache_key] = {"events": filtered_events, "error": None, "ts": now}
     return filtered_events, None
 
 

@@ -1156,7 +1156,7 @@ function renderCalendar() {
     }
 
     if (!Array.isArray(calEvents) || calEvents.length === 0) {
-        root.innerHTML = '<div class="cal-empty">Aucun evenement sur la semaine en cours.</div>';
+        root.innerHTML = '<div class="cal-empty">Aucun evenement a venir.</div>';
         return;
     }
 
@@ -1172,7 +1172,7 @@ function renderCalendar() {
     const upcoming = filtered.filter((event) => getDateKeyFromTs(event.ts, timeZone) >= todayKey);
 
     if (upcoming.length === 0) {
-        root.innerHTML = '<div class="cal-empty">Aucun evenement a venir sur la semaine en cours.</div>';
+        root.innerHTML = '<div class="cal-empty">Aucun evenement a venir.</div>';
         return;
     }
 
