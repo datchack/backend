@@ -1145,6 +1145,13 @@ async def get_context(request: Request):
 async def index():
     return FileResponse("templates/index.html")
 
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    require_owner(request)
+    return FileResponse("templates/admin.html")
+
+
 @app.get("/db-test")
 def db_test():
     try:

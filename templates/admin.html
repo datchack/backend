@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADMIN - XAUTERMINAL</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="admin-body">
+    <header class="admin-topbar">
+        <div>
+            <div class="admin-kicker">OWNER CONTROL</div>
+            <h1>Administration</h1>
+        </div>
+        <div class="admin-top-actions">
+            <a class="panel-btn admin-link" href="/">TERMINAL</a>
+            <button type="button" class="panel-btn" id="admin-refresh">REFRESH</button>
+        </div>
+    </header>
+
+    <main class="admin-shell">
+        <section class="admin-metrics" aria-label="Statistiques utilisateurs">
+            <div class="admin-metric">
+                <span>TOTAL</span>
+                <strong id="metric-total">0</strong>
+            </div>
+            <div class="admin-metric">
+                <span>ACTIVE</span>
+                <strong id="metric-active">0</strong>
+            </div>
+            <div class="admin-metric">
+                <span>TRIAL</span>
+                <strong id="metric-trial">0</strong>
+            </div>
+            <div class="admin-metric">
+                <span>EXPIRED</span>
+                <strong id="metric-expired">0</strong>
+            </div>
+        </section>
+
+        <section class="admin-panel">
+            <div class="admin-panel-head">
+                <div>
+                    <span class="admin-kicker">USERS</span>
+                    <h2>Comptes terminal</h2>
+                </div>
+                <div class="admin-filter">
+                    <input id="admin-search" type="search" placeholder="Rechercher un email" autocomplete="off">
+                    <select id="admin-status-filter" title="Filtrer par statut">
+                        <option value="all">TOUS</option>
+                        <option value="owner">OWNER</option>
+                        <option value="active">ACTIVE</option>
+                        <option value="trial">TRIAL</option>
+                        <option value="expired">EXPIRED</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="admin-message" class="admin-message">Chargement...</div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Statut</th>
+                            <th>Expiration</th>
+                            <th>Creation</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/admin.js"></script>
+</body>
+</html>
