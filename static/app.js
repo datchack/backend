@@ -2,7 +2,7 @@ const PREFS_KEY = 'tt_prefs_v1';
 const CALENDAR_REFRESH_MS = 60000;
 const NEWS_REFRESH_MS = 8000;
 const CONTEXT_REFRESH_MS = 15000;
-const QUOTES_REFRESH_MS = 15000;
+const QUOTES_REFRESH_MS = 5000;
 const IMPACT_LEVELS = ['High', 'Medium', 'Low'];
 const DEFAULT_ACCOUNT_MODE = 'register';
 const DEFAULT_MARKET_PROFILE = 'xauusd';
@@ -859,9 +859,21 @@ function renderQuoteCards(items = []) {
         if (!quote) return;
 
         const change = Number(quote.change || 0);
+        const nextPrice = Number(quote.price);
+        const prevPrice = Number(card.dataset.price);
+        const tickTone = Number.isFinite(prevPrice) && Number.isFinite(nextPrice) && nextPrice !== prevPrice
+            ? nextPrice > prevPrice ? 'tick-up' : 'tick-down'
+            : '';
         const tone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
-        card.classList.remove('loading', 'up', 'down', 'flat');
+        card.classList.remove('loading', 'up', 'down', 'flat', 'tick-up', 'tick-down');
         card.classList.add(tone);
+        if (tickTone) {
+            window.setTimeout(() => {
+                card.classList.remove('tick-up', 'tick-down');
+                card.classList.add(tickTone);
+            }, 0);
+        }
+        card.dataset.price = Number.isFinite(nextPrice) ? String(nextPrice) : '';
         card.dataset.symbol = quote.tv_symbol || card.dataset.symbol;
         card.classList.toggle('active', card.dataset.symbol === currentSymbol);
         card.innerHTML = `
