@@ -285,8 +285,16 @@
                         <div class="account-user-line"><span>EXPIRATION</span><strong id="account-expiry-value">-</strong></div>
                         <div class="account-actions">
                             <button type="button" class="panel-btn" id="account-sync">SYNC NOW</button>
+                            <button type="button" class="panel-btn hidden" id="account-admin-toggle">ADMIN</button>
                             <button type="button" class="panel-btn" id="account-logout">LOGOUT</button>
                         </div>
+                    </div>
+                    <div id="account-admin" class="account-admin hidden">
+                        <div class="account-admin-head">
+                            <span>USERS</span>
+                            <button type="button" class="panel-btn" id="account-admin-refresh">REFRESH</button>
+                        </div>
+                        <div id="account-admin-list" class="account-admin-list"></div>
                     </div>
                     <div id="account-message" class="account-message"></div>
                 </div>

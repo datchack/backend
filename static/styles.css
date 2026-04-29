@@ -888,6 +888,86 @@ body.gated .main-layout > .layout-splitter {
     color: var(--sell);
 }
 
+.account-admin {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.account-admin-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+}
+
+.account-admin-list {
+    display: grid;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.account-admin-empty {
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+}
+
+.account-admin-row {
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.account-admin-main {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.account-admin-main strong {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-admin-main span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.account-admin-main .ok {
+    color: var(--buy);
+}
+
+.account-admin-main .err {
+    color: var(--sell);
+}
+
+.account-admin-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.account-admin-actions .panel-btn {
+    min-width: 0;
+    padding: 0 4px;
+    font-size: 9px;
+}
+
 .status-select-wrap {
     gap: 6px;
     padding-right: 4px;

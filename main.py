@@ -101,6 +101,10 @@ class PreferencesPayload(BaseModel):
     prefs: dict[str, Any]
 
 
+class AdminAccessPayload(BaseModel):
+    action: str
+
+
 def db_connection():
     if DATABASE_URL:
         if psycopg2 is None:
@@ -189,6 +193,15 @@ def execute_one(query: str, params: tuple = ()) -> dict | sqlite3.Row | None:
                 cursor.execute(query.replace("?", "%s"), params)
                 return cursor.fetchone()
         return conn.execute(query, params).fetchone()
+
+
+def execute_all(query: str, params: tuple = ()) -> list[dict | sqlite3.Row]:
+    with db_connection() as conn:
+        if ACCOUNT_DB_BACKEND == "postgres":
+            with conn.cursor() as cursor:
+                cursor.execute(query.replace("?", "%s"), params)
+                return list(cursor.fetchall())
+        return list(conn.execute(query, params).fetchall())
 
 
 def execute_write(query: str, params: tuple = (), *, returning: bool = False):
@@ -356,6 +369,13 @@ def require_terminal_access(request: Request) -> dict:
     user = require_user(request)
     if not user.get("has_access"):
         raise HTTPException(status_code=403, detail="Acces reserve aux membres en essai ou abonnes")
+    return user
+
+
+def require_owner(request: Request) -> dict:
+    user = require_user(request)
+    if user.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Acces owner requis")
     return user
 
 
@@ -996,6 +1016,60 @@ async def account_preferences_save(payload: PreferencesPayload, request: Request
     prefs_json = json.dumps(payload.prefs)
     execute_write("UPDATE users SET prefs_json = ? WHERE id = ?", (prefs_json, user["id"]))
     return {"ok": True}
+
+
+@app.get("/api/admin/users")
+async def admin_users(request: Request):
+    require_owner(request)
+    rows = execute_all(
+        """
+        SELECT id, email, created_at, trial_started_at, trial_ends_at, plan, status, prefs_json
+        FROM users
+        ORDER BY id DESC
+        """
+    )
+    return {"users": [normalize_account_row(row) for row in rows]}
+
+
+@app.post("/api/admin/users/{user_id}/access")
+async def admin_update_user_access(user_id: int, payload: AdminAccessPayload, request: Request):
+    require_owner(request)
+    row = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    if not row:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
+    email = str(row["email"]).strip().lower()
+    action = payload.action.strip().lower()
+    now = utc_now()
+
+    if email in OWNER_EMAILS and action != "owner":
+        raise HTTPException(status_code=400, detail="Ce compte owner configure ne peut pas etre retrograde")
+
+    if action == "owner":
+        execute_write(
+            "UPDATE users SET plan = ?, status = ?, trial_ends_at = ? WHERE id = ?",
+            ("owner", "active", (now + timedelta(days=365 * 100)).isoformat(), user_id),
+        )
+    elif action == "active":
+        execute_write(
+            "UPDATE users SET plan = ?, status = ? WHERE id = ?",
+            ("active", "active", user_id),
+        )
+    elif action == "trial":
+        execute_write(
+            "UPDATE users SET plan = ?, status = ?, trial_started_at = ?, trial_ends_at = ? WHERE id = ?",
+            ("trial", "trialing", now.isoformat(), (now + timedelta(days=TRIAL_DAYS)).isoformat(), user_id),
+        )
+    elif action == "expire":
+        execute_write(
+            "UPDATE users SET plan = ?, status = ?, trial_ends_at = ? WHERE id = ?",
+            ("trial", "expired", (now - timedelta(seconds=1)).isoformat(), user_id),
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Action admin inconnue")
+
+    updated = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    return {"user": normalize_account_row(updated)}
 
 
 @app.get("/api/news")

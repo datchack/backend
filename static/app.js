@@ -42,6 +42,8 @@ let currentCenterTab = PREFS.centerTab || 'bias';
 let layoutState = loadLayoutPrefs();
 let accountMode = DEFAULT_ACCOUNT_MODE;
 let accountState = { authenticated: false, account: null };
+let adminPanelOpen = false;
+let adminUsers = [];
 let prefsSyncTimer = null;
 let appBooted = false;
 let accessFormMode = 'intro';
@@ -344,6 +346,8 @@ function renderAccountState() {
     const emailValue = document.getElementById('account-email-value');
     const planValue = document.getElementById('account-plan-value');
     const expiryValue = document.getElementById('account-expiry-value');
+    const adminToggle = document.getElementById('account-admin-toggle');
+    const adminPanel = document.getElementById('account-admin');
 
     if (!toggle || !trial || !summary || !form || !userBlock) return;
 
@@ -353,6 +357,9 @@ function renderAccountState() {
         summary.textContent = "Connecte-toi pour sauvegarder ton terminal et demarrer un essai 7 jours.";
         form.classList.remove('hidden');
         userBlock.classList.add('hidden');
+        if (adminToggle) adminToggle.classList.add('hidden');
+        if (adminPanel) adminPanel.classList.add('hidden');
+        adminPanelOpen = false;
         setAccountMode(accountMode);
         renderAccessGate();
         return;
@@ -373,7 +380,88 @@ function renderAccountState() {
     if (emailValue) emailValue.textContent = account.email;
     if (planValue) planValue.textContent = account.role === 'owner' ? 'OWNER' : String(account.plan || 'trial').toUpperCase();
     if (expiryValue) expiryValue.textContent = account.role === 'owner' ? 'LIFETIME' : new Date(account.trial_ends_at).toLocaleDateString('fr-FR');
+    if (adminToggle) adminToggle.classList.toggle('hidden', account.role !== 'owner');
+    if (adminPanel) adminPanel.classList.toggle('hidden', account.role !== 'owner' || !adminPanelOpen);
     renderAccessGate();
+}
+
+function renderAdminUsers() {
+    const list = document.getElementById('account-admin-list');
+    if (!list) return;
+
+    if (!adminUsers.length) {
+        list.innerHTML = '<div class="account-admin-empty">Aucun utilisateur.</div>';
+        return;
+    }
+
+    list.innerHTML = adminUsers.map((user) => {
+        const expiry = user.role === 'owner' ? 'LIFETIME' : new Date(user.trial_ends_at).toLocaleDateString('fr-FR');
+        const statusClass = user.has_access ? 'ok' : 'err';
+        return `
+            <div class="account-admin-row" data-user-id="${user.id}">
+                <div class="account-admin-main">
+                    <strong>${escapeHtml(user.email)}</strong>
+                    <span>${String(user.role || user.plan).toUpperCase()} · <span class="${statusClass}">${String(user.status || '').toUpperCase()}</span> · ${expiry}</span>
+                </div>
+                <div class="account-admin-actions">
+                    <button type="button" class="panel-btn" data-admin-action="active">ACTIVE</button>
+                    <button type="button" class="panel-btn" data-admin-action="trial">TRIAL</button>
+                    <button type="button" class="panel-btn" data-admin-action="expire">EXPIRE</button>
+                    <button type="button" class="panel-btn" data-admin-action="owner">OWNER</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[char]));
+}
+
+async function fetchAdminUsers() {
+    if (accountState.account?.role !== 'owner') return;
+
+    try {
+        setAccountMessage('Chargement admin...');
+        const response = await fetch('/api/admin/users', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || 'Admin indisponible');
+        }
+
+        adminUsers = payload.users || [];
+        renderAdminUsers();
+        setAccountMessage('Admin synchronise.', 'ok');
+    } catch (error) {
+        setAccountMessage(error.message || 'Erreur admin', 'err');
+    }
+}
+
+async function updateAdminUserAccess(userId, action) {
+    try {
+        setAccountMessage('Mise a jour utilisateur...');
+        const response = await fetch(`/api/admin/users/${userId}/access`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || 'Action admin impossible');
+        }
+
+        adminUsers = adminUsers.map((user) => user.id === payload.user.id ? payload.user : user);
+        renderAdminUsers();
+        setAccountMessage('Utilisateur mis a jour.', 'ok');
+    } catch (error) {
+        setAccountMessage(error.message || 'Erreur admin', 'err');
+    }
 }
 
 function toggleAccountPanel(forceOpen = null, heroOpen = false) {
@@ -503,6 +591,9 @@ function bindAccountControls() {
     const switchBtn = document.getElementById('account-switch');
     const logoutBtn = document.getElementById('account-logout');
     const syncBtn = document.getElementById('account-sync');
+    const adminToggle = document.getElementById('account-admin-toggle');
+    const adminRefresh = document.getElementById('account-admin-refresh');
+    const adminList = document.getElementById('account-admin-list');
     const panel = document.getElementById('account-panel');
     const startTrialBtn = document.getElementById('access-start-trial');
     const loginBtn = document.getElementById('access-login');
@@ -528,6 +619,24 @@ function bindAccountControls() {
         syncBtn.addEventListener('click', async () => {
             await syncPreferences();
             setAccountMessage('Preferences synchronisees.', 'ok');
+        });
+    }
+    if (adminToggle) {
+        adminToggle.addEventListener('click', async () => {
+            adminPanelOpen = !adminPanelOpen;
+            renderAccountState();
+            if (adminPanelOpen) {
+                await fetchAdminUsers();
+            }
+        });
+    }
+    if (adminRefresh) adminRefresh.addEventListener('click', fetchAdminUsers);
+    if (adminList) {
+        adminList.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-admin-action]');
+            const row = event.target.closest('[data-user-id]');
+            if (!button || !row) return;
+            updateAdminUserAccess(Number(row.dataset.userId), button.dataset.adminAction);
         });
     }
     if (startTrialBtn) {
