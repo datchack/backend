@@ -18,6 +18,13 @@ function formatDate(value, lifetime = false) {
     return new Date(value).toLocaleDateString('fr-FR');
 }
 
+function formatAccessEnd(user) {
+    if (user.role === 'owner') return 'LIFETIME';
+    if (user.role === 'member') return 'ACCES ACTIF';
+    if (user.role === 'trial') return formatDate(user.trial_ends_at);
+    return 'EXPIRE';
+}
+
 function setAdminMessage(message, tone = '') {
     const el = document.getElementById('admin-message');
     if (!el) return;
@@ -66,6 +73,15 @@ function renderUsers() {
         const role = String(user.role || user.plan || '-').toUpperCase();
         const status = String(user.status || '-').toUpperCase();
         const accessClass = user.has_access ? 'ok' : 'err';
+        const ownerLocked = user.role === 'owner';
+        const actions = ownerLocked
+            ? '<button type="button" class="panel-btn" disabled>OWNER</button>'
+            : `
+                <button type="button" class="panel-btn" data-admin-action="active">ACTIVE</button>
+                <button type="button" class="panel-btn" data-admin-action="trial">TRIAL</button>
+                <button type="button" class="panel-btn" data-admin-action="expire">EXPIRE</button>
+                <button type="button" class="panel-btn" data-admin-action="owner">OWNER</button>
+            `;
         return `
             <tr data-user-id="${user.id}">
                 <td>
@@ -74,15 +90,10 @@ function renderUsers() {
                 </td>
                 <td>${role}</td>
                 <td><span class="${accessClass}">${status}</span></td>
-                <td>${formatDate(user.trial_ends_at, user.role === 'owner')}</td>
+                <td>${formatAccessEnd(user)}</td>
                 <td>${formatDate(user.created_at)}</td>
                 <td>
-                    <div class="admin-row-actions">
-                        <button type="button" class="panel-btn" data-admin-action="active">ACTIVE</button>
-                        <button type="button" class="panel-btn" data-admin-action="trial">TRIAL</button>
-                        <button type="button" class="panel-btn" data-admin-action="expire">EXPIRE</button>
-                        <button type="button" class="panel-btn" data-admin-action="owner">OWNER</button>
-                    </div>
+                    <div class="admin-row-actions${ownerLocked ? ' owner-locked' : ''}">${actions}</div>
                 </td>
             </tr>
         `;

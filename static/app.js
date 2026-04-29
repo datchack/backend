@@ -364,17 +364,21 @@ function renderAccountState() {
     toggle.textContent = 'MY ACCOUNT';
     trial.textContent = account.role === 'owner'
         ? 'OWNER'
-        : account.trial_active ? `TRIAL ${account.trial_days_left}J` : (account.plan || 'PLAN').toUpperCase();
+        : account.role === 'trial' ? `TRIAL ${account.trial_days_left}J` : (account.plan || 'PLAN').toUpperCase();
     summary.textContent = account.role === 'owner'
         ? 'Acces createur actif a vie. Le terminal complet reste ouvert sans limitation.'
-        : account.trial_active
+        : account.role === 'trial'
         ? `Essai actif jusqu'au ${new Date(account.trial_ends_at).toLocaleDateString('fr-FR')}. Tes preferences sont synchronisees.`
         : 'Compte actif. Structure abonnement prete a etre branchee.';
     form.classList.add('hidden');
     userBlock.classList.remove('hidden');
     if (emailValue) emailValue.textContent = account.email;
     if (planValue) planValue.textContent = account.role === 'owner' ? 'OWNER' : String(account.plan || 'trial').toUpperCase();
-    if (expiryValue) expiryValue.textContent = account.role === 'owner' ? 'LIFETIME' : new Date(account.trial_ends_at).toLocaleDateString('fr-FR');
+    if (expiryValue) {
+        expiryValue.textContent = account.role === 'owner'
+            ? 'LIFETIME'
+            : account.role === 'trial' ? new Date(account.trial_ends_at).toLocaleDateString('fr-FR') : 'ACCES ACTIF';
+    }
     if (adminToggle) adminToggle.classList.toggle('hidden', account.role !== 'owner');
     renderAccessGate();
 }

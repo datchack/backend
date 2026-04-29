@@ -429,6 +429,12 @@ body.gated .main-layout > .layout-splitter {
     border-color: var(--border-hot);
 }
 
+.panel-btn:disabled,
+.status-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .scroll {
     flex: 1;
     overflow-y: auto;
@@ -1132,6 +1138,10 @@ body.gated .main-layout > .layout-splitter {
     display: grid;
     grid-template-columns: repeat(4, minmax(64px, 1fr));
     gap: 5px;
+}
+
+.admin-row-actions.owner-locked {
+    grid-template-columns: minmax(84px, 120px);
 }
 
 .admin-row-actions .panel-btn {
