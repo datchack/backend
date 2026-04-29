@@ -18,6 +18,11 @@ except ImportError:
     psycopg2 = None
     RealDictCursor = None
 
+try:
+    import stripe
+except ImportError:
+    stripe = None
+
 import aiohttp
 import feedparser
 import uvicorn
@@ -82,6 +87,15 @@ OWNER_EMAILS = {
     if email.strip()
 }
 OWNER_PASSWORD = os.getenv("OWNER_PASSWORD", "")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_MONTHLY = os.getenv("STRIPE_PRICE_MONTHLY", "")
+STRIPE_PRICE_YEARLY = os.getenv("STRIPE_PRICE_YEARLY", "")
+STRIPE_PRICE_LIFETIME = os.getenv("STRIPE_PRICE_LIFETIME", "")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "https://xauterminal.com").rstrip("/")
+
+if stripe is not None and STRIPE_SECRET_KEY:
+    stripe.api_key = STRIPE_SECRET_KEY
 
 MARKET_SYMBOLS = {
     "gold": {"symbol": "GC=F", "label": "GOLD"},
@@ -158,6 +172,10 @@ class AdminAccessPayload(BaseModel):
     action: str
 
 
+class BillingCheckoutPayload(BaseModel):
+    plan: str
+
+
 def db_connection():
     if DATABASE_URL:
         if psycopg2 is None:
@@ -199,6 +217,14 @@ def init_account_db() -> None:
                     )
                     """
                 )
+                for column_def in (
+                    "stripe_customer_id TEXT",
+                    "stripe_subscription_id TEXT",
+                    "stripe_price_id TEXT",
+                    "stripe_checkout_session_id TEXT",
+                    "stripe_current_period_end TEXT",
+                ):
+                    cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_def}")
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS sessions (
@@ -236,6 +262,18 @@ def init_account_db() -> None:
             );
             """
         )
+        for column_def in (
+            "stripe_customer_id TEXT",
+            "stripe_subscription_id TEXT",
+            "stripe_price_id TEXT",
+            "stripe_checkout_session_id TEXT",
+            "stripe_current_period_end TEXT",
+        ):
+            try:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {column_def}")
+            except sqlite3.OperationalError as exc:
+                if "duplicate column" not in str(exc).lower():
+                    raise
     seed_owner_accounts()
 
 
@@ -368,6 +406,10 @@ def normalize_account_row(row) -> dict | None:
         "trial_ends_at": row["trial_ends_at"],
         "trial_active": trial_active,
         "trial_days_left": days_left,
+        "stripe_customer_id": row["stripe_customer_id"] if "stripe_customer_id" in row.keys() else None,
+        "stripe_subscription_id": row["stripe_subscription_id"] if "stripe_subscription_id" in row.keys() else None,
+        "stripe_price_id": row["stripe_price_id"] if "stripe_price_id" in row.keys() else None,
+        "stripe_current_period_end": row["stripe_current_period_end"] if "stripe_current_period_end" in row.keys() else None,
         "prefs": prefs,
     }
 
@@ -430,6 +472,99 @@ def require_owner(request: Request) -> dict:
     if user.get("role") != "owner":
         raise HTTPException(status_code=403, detail="Acces owner requis")
     return user
+
+
+def stripe_checkout_plans() -> dict[str, dict[str, str]]:
+    return {
+        "monthly": {"price": STRIPE_PRICE_MONTHLY, "mode": "subscription", "plan": "monthly"},
+        "yearly": {"price": STRIPE_PRICE_YEARLY, "mode": "subscription", "plan": "yearly"},
+        "lifetime": {"price": STRIPE_PRICE_LIFETIME, "mode": "payment", "plan": "lifetime"},
+    }
+
+
+def require_stripe_ready() -> None:
+    if stripe is None:
+        raise HTTPException(status_code=503, detail="Stripe n'est pas installe sur le serveur")
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="STRIPE_SECRET_KEY manquant")
+
+
+def stripe_plan_from_price(price_id: str | None, fallback: str = "active") -> str:
+    if price_id == STRIPE_PRICE_MONTHLY:
+        return "monthly"
+    if price_id == STRIPE_PRICE_YEARLY:
+        return "yearly"
+    if price_id == STRIPE_PRICE_LIFETIME:
+        return "lifetime"
+    return fallback
+
+
+def iso_from_stripe_timestamp(value: Any) -> str | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromtimestamp(int(value), timezone.utc).isoformat()
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+def mark_user_paid(
+    *,
+    user_id: int | None = None,
+    customer_id: str | None = None,
+    subscription_id: str | None = None,
+    checkout_session_id: str | None = None,
+    price_id: str | None = None,
+    plan: str = "active",
+    status: str = "active",
+    current_period_end: str | None = None,
+) -> None:
+    now = utc_now()
+    if plan == "lifetime":
+        current_period_end = (now + timedelta(days=365 * 100)).isoformat()
+
+    assignments = ["plan = ?", "status = ?"]
+    params: list[Any] = [plan, status]
+    optional_values = {
+        "stripe_customer_id": customer_id,
+        "stripe_subscription_id": subscription_id,
+        "stripe_checkout_session_id": checkout_session_id,
+        "stripe_price_id": price_id,
+        "stripe_current_period_end": current_period_end,
+    }
+    for column, value in optional_values.items():
+        if value:
+            assignments.append(f"{column} = ?")
+            params.append(value)
+
+    if user_id is not None:
+        params.append(user_id)
+        execute_write(f"UPDATE users SET {', '.join(assignments)} WHERE id = ?", tuple(params))
+        return
+
+    if subscription_id:
+        params.append(subscription_id)
+        execute_write(f"UPDATE users SET {', '.join(assignments)} WHERE stripe_subscription_id = ?", tuple(params))
+        return
+
+    if customer_id:
+        params.append(customer_id)
+        execute_write(f"UPDATE users SET {', '.join(assignments)} WHERE stripe_customer_id = ?", tuple(params))
+
+
+def update_user_billing_status(customer_id: str | None, subscription_id: str | None, status: str) -> None:
+    local_status = "active" if status in {"active", "trialing"} else status
+    if subscription_id:
+        execute_write(
+            "UPDATE users SET status = ? WHERE stripe_subscription_id = ?",
+            (local_status, subscription_id),
+        )
+        return
+    if customer_id:
+        execute_write(
+            "UPDATE users SET status = ? WHERE stripe_customer_id = ?",
+            (local_status, customer_id),
+        )
 
 
 def clear_session(response: Response, token: str | None) -> None:
@@ -1144,6 +1279,146 @@ async def account_preferences_save(payload: PreferencesPayload, request: Request
     prefs_json = json.dumps(payload.prefs)
     execute_write("UPDATE users SET prefs_json = ? WHERE id = ?", (prefs_json, user["id"]))
     return {"ok": True}
+
+
+@app.post("/api/billing/checkout")
+async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
+    require_stripe_ready()
+    user = require_user(request)
+
+    plan_key = payload.plan.strip().lower()
+    plan_cfg = stripe_checkout_plans().get(plan_key)
+    if not plan_cfg:
+        raise HTTPException(status_code=400, detail="Formule inconnue")
+    if not plan_cfg["price"]:
+        raise HTTPException(status_code=503, detail=f"Prix Stripe manquant pour {plan_key}")
+
+    session_payload: dict[str, Any] = {
+        "mode": plan_cfg["mode"],
+        "line_items": [{"price": plan_cfg["price"], "quantity": 1}],
+        "success_url": f"{APP_BASE_URL}/terminal?billing=success",
+        "cancel_url": f"{APP_BASE_URL}/#pricing",
+        "client_reference_id": str(user["id"]),
+        "metadata": {
+            "user_id": str(user["id"]),
+            "plan": plan_cfg["plan"],
+            "price_id": plan_cfg["price"],
+        },
+        "allow_promotion_codes": True,
+    }
+
+    if user.get("stripe_customer_id"):
+        session_payload["customer"] = user["stripe_customer_id"]
+    else:
+        session_payload["customer_email"] = user["email"]
+
+    if plan_cfg["mode"] == "subscription":
+        session_payload["subscription_data"] = {
+            "metadata": {
+                "user_id": str(user["id"]),
+                "plan": plan_cfg["plan"],
+                "price_id": plan_cfg["price"],
+            }
+        }
+    else:
+        session_payload["customer_creation"] = "always"
+        session_payload["invoice_creation"] = {"enabled": True}
+        session_payload["payment_intent_data"] = {
+            "metadata": {
+                "user_id": str(user["id"]),
+                "plan": plan_cfg["plan"],
+                "price_id": plan_cfg["price"],
+            }
+        }
+
+    checkout_session = stripe.checkout.Session.create(**session_payload)
+    return {"url": checkout_session.url}
+
+
+@app.post("/api/billing/webhook")
+async def billing_webhook(request: Request):
+    require_stripe_ready()
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="STRIPE_WEBHOOK_SECRET manquant")
+
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature", "")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, signature, STRIPE_WEBHOOK_SECRET)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Webhook Stripe invalide") from exc
+    except stripe.error.SignatureVerificationError as exc:
+        raise HTTPException(status_code=400, detail="Signature Stripe invalide") from exc
+
+    event_type = event["type"]
+    obj = event["data"]["object"]
+
+    if event_type == "checkout.session.completed":
+        metadata = obj.get("metadata") or {}
+        user_id = int(metadata["user_id"]) if metadata.get("user_id") else None
+        plan = metadata.get("plan") or stripe_plan_from_price(metadata.get("price_id"))
+        price_id = metadata.get("price_id")
+        customer_id = obj.get("customer")
+        subscription_id = obj.get("subscription")
+        mode = obj.get("mode")
+        payment_status = obj.get("payment_status")
+
+        if mode == "subscription" or payment_status == "paid":
+            mark_user_paid(
+                user_id=user_id,
+                customer_id=customer_id,
+                subscription_id=subscription_id,
+                checkout_session_id=obj.get("id"),
+                price_id=price_id,
+                plan=plan,
+                status="active",
+            )
+
+    elif event_type == "invoice.paid":
+        subscription_id = obj.get("subscription")
+        customer_id = obj.get("customer")
+        line_items = ((obj.get("lines") or {}).get("data") or [])
+        price_id = None
+        if line_items:
+            price = line_items[0].get("price") or {}
+            price_id = price.get("id")
+        plan = stripe_plan_from_price(price_id, "active")
+        mark_user_paid(
+            customer_id=customer_id,
+            subscription_id=subscription_id,
+            price_id=price_id,
+            plan=plan,
+            status="active",
+        )
+
+    elif event_type == "invoice.payment_failed":
+        update_user_billing_status(obj.get("customer"), obj.get("subscription"), "past_due")
+
+    elif event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
+        subscription_id = obj.get("id")
+        customer_id = obj.get("customer")
+        status = "canceled" if event_type.endswith("deleted") else obj.get("status", "inactive")
+        current_period_end = iso_from_stripe_timestamp(obj.get("current_period_end"))
+        price_id = None
+        items = ((obj.get("items") or {}).get("data") or [])
+        if items:
+            price = items[0].get("price") or {}
+            price_id = price.get("id")
+
+        if status in {"active", "trialing"}:
+            mark_user_paid(
+                customer_id=customer_id,
+                subscription_id=subscription_id,
+                price_id=price_id,
+                plan=stripe_plan_from_price(price_id, "active"),
+                status="active",
+                current_period_end=current_period_end,
+            )
+        else:
+            update_user_billing_status(customer_id, subscription_id, status)
+
+    return {"received": True}
 
 
 @app.get("/api/admin/users")

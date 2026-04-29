@@ -1,5 +1,6 @@
 let landingAuthMode = 'register';
 let landingLang = localStorage.getItem('xt_lang') || 'fr';
+let selectedBillingPlan = null;
 
 const LANDING_COPY = {
     fr: {
@@ -38,7 +39,7 @@ const LANDING_COPY = {
         pricing_lifetime_period: 'une fois',
         pricing_lifetime_copy: 'Un accès à vie pensé comme offre fondateur, limité tant que le produit se construit.',
         pricing_best_value: 'Meilleur choix',
-        pricing_start_trial: "Démarrer l'essai",
+        pricing_choose: 'Choisir cette formule',
         cta_title: 'Construis ton poste de décision macro.',
         cta_copy: 'Active ton essai gratuit et teste le terminal complet avec ton propre profil de marché.',
         cta_button: 'Créer mon compte',
@@ -57,6 +58,8 @@ const LANDING_COPY = {
         auth_loading_register: 'Création du compte...',
         auth_no_access: 'Compte connecté, mais accès terminal indisponible.',
         auth_success: 'Accès valide. Ouverture du terminal...',
+        billing_redirect: 'Redirection vers le paiement...',
+        billing_error: 'Paiement indisponible',
         auth_error: 'Erreur compte',
     },
     en: {
@@ -95,7 +98,7 @@ const LANDING_COPY = {
         pricing_lifetime_period: 'one time',
         pricing_lifetime_copy: 'Lifetime access as a founder offer, limited while the product is still being built.',
         pricing_best_value: 'Best value',
-        pricing_start_trial: 'Start trial',
+        pricing_choose: 'Choose this plan',
         cta_title: 'Build your macro decision desk.',
         cta_copy: 'Start your free trial and test the full terminal with your own market profile.',
         cta_button: 'Create my account',
@@ -114,6 +117,8 @@ const LANDING_COPY = {
         auth_loading_register: 'Creating account...',
         auth_no_access: 'Account connected, but terminal access is unavailable.',
         auth_success: 'Access valid. Opening terminal...',
+        billing_redirect: 'Redirecting to payment...',
+        billing_error: 'Payment unavailable',
         auth_error: 'Account error',
     },
 };
@@ -224,6 +229,11 @@ async function submitLandingAuth(event) {
             return;
         }
 
+        if (selectedBillingPlan) {
+            await startBillingCheckout(selectedBillingPlan);
+            return;
+        }
+
         setLandingMessage(t('auth_success'), 'ok');
         window.location.href = '/terminal';
     } catch (error) {
@@ -231,9 +241,49 @@ async function submitLandingAuth(event) {
     }
 }
 
+async function startBillingCheckout(plan) {
+    try {
+        setLandingMessage(t('billing_redirect'));
+        const response = await fetch('/api/billing/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || t('billing_error'));
+        }
+        window.location.href = payload.url;
+    } catch (error) {
+        setLandingMessage(error.message || t('billing_error'), 'err');
+    }
+}
+
+async function handleBillingPlan(plan) {
+    selectedBillingPlan = plan;
+    try {
+        const response = await fetch('/api/account/me', { cache: 'no-store' });
+        const payload = await response.json();
+        if (payload.authenticated) {
+            await startBillingCheckout(plan);
+            return;
+        }
+    } catch (error) {
+        console.error(error);
+    }
+    openLandingAuth('register');
+}
+
 function bindLanding() {
     document.querySelectorAll('[data-auth-mode]').forEach((button) => {
-        button.addEventListener('click', () => openLandingAuth(button.dataset.authMode));
+        button.addEventListener('click', () => {
+            selectedBillingPlan = null;
+            openLandingAuth(button.dataset.authMode);
+        });
+    });
+
+    document.querySelectorAll('[data-billing-plan]').forEach((button) => {
+        button.addEventListener('click', () => handleBillingPlan(button.dataset.billingPlan));
     });
 
     const langToggle = document.querySelector('[data-lang-toggle]');
