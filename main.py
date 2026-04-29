@@ -1313,7 +1313,9 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
         session_payload["customer_email"] = user["email"]
 
     if plan_cfg["mode"] == "subscription":
+        session_payload["payment_method_collection"] = "always"
         session_payload["subscription_data"] = {
+            "trial_period_days": TRIAL_DAYS,
             "metadata": {
                 "user_id": str(user["id"]),
                 "plan": plan_cfg["plan"],
