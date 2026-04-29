@@ -24,7 +24,7 @@ import uvicorn
 from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response as FastAPIResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
@@ -1292,6 +1292,31 @@ async def get_context(request: Request):
 @app.get("/", response_class=HTMLResponse)
 async def index():
     return FileResponse("templates/index.html")
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt():
+    return """User-agent: *
+Allow: /
+
+Sitemap: https://xauterminal.com/sitemap.xml
+"""
+
+
+@app.get("/sitemap.xml")
+async def sitemap_xml():
+    today = utc_now().date().isoformat()
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://xauterminal.com/</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+"""
+    return FastAPIResponse(content=xml, media_type="application/xml")
 
 
 @app.get("/admin", response_class=HTMLResponse)
