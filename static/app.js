@@ -56,6 +56,7 @@ let prefsSyncTimer = null;
 let appBooted = false;
 let accessFormMode = 'intro';
 let lastSeenNewsTs = 0;
+let hasLoadedNews = false;
 let suppressNextNewsFresh = false;
 let calEvents = [];
 let contextState = null;
@@ -1308,7 +1309,7 @@ async function getNews() {
 
         items.forEach((itemData) => {
             const item = document.createElement('div');
-            const isFresh = !suppressFresh && itemData.ts > lastSeenNewsTs;
+            const isFresh = hasLoadedNews && !suppressFresh && itemData.ts > lastSeenNewsTs;
             if (isFresh) {
                 freshCount += 1;
             }
@@ -1351,9 +1352,11 @@ async function getNews() {
             container.appendChild(item);
         });
 
-        if (items.length) {
-            lastSeenNewsTs = Math.max(lastSeenNewsTs, items[0].ts || 0);
+        const latestNewsTs = items.reduce((latest, item) => Math.max(latest, Number(item.ts) || 0), lastSeenNewsTs);
+        if (latestNewsTs > lastSeenNewsTs) {
+            lastSeenNewsTs = latestNewsTs;
         }
+        hasLoadedNews = true;
         suppressNextNewsFresh = false;
 
         const statusNews = document.getElementById('status-news');

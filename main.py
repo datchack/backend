@@ -603,7 +603,7 @@ def personalize_news_items(items: list[dict], profile: dict) -> list[dict]:
     else:
         personalized = [{**item, "profile_score": 0} for item in recent_items]
 
-    personalized.sort(key=lambda item: (item.get("profile_score", 0), item.get("ts", 0)), reverse=True)
+    personalized.sort(key=lambda item: item.get("ts", 0), reverse=True)
     return personalized[:80]
 
 
