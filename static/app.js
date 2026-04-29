@@ -894,9 +894,9 @@ function formatValue(value, unit = '') {
     return unit ? `${text}${unit}` : text;
 }
 
-function renderCalendarValue(label, value, unit = '') {
+function renderCalendarValue(label, value, unit = '', tone = '') {
     return `
-        <span class="cal-stat">
+        <span class="cal-stat ${tone}">
             <span class="cal-stat-label">${label}</span>
             <strong>${formatValue(value, unit)}</strong>
         </span>
@@ -918,6 +918,40 @@ function parseComparable(value) {
     return Number.parseFloat(String(value).replace(/[^\d.-]/g, ''));
 }
 
+function isLowerBetterCalendarEvent(title = '') {
+    const lowerTitle = title.toLowerCase();
+    const lowerIsBetterKeywords = [
+        'unemployment',
+        'jobless',
+        'claims',
+        'claimant',
+        'layoffs',
+        'layoff',
+        'challenger job cuts',
+        'inventories',
+        'stock change',
+        'deficit',
+        'debt',
+        'delinquency',
+        'bankruptcy',
+        'bankruptcies',
+        'default',
+    ];
+    return lowerIsBetterKeywords.some((keyword) => lowerTitle.includes(keyword));
+}
+
+function getActualVsPreviousTone(event) {
+    const actual = parseComparable(event.actual);
+    const previous = parseComparable(event.previous);
+    if (Number.isNaN(actual) || Number.isNaN(previous) || actual === previous) {
+        return '';
+    }
+
+    const higherIsBetter = !isLowerBetterCalendarEvent(event.title || '');
+    const good = higherIsBetter ? actual > previous : actual < previous;
+    return good ? 'good' : 'bad';
+}
+
 function getCalendarBiasClass(event) {
     const actual = parseComparable(event.actual);
     const forecast = parseComparable(event.forecast);
@@ -925,9 +959,7 @@ function getCalendarBiasClass(event) {
         return '';
     }
 
-    const title = (event.title || '').toLowerCase();
-    const negativeHigher = ['unemployment', 'claims', 'jobless', 'inventories', 'stock change'];
-    const lowerIsBetter = negativeHigher.some((keyword) => title.includes(keyword));
+    const lowerIsBetter = isLowerBetterCalendarEvent(event.title || '');
     const betterThanForecast = lowerIsBetter ? actual < forecast : actual > forecast;
 
     if (actual === forecast) {
@@ -1053,6 +1085,7 @@ function renderCalendar() {
 
             const dueSoon = event.ts >= nowTs && event.ts - nowTs <= 1800;
             const isPast = event.ts < nowTs;
+            const actualTone = getActualVsPreviousTone(event);
             const rowClasses = [
                 'cal-row',
                 getCalendarBiasClass(event),
@@ -1070,7 +1103,7 @@ function renderCalendar() {
                     </div>
                     <div class="cal-title-text">${event.title || '-'}</div>
                     <div class="cal-stats">
-                        ${renderCalendarValue('Actual', event.actual, event.unit)}
+                        ${renderCalendarValue('Actual', event.actual, event.unit, actualTone)}
                         ${renderCalendarValue('Forecast', event.forecast, event.unit)}
                         ${renderCalendarValue('Previous', event.previous, event.unit)}
                     </div>

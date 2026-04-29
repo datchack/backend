@@ -1356,6 +1356,24 @@ body.gated .main-layout > .layout-splitter {
     white-space: nowrap;
 }
 
+.cal-stat.good {
+    border-color: rgba(0, 242, 173, 0.24);
+    background: rgba(0, 242, 173, 0.06);
+}
+
+.cal-stat.good strong {
+    color: var(--buy);
+}
+
+.cal-stat.bad {
+    border-color: rgba(255, 77, 109, 0.24);
+    background: rgba(255, 77, 109, 0.06);
+}
+
+.cal-stat.bad strong {
+    color: var(--sell);
+}
+
 .cal-empty {
     padding: 24px 12px;
     text-align: center;
