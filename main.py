@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta, timezone
 import asyncio
 import hashlib
@@ -5,10 +7,16 @@ import json
 import os
 import secrets
 import sqlite3
-import psycopg2
 import time
 from typing import Any
 from zoneinfo import ZoneInfo
+
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+except ImportError:
+    psycopg2 = None
+    RealDictCursor = None
 
 import aiohttp
 import feedparser
@@ -28,6 +36,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 def get_db_connection():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL n'est pas configurée")
+    if psycopg2 is None:
+        raise RuntimeError("psycopg2 n'est pas installe")
     
     return psycopg2.connect(
         DATABASE_URL,
@@ -61,6 +71,7 @@ NEWS_CACHE_TTL = 30
 _context_cache: dict = {"data": None, "ts": 0.0}
 CONTEXT_CACHE_TTL = 30
 ACCOUNT_DB_PATH = os.path.join(os.path.dirname(__file__), "terminal_users.db")
+ACCOUNT_DB_BACKEND = "postgres" if DATABASE_URL else "sqlite"
 SESSION_COOKIE = "tt_session"
 TRIAL_DAYS = 7
 OWNER_EMAILS = {
@@ -68,6 +79,7 @@ OWNER_EMAILS = {
     for email in os.getenv("OWNER_EMAILS", os.getenv("OWNER_EMAIL", "")).split(",")
     if email.strip()
 }
+OWNER_PASSWORD = os.getenv("OWNER_PASSWORD", "")
 
 MARKET_SYMBOLS = {
     "gold": {"symbol": "GC=F", "label": "GOLD"},
@@ -89,13 +101,60 @@ class PreferencesPayload(BaseModel):
     prefs: dict[str, Any]
 
 
-def db_connection() -> sqlite3.Connection:
+def db_connection():
+    if DATABASE_URL:
+        if psycopg2 is None:
+            raise RuntimeError("psycopg2 n'est pas installe")
+        return psycopg2.connect(
+            DATABASE_URL,
+            sslmode="require",
+            cursor_factory=RealDictCursor,
+        )
+
     conn = sqlite3.connect(ACCOUNT_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
+def db_integrity_errors() -> tuple[type[Exception], ...]:
+    errors: tuple[type[Exception], ...] = (sqlite3.IntegrityError,)
+    if psycopg2 is not None:
+        errors = errors + (psycopg2.IntegrityError,)
+    return errors
+
+
 def init_account_db() -> None:
+    if ACCOUNT_DB_BACKEND == "postgres":
+        with db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS users (
+                        id SERIAL PRIMARY KEY,
+                        email TEXT NOT NULL UNIQUE,
+                        password_hash TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        trial_started_at TEXT NOT NULL,
+                        trial_ends_at TEXT NOT NULL,
+                        plan TEXT NOT NULL DEFAULT 'trial',
+                        status TEXT NOT NULL DEFAULT 'trialing',
+                        prefs_json TEXT NOT NULL DEFAULT '{}'
+                    )
+                    """
+                )
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS sessions (
+                        token TEXT PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        created_at TEXT NOT NULL,
+                        expires_at TEXT NOT NULL
+                    )
+                    """
+                )
+        seed_owner_accounts()
+        return
+
     with db_connection() as conn:
         conn.executescript(
             """
@@ -120,18 +179,71 @@ def init_account_db() -> None:
             );
             """
         )
+    seed_owner_accounts()
+
+
+def execute_one(query: str, params: tuple = ()) -> dict | sqlite3.Row | None:
+    with db_connection() as conn:
+        if ACCOUNT_DB_BACKEND == "postgres":
+            with conn.cursor() as cursor:
+                cursor.execute(query.replace("?", "%s"), params)
+                return cursor.fetchone()
+        return conn.execute(query, params).fetchone()
+
+
+def execute_write(query: str, params: tuple = (), *, returning: bool = False):
+    with db_connection() as conn:
+        if ACCOUNT_DB_BACKEND == "postgres":
+            with conn.cursor() as cursor:
+                cursor.execute(query.replace("?", "%s"), params)
+                return cursor.fetchone() if returning else None
+        cursor = conn.execute(query, params)
+        return cursor.lastrowid if returning else None
+
+
+def seed_owner_accounts() -> None:
+    if not OWNER_EMAILS or not OWNER_PASSWORD:
+        return
+
+    created_at = utc_now()
+    trial_ends_at = created_at + timedelta(days=365 * 100)
+    for email in OWNER_EMAILS:
+        existing = execute_one("SELECT id FROM users WHERE email = ?", (email,))
+        if existing:
+            execute_write(
+                "UPDATE users SET password_hash = ?, plan = ?, status = ? WHERE email = ?",
+                (hash_password(OWNER_PASSWORD), "owner", "active", email),
+            )
+            continue
+
+        execute_write(
+            """
+            INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, plan, status, prefs_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                email,
+                hash_password(OWNER_PASSWORD),
+                created_at.isoformat(),
+                created_at.isoformat(),
+                trial_ends_at.isoformat(),
+                "owner",
+                "active",
+                "{}",
+            ),
+        )
 
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def is_owner_row(row: sqlite3.Row) -> bool:
+def is_owner_row(row) -> bool:
     email = str(row["email"]).strip().lower()
-    return email in OWNER_EMAILS or int(row["id"]) == 1
+    return email in OWNER_EMAILS or row["plan"] == "owner" or (not OWNER_EMAILS and int(row["id"]) == 1)
 
 
-def derive_access_state(row: sqlite3.Row) -> tuple[str, str, bool, bool, int]:
+def derive_access_state(row) -> tuple[str, str, bool, bool, int]:
     if is_owner_row(row):
         return "owner", "owner", True, True, 999
 
@@ -167,7 +279,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return secrets.compare_digest(candidate, expected)
 
 
-def normalize_account_row(row: sqlite3.Row | None) -> dict | None:
+def normalize_account_row(row) -> dict | None:
     if row is None:
         return None
 
@@ -197,11 +309,10 @@ def normalize_account_row(row: sqlite3.Row | None) -> dict | None:
 def create_session(user_id: int) -> tuple[str, str]:
     token = secrets.token_urlsafe(32)
     expires_at = utc_now() + timedelta(days=30)
-    with db_connection() as conn:
-        conn.execute(
-            "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
-            (token, user_id, utc_now().isoformat(), expires_at.isoformat()),
-        )
+    execute_write(
+        "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+        (token, user_id, utc_now().isoformat(), expires_at.isoformat()),
+    )
     return token, expires_at.isoformat()
 
 
@@ -209,28 +320,27 @@ def get_user_by_session(token: str | None) -> dict | None:
     if not token:
         return None
 
-    with db_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT users.*
-            FROM sessions
-            JOIN users ON users.id = sessions.user_id
-            WHERE sessions.token = ?
-            """,
-            (token,),
-        ).fetchone()
-        session_row = conn.execute(
-            "SELECT expires_at FROM sessions WHERE token = ?",
-            (token,),
-        ).fetchone()
+    row = execute_one(
+        """
+        SELECT users.*
+        FROM sessions
+        JOIN users ON users.id = sessions.user_id
+        WHERE sessions.token = ?
+        """,
+        (token,),
+    )
+    session_row = execute_one(
+        "SELECT expires_at FROM sessions WHERE token = ?",
+        (token,),
+    )
 
-        if not session_row:
-            return None
+    if not session_row:
+        return None
 
-        expires_at = datetime.fromisoformat(session_row["expires_at"])
-        if expires_at <= utc_now():
-            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
-            return None
+    expires_at = datetime.fromisoformat(session_row["expires_at"])
+    if expires_at <= utc_now():
+        execute_write("DELETE FROM sessions WHERE token = ?", (token,))
+        return None
 
     return normalize_account_row(row)
 
@@ -251,8 +361,7 @@ def require_terminal_access(request: Request) -> dict:
 
 def clear_session(response: Response, token: str | None) -> None:
     if token:
-        with db_connection() as conn:
-            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        execute_write("DELETE FROM sessions WHERE token = ?", (token,))
     response.delete_cookie(SESSION_COOKIE, path="/")
 
 
@@ -804,11 +913,12 @@ async def account_register(payload: AccountAuthPayload, response: Response):
     trial_ends_at = created_at + timedelta(days=TRIAL_DAYS)
 
     try:
-        with db_connection() as conn:
-            cursor = conn.execute(
+        if ACCOUNT_DB_BACKEND == "postgres":
+            inserted = execute_write(
                 """
                 INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, prefs_json)
                 VALUES (?, ?, ?, ?, ?, ?)
+                RETURNING id
                 """,
                 (
                     email,
@@ -818,16 +928,34 @@ async def account_register(payload: AccountAuthPayload, response: Response):
                     trial_ends_at.isoformat(),
                     "{}",
                 ),
+                returning=True,
             )
-            user_id = int(cursor.lastrowid)
-    except sqlite3.IntegrityError as exc:
+            user_id = int(inserted["id"])
+        else:
+            user_id = int(
+                execute_write(
+                    """
+                    INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, prefs_json)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        email,
+                        hash_password(password),
+                        created_at.isoformat(),
+                        created_at.isoformat(),
+                        trial_ends_at.isoformat(),
+                        "{}",
+                    ),
+                    returning=True,
+                )
+            )
+    except db_integrity_errors() as exc:
         raise HTTPException(status_code=409, detail="Compte deja existant") from exc
 
     token, expires_at = create_session(user_id)
     set_session_cookie(response, token, expires_at)
 
-    with db_connection() as conn:
-        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    row = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
 
     return {"authenticated": True, "account": normalize_account_row(row)}
 
@@ -840,8 +968,7 @@ async def account_login(payload: AccountAuthPayload, response: Response):
     if "@" not in email or "." not in email:
         raise HTTPException(status_code=400, detail="Email invalide")
 
-    with db_connection() as conn:
-        row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    row = execute_one("SELECT * FROM users WHERE email = ?", (email,))
 
     if not row or not verify_password(password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
@@ -867,8 +994,7 @@ async def account_preferences(request: Request):
 async def account_preferences_save(payload: PreferencesPayload, request: Request):
     user = require_user(request)
     prefs_json = json.dumps(payload.prefs)
-    with db_connection() as conn:
-        conn.execute("UPDATE users SET prefs_json = ? WHERE id = ?", (prefs_json, user["id"]))
+    execute_write("UPDATE users SET prefs_json = ? WHERE id = ?", (prefs_json, user["id"]))
     return {"ok": True}
 
 
