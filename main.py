@@ -62,14 +62,14 @@ NEWS_SOURCES = {
     "DOL": {"url": "https://www.dol.gov/rss/releases.xml", "kind": "rss"},
 }
 
-FMP_API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
+FMP_API_KEY = os.getenv("FMP_API_KEY", "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX")
 CALENDAR_TZ = PARIS
 
 _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
 NEWS_MAX_AGE_HOURS = 72
 _calendar_cache: dict[str, dict] = {}
-CALENDAR_CACHE_TTL = 60
+CALENDAR_CACHE_TTL = 600
 _context_cache: dict = {"data": None, "ts": 0.0}
 CONTEXT_CACHE_TTL = 30
 ACCOUNT_DB_PATH = os.path.join(os.path.dirname(__file__), "terminal_users.db")
@@ -697,21 +697,31 @@ async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
     if cached and (now - cached["ts"]) < CALENDAR_CACHE_TTL:
         return cached["events"], cached["error"]
 
+    errors = []
     async with aiohttp.ClientSession() as session:
         payloads = []
         for country in countries or ["US"]:
             url = f"https://financialmodelingprep.com/stable/economic-calendar?country={country}&apikey={FMP_API_KEY}"
             try:
                 async with session.get(url, timeout=20) as resp:
+                    if resp.status == 429:
+                        error = "Limite API calendrier atteinte"
+                        _calendar_cache[country_key] = {"events": [], "error": error, "ts": now}
+                        return [], error
                     if resp.status != 200:
+                        errors.append(f"{country}: HTTP {resp.status}")
                         continue
                     payloads.append(await resp.json())
             except Exception:
+                errors.append(f"{country}: indisponible")
                 continue
 
     if not payloads:
-        _calendar_cache[country_key] = {"events": [], "error": "Calendar feed unavailable", "ts": now}
-        return [], "Calendar feed unavailable"
+        error = "Calendar feed unavailable"
+        if errors:
+            error = f"Calendar feed unavailable ({', '.join(errors[:3])})"
+        _calendar_cache[country_key] = {"events": [], "error": error, "ts": now}
+        return [], error
 
     events: list[dict] = []
     for payload in payloads:
