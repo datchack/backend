@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import sqlite3
+import psycopg2
 import time
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -22,6 +23,16 @@ app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_db_connection():
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL n'est pas configurée")
+    
+    return psycopg2.connect(
+        DATABASE_URL,
+        sslmode="require"
+    )
 PARIS = ZoneInfo("Europe/Paris")
 
 ALERTS_CRITICAL = [
@@ -934,6 +945,19 @@ async def get_context(request: Request):
 async def index():
     return FileResponse("templates/index.html")
 
+@app.get("/db-test")
+def db_test():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1;")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        return {"database": "ok", "result": result[0]}
+    except Exception as e:
+        return {"database": "error", "message": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
