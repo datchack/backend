@@ -453,7 +453,6 @@ body.gated .main-layout > .layout-splitter {
     -webkit-overflow-scrolling: touch;
 }
 
-.week-bar,
 .news-toolbar {
     display: flex;
     align-items: center;
@@ -468,7 +467,6 @@ body.gated .main-layout > .layout-splitter {
     text-transform: uppercase;
 }
 
-.session-badge,
 .news-summary,
 .desk-pill {
     display: inline-flex;

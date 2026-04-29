@@ -884,10 +884,6 @@ function updateClocks() {
         }).format(new Date());
     }
 
-    const sessionBadge = document.getElementById('session-badge');
-    if (sessionBadge) {
-        sessionBadge.textContent = getActiveSessionLabel();
-    }
 }
 
 function formatValue(value, unit = '') {
@@ -993,27 +989,9 @@ function renderCalendarFilters() {
     });
 }
 
-function renderWeekRange() {
-    const weekEl = document.getElementById('week-range');
-    if (!weekEl) return;
-
-    if (!calendarMeta.weekStart || !calendarMeta.weekEnd) {
-        weekEl.textContent = 'SEMAINE EN COURS';
-        return;
-    }
-
-    const start = new Date(calendarMeta.weekStart);
-    const end = addDays(new Date(calendarMeta.weekEnd), -1);
-    const startLabel = start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
-    const endLabel = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    weekEl.textContent = `SEMAINE DU ${startLabel.toUpperCase()} AU ${endLabel.toUpperCase()}`;
-}
-
 function renderCalendar() {
     const root = document.getElementById('calendar-content');
     if (!root) return;
-
-    renderWeekRange();
 
     if (calendarMeta.error && calEvents.length === 0) {
         root.innerHTML = `<div class="cal-empty">Erreur calendrier: ${calendarMeta.error}</div>`;
@@ -1033,9 +1011,17 @@ function renderCalendar() {
 
     const nowTs = Math.floor(Date.now() / 1000);
     const timeZone = calendarMeta.timezone || 'Europe/Paris';
+    const todayKey = getDateKeyFromTs(nowTs, timeZone);
+    const upcoming = filtered.filter((event) => getDateKeyFromTs(event.ts, timeZone) >= todayKey);
+
+    if (upcoming.length === 0) {
+        root.innerHTML = '<div class="cal-empty">Aucun evenement a venir sur la semaine en cours.</div>';
+        return;
+    }
+
     const eventsByDay = new Map();
 
-    filtered.forEach((event) => {
+    upcoming.forEach((event) => {
         const key = getDateKeyFromTs(event.ts, timeZone);
         if (!eventsByDay.has(key)) {
             eventsByDay.set(key, []);
@@ -1043,39 +1029,19 @@ function renderCalendar() {
         eventsByDay.get(key).push(event);
     });
 
-    let weekStartDate = calendarMeta.weekStart ? new Date(calendarMeta.weekStart) : null;
-    if (!weekStartDate || Number.isNaN(weekStartDate.getTime())) {
-        const fallback = new Date();
-        const offset = (fallback.getDay() + 6) % 7;
-        fallback.setHours(0, 0, 0, 0);
-        fallback.setDate(fallback.getDate() - offset);
-        weekStartDate = fallback;
-    }
-
     let html = '';
+    const dayKeys = [...eventsByDay.keys()].sort();
 
-    for (let index = 0; index < 7; index += 1) {
-        const dayDate = addDays(weekStartDate, index);
+    dayKeys.forEach((dayKey) => {
+        const dayDate = new Date(`${dayKey}T12:00:00`);
         const dayLabel = dayDate.toLocaleDateString('fr-FR', {
             weekday: 'long',
             day: 'numeric',
             month: 'long',
         });
-        const dayKey = getDateKeyFromIso(dayDate.toISOString(), timeZone);
         const dayEvents = eventsByDay.get(dayKey) || [];
 
         html += `<div class="cal-day">${dayLabel}</div>`;
-
-        if (dayEvents.length === 0) {
-            html += `
-            <div class="cal-row cal-row-empty">
-                <div class="cal-event-main">
-                    <span class="cal-time">--:--</span>
-                    <span class="cal-title-text">Aucun evenement programme</span>
-                </div>
-            </div>`;
-            continue;
-        }
 
         dayEvents.forEach((event) => {
             const dt = new Date(event.ts * 1000);
@@ -1111,7 +1077,7 @@ function renderCalendar() {
                 </div>
             </div>`;
         });
-    }
+    });
 
     root.innerHTML = html;
 }
