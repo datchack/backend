@@ -60,6 +60,7 @@ const LANDING_COPY = {
         auth_success: 'Accès valide. Ouverture du terminal...',
         billing_redirect: 'Redirection vers le paiement...',
         billing_error: 'Paiement indisponible',
+        auth_existing_account: 'Compte déjà existant. Connecte-toi pour reprendre le paiement.',
         auth_error: 'Erreur compte',
     },
     en: {
@@ -119,6 +120,7 @@ const LANDING_COPY = {
         auth_success: 'Access valid. Opening terminal...',
         billing_redirect: 'Redirecting to payment...',
         billing_error: 'Payment unavailable',
+        auth_existing_account: 'Account already exists. Log in to resume payment.',
         auth_error: 'Account error',
     },
 };
@@ -221,6 +223,11 @@ async function submitLandingAuth(event) {
         });
         const payload = await response.json();
         if (!response.ok) {
+            if (response.status === 409 && landingAuthMode === 'register') {
+                setLandingAuthMode('login');
+                setLandingMessage(payload.detail || t('auth_existing_account'), 'err');
+                return;
+            }
             throw new Error(payload.detail || 'Action impossible');
         }
 

@@ -1233,7 +1233,15 @@ async def account_register(payload: AccountAuthPayload, response: Response):
                 )
             )
     except db_integrity_errors() as exc:
-        raise HTTPException(status_code=409, detail="Compte deja existant") from exc
+        existing = execute_one("SELECT * FROM users WHERE email = ?", (email,))
+        if existing and verify_password(password, existing["password_hash"]):
+            token, expires_at = create_session(int(existing["id"]))
+            set_session_cookie(response, token, expires_at)
+            return {"authenticated": True, "account": normalize_account_row(existing), "existing": True}
+        raise HTTPException(
+            status_code=409,
+            detail="Compte deja existant. Connecte-toi avec ce compte pour reprendre le paiement.",
+        ) from exc
 
     token, expires_at = create_session(user_id)
     set_session_cookie(response, token, expires_at)
