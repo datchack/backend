@@ -1,4 +1,114 @@
 let landingAuthMode = 'register';
+let landingLang = localStorage.getItem('xt_lang') || 'fr';
+
+const LANDING_COPY = {
+    fr: {
+        meta_title: 'XAUTERMINAL - Terminal macro et trading professionnel',
+        nav_tools: 'Outils',
+        nav_markets: 'Marchés',
+        nav_login: 'Connexion',
+        nav_terminal: 'Ouvrir le terminal',
+        hero_kicker: 'TRADING TERMINAL',
+        hero_copy: 'Un poste de travail macro pour suivre les news, le calendrier économique, les drivers de marché et tes charts dans une interface rapide, personnalisable et orientée décision.',
+        hero_trial: "Démarrer l'essai 7 jours",
+        hero_login: "J'ai déjà un compte",
+        preview_volatility: 'Volatilité attendue',
+        features_kicker: 'OUTILS',
+        features_title: 'Tout ce qui compte avant une décision de marché.',
+        feature_calendar_title: 'Calendrier économique intelligent',
+        feature_calendar_copy: 'Événements classés par jour, impact, pays et données actual/forecast/previous avec lecture visuelle du résultat.',
+        feature_news_title: 'News multi-source filtrées',
+        feature_news_copy: 'Le feed priorise les informations récentes selon ton profil de marché: Fed, BoJ, inflation, géopolitique, indices ou crypto.',
+        feature_workspace_title: 'Workspace personnalisable',
+        feature_workspace_copy: 'Layouts sauvegardés, panels redimensionnables, alertes sonores, watchlist et symboles TradingView adaptés à ton trading.',
+        feature_bias_copy: "Un tableau de lecture rapide pour comprendre les pressions macro dominantes avant d'entrer en position.",
+        profiles_kicker: 'PROFILS DE MARCHÉ',
+        profiles_title: "Un terminal qui s'adapte au marché que tu trades.",
+        cta_title: 'Construis ton poste de décision macro.',
+        cta_copy: 'Active ton essai gratuit et teste le terminal complet avec ton propre profil de marché.',
+        cta_button: 'Créer mon compte',
+        auth_register_kicker: 'CRÉATION DE COMPTE',
+        auth_login_kicker: 'CONNEXION',
+        auth_register_title: "Démarrer l'essai 7 jours",
+        auth_login_title: 'Connexion au terminal',
+        auth_register_copy: 'Crée ton compte pour ouvrir le terminal complet et sauvegarder ton workspace.',
+        auth_login_copy: 'Connecte-toi pour reprendre ton workspace.',
+        auth_register_submit: 'Créer mon compte',
+        auth_login_submit: 'Se connecter',
+        auth_register_switch: "J'ai déjà un compte",
+        auth_login_switch: 'Créer un compte',
+        password_placeholder: 'Mot de passe (8 caractères min.)',
+        auth_loading_login: 'Connexion...',
+        auth_loading_register: 'Création du compte...',
+        auth_no_access: 'Compte connecté, mais accès terminal indisponible.',
+        auth_success: 'Accès valide. Ouverture du terminal...',
+        auth_error: 'Erreur compte',
+    },
+    en: {
+        meta_title: 'XAUTERMINAL - Professional macro and trading terminal',
+        nav_tools: 'Tools',
+        nav_markets: 'Markets',
+        nav_login: 'Login',
+        nav_terminal: 'Open terminal',
+        hero_kicker: 'TRADING TERMINAL',
+        hero_copy: 'A macro workstation to track news, the economic calendar, market drivers and your charts in a fast, customizable, decision-focused interface.',
+        hero_trial: 'Start 7-day trial',
+        hero_login: 'I already have an account',
+        preview_volatility: 'Expected volatility',
+        features_kicker: 'TOOLS',
+        features_title: 'Everything that matters before a market decision.',
+        feature_calendar_title: 'Smart economic calendar',
+        feature_calendar_copy: 'Events organized by day, impact and country, with actual/forecast/previous data and visual result reading.',
+        feature_news_title: 'Filtered multi-source news',
+        feature_news_copy: 'The feed prioritizes recent information for your market profile: Fed, BoJ, inflation, geopolitics, indices or crypto.',
+        feature_workspace_title: 'Customizable workspace',
+        feature_workspace_copy: 'Saved layouts, resizable panels, sound alerts, watchlists and TradingView symbols adapted to your trading.',
+        feature_bias_copy: 'A fast reading desk to understand dominant macro pressure before taking a trade.',
+        profiles_kicker: 'MARKET PROFILES',
+        profiles_title: 'A terminal that adapts to the market you trade.',
+        cta_title: 'Build your macro decision desk.',
+        cta_copy: 'Start your free trial and test the full terminal with your own market profile.',
+        cta_button: 'Create my account',
+        auth_register_kicker: 'ACCOUNT CREATION',
+        auth_login_kicker: 'LOGIN',
+        auth_register_title: 'Start your 7-day trial',
+        auth_login_title: 'Login to the terminal',
+        auth_register_copy: 'Create your account to open the full terminal and save your workspace.',
+        auth_login_copy: 'Login to resume your workspace.',
+        auth_register_submit: 'Create my account',
+        auth_login_submit: 'Login',
+        auth_register_switch: 'I already have an account',
+        auth_login_switch: 'Create an account',
+        password_placeholder: 'Password (8 characters min.)',
+        auth_loading_login: 'Logging in...',
+        auth_loading_register: 'Creating account...',
+        auth_no_access: 'Account connected, but terminal access is unavailable.',
+        auth_success: 'Access valid. Opening terminal...',
+        auth_error: 'Account error',
+    },
+};
+
+function t(key) {
+    return LANDING_COPY[landingLang]?.[key] || LANDING_COPY.fr[key] || key;
+}
+
+function applyLandingLanguage() {
+    document.documentElement.lang = landingLang;
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
+
+    const title = document.querySelector('title');
+    if (title) title.textContent = t('meta_title');
+
+    const toggle = document.querySelector('[data-lang-toggle]');
+    if (toggle) toggle.textContent = landingLang === 'fr' ? 'EN' : 'FR';
+
+    setLandingAuthMode(landingAuthMode);
+}
 
 function setLandingMessage(message = '', tone = '') {
     const el = document.getElementById('landing-auth-message');
@@ -17,13 +127,13 @@ function setLandingAuthMode(mode) {
     const switchBtn = document.getElementById('landing-auth-switch');
     const password = document.getElementById('landing-auth-password');
 
-    if (kicker) kicker.textContent = landingAuthMode === 'login' ? 'CONNEXION' : 'CREATION DE COMPTE';
-    if (title) title.textContent = landingAuthMode === 'login' ? 'Connexion au terminal' : "Demarrer l'essai 7 jours";
+    if (kicker) kicker.textContent = landingAuthMode === 'login' ? t('auth_login_kicker') : t('auth_register_kicker');
+    if (title) title.textContent = landingAuthMode === 'login' ? t('auth_login_title') : t('auth_register_title');
     if (copy) copy.textContent = landingAuthMode === 'login'
-        ? 'Connecte-toi pour reprendre ton workspace.'
-        : 'Cree ton compte pour ouvrir le terminal complet et sauvegarder ton workspace.';
-    if (submit) submit.textContent = landingAuthMode === 'login' ? 'Se connecter' : 'Creer mon compte';
-    if (switchBtn) switchBtn.textContent = landingAuthMode === 'login' ? 'Creer un compte' : "J'ai deja un compte";
+        ? t('auth_login_copy')
+        : t('auth_register_copy');
+    if (submit) submit.textContent = landingAuthMode === 'login' ? t('auth_login_submit') : t('auth_register_submit');
+    if (switchBtn) switchBtn.textContent = landingAuthMode === 'login' ? t('auth_login_switch') : t('auth_register_switch');
     if (password) password.autocomplete = landingAuthMode === 'login' ? 'current-password' : 'new-password';
 }
 
@@ -68,7 +178,7 @@ async function submitLandingAuth(event) {
     if (!email || !password) return;
 
     try {
-        setLandingMessage(landingAuthMode === 'login' ? 'Connexion...' : 'Creation du compte...');
+        setLandingMessage(landingAuthMode === 'login' ? t('auth_loading_login') : t('auth_loading_register'));
         const response = await fetch(`/api/account/${landingAuthMode}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -80,14 +190,14 @@ async function submitLandingAuth(event) {
         }
 
         if (!payload.account?.has_access) {
-            setLandingMessage('Compte connecte, mais acces terminal indisponible.', 'err');
+            setLandingMessage(t('auth_no_access'), 'err');
             return;
         }
 
-        setLandingMessage('Acces valide. Ouverture du terminal...', 'ok');
+        setLandingMessage(t('auth_success'), 'ok');
         window.location.href = '/terminal';
     } catch (error) {
-        setLandingMessage(error.message || 'Erreur compte', 'err');
+        setLandingMessage(error.message || t('auth_error'), 'err');
     }
 }
 
@@ -95,6 +205,15 @@ function bindLanding() {
     document.querySelectorAll('[data-auth-mode]').forEach((button) => {
         button.addEventListener('click', () => openLandingAuth(button.dataset.authMode));
     });
+
+    const langToggle = document.querySelector('[data-lang-toggle]');
+    if (langToggle) {
+        langToggle.addEventListener('click', () => {
+            landingLang = landingLang === 'fr' ? 'en' : 'fr';
+            localStorage.setItem('xt_lang', landingLang);
+            applyLandingLanguage();
+        });
+    }
 
     const close = document.getElementById('landing-auth-close');
     if (close) close.addEventListener('click', closeLandingAuth);
@@ -119,6 +238,7 @@ function bindLanding() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    applyLandingLanguage();
     bindLanding();
     fetchLandingAccount();
 });

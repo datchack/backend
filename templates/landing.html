@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XAUTERMINAL - Terminal macro et trading professionnel</title>
-    <meta name="description" content="XAUTERMINAL centralise charting, calendrier economique, news multi-source, alertes macro et profils de marche dans un terminal professionnel pour traders.">
+    <title data-i18n="meta_title">XAUTERMINAL - Terminal macro et trading professionnel</title>
+    <meta name="description" content="XAUTERMINAL centralise charting, calendrier économique, news multi-source, alertes macro et profils de marché dans un terminal professionnel pour traders.">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="landing-body">
@@ -14,22 +14,23 @@
             <span>XAUTERMINAL</span>
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
-            <a href="#features">Outils</a>
-            <a href="#profiles">Marches</a>
-            <button type="button" class="landing-login" data-auth-mode="login">Connexion</button>
-            <a class="landing-terminal-link hidden" id="landing-terminal-link" href="/terminal">Ouvrir le terminal</a>
+            <a href="#features" data-i18n="nav_tools">Outils</a>
+            <a href="#profiles" data-i18n="nav_markets">Marchés</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
+            <button type="button" class="landing-login" data-auth-mode="login" data-i18n="nav_login">Connexion</button>
+            <a class="landing-terminal-link hidden" id="landing-terminal-link" href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
         </nav>
     </header>
 
     <main>
         <section class="landing-hero">
             <div class="landing-hero-copy">
-                <div class="landing-kicker">TRADING TERMINAL</div>
+                <div class="landing-kicker" data-i18n="hero_kicker">TRADING TERMINAL</div>
                 <h1>XAUTERMINAL</h1>
-                <p>Un poste de travail macro pour suivre les news, le calendrier economique, les drivers de marche et tes charts dans une interface rapide, personnalisable et orientee decision.</p>
+                <p data-i18n="hero_copy">Un poste de travail macro pour suivre les news, le calendrier économique, les drivers de marché et tes charts dans une interface rapide, personnalisable et orientée décision.</p>
                 <div class="landing-actions">
-                    <button type="button" class="landing-primary" data-auth-mode="register">Demarrer l'essai 7 jours</button>
-                    <button type="button" class="landing-secondary" data-auth-mode="login">J'ai deja un compte</button>
+                    <button type="button" class="landing-primary" data-auth-mode="register" data-i18n="hero_trial">Démarrer l'essai 7 jours</button>
+                    <button type="button" class="landing-secondary" data-auth-mode="login" data-i18n="hero_login">J'ai déjà un compte</button>
                 </div>
                 <div class="landing-proof">
                     <span>News multi-source</span>
@@ -54,7 +55,7 @@
                         <div class="preview-event">
                             <span>16:00 US</span>
                             <strong>Fed Chair Powell Speech</strong>
-                            <em>Volatilite attendue</em>
+                            <em data-i18n="preview_volatility">Volatilité attendue</em>
                         </div>
                     </div>
                     <div class="preview-panel preview-chart">
@@ -81,37 +82,37 @@
 
         <section class="landing-band" id="features">
             <div class="landing-section-head">
-                <div class="landing-kicker">OUTILS</div>
-                <h2>Tout ce qui compte avant une decision de marche.</h2>
+                <div class="landing-kicker" data-i18n="features_kicker">OUTILS</div>
+                <h2 data-i18n="features_title">Tout ce qui compte avant une décision de marché.</h2>
             </div>
             <div class="feature-grid">
                 <article class="feature-card">
                     <span>01</span>
-                    <h3>Calendrier economique intelligent</h3>
-                    <p>Evenements classes par jour, impact, pays et donnees actual/forecast/previous avec lecture visuelle du resultat.</p>
+                    <h3 data-i18n="feature_calendar_title">Calendrier économique intelligent</h3>
+                    <p data-i18n="feature_calendar_copy">Événements classés par jour, impact, pays et données actual/forecast/previous avec lecture visuelle du résultat.</p>
                 </article>
                 <article class="feature-card">
                     <span>02</span>
-                    <h3>News multi-source filtrees</h3>
-                    <p>Le feed priorise les informations recentes selon ton profil de marche: Fed, BoJ, inflation, geopolitique, indices ou crypto.</p>
+                    <h3 data-i18n="feature_news_title">News multi-source filtrées</h3>
+                    <p data-i18n="feature_news_copy">Le feed priorise les informations récentes selon ton profil de marché: Fed, BoJ, inflation, géopolitique, indices ou crypto.</p>
                 </article>
                 <article class="feature-card">
                     <span>03</span>
-                    <h3>Workspace personnalisable</h3>
-                    <p>Layouts sauvegardes, panels redimensionnables, alertes sonores, watchlist et symboles TradingView adaptes a ton trading.</p>
+                    <h3 data-i18n="feature_workspace_title">Workspace personnalisable</h3>
+                    <p data-i18n="feature_workspace_copy">Layouts sauvegardés, panels redimensionnables, alertes sonores, watchlist et symboles TradingView adaptés à ton trading.</p>
                 </article>
                 <article class="feature-card">
                     <span>04</span>
                     <h3>Bias desk et drivers</h3>
-                    <p>Un tableau de lecture rapide pour comprendre les pressions macro dominantes avant d'entrer en position.</p>
+                    <p data-i18n="feature_bias_copy">Un tableau de lecture rapide pour comprendre les pressions macro dominantes avant d'entrer en position.</p>
                 </article>
             </div>
         </section>
 
         <section class="landing-band compact" id="profiles">
             <div class="landing-section-head">
-                <div class="landing-kicker">PROFILS DE MARCHE</div>
-                <h2>Un terminal qui s'adapte au marche que tu trades.</h2>
+                <div class="landing-kicker" data-i18n="profiles_kicker">PROFILS DE MARCHÉ</div>
+                <h2 data-i18n="profiles_title">Un terminal qui s'adapte au marché que tu trades.</h2>
             </div>
             <div class="profile-strip">
                 <span>XAU/USD</span>
@@ -124,24 +125,24 @@
         </section>
 
         <section class="landing-cta">
-            <h2>Construis ton poste de decision macro.</h2>
-            <p>Active ton essai gratuit et teste le terminal complet avec ton propre profil de marche.</p>
-            <button type="button" class="landing-primary" data-auth-mode="register">Creer mon compte</button>
+            <h2 data-i18n="cta_title">Construis ton poste de décision macro.</h2>
+            <p data-i18n="cta_copy">Active ton essai gratuit et teste le terminal complet avec ton propre profil de marché.</p>
+            <button type="button" class="landing-primary" data-auth-mode="register" data-i18n="cta_button">Créer mon compte</button>
         </section>
     </main>
 
     <div class="landing-auth hidden" id="landing-auth" aria-modal="true" role="dialog">
         <div class="landing-auth-panel">
             <button type="button" class="landing-auth-close" id="landing-auth-close" aria-label="Fermer">x</button>
-            <div class="landing-kicker" id="landing-auth-kicker">CREATION DE COMPTE</div>
-            <h2 id="landing-auth-title">Demarrer l'essai 7 jours</h2>
-            <p id="landing-auth-copy">Cree ton compte pour ouvrir le terminal complet et sauvegarder ton workspace.</p>
+            <div class="landing-kicker" id="landing-auth-kicker">CRÉATION DE COMPTE</div>
+            <h2 id="landing-auth-title">Démarrer l'essai 7 jours</h2>
+            <p id="landing-auth-copy">Crée ton compte pour ouvrir le terminal complet et sauvegarder ton workspace.</p>
             <form id="landing-auth-form" class="landing-auth-form">
                 <input id="landing-auth-email" type="email" placeholder="Email" autocomplete="email" required>
-                <input id="landing-auth-password" type="password" placeholder="Mot de passe (8 caracteres min.)" autocomplete="new-password" required>
-                <button type="submit" class="landing-primary" id="landing-auth-submit">Creer mon compte</button>
+                <input id="landing-auth-password" type="password" placeholder="Mot de passe (8 caracteres min.)" autocomplete="new-password" required data-i18n-placeholder="password_placeholder">
+                <button type="submit" class="landing-primary" id="landing-auth-submit">Créer mon compte</button>
             </form>
-            <button type="button" class="landing-auth-switch" id="landing-auth-switch">J'ai deja un compte</button>
+            <button type="button" class="landing-auth-switch" id="landing-auth-switch">J'ai déjà un compte</button>
             <div class="landing-auth-message" id="landing-auth-message"></div>
         </div>
     </div>
