@@ -8,7 +8,7 @@ import os
 import secrets
 import sqlite3
 import time
-from typing import Any
+from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
 try:
@@ -63,11 +63,12 @@ NEWS_SOURCES = {
 }
 
 FMP_API_KEY = "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX"
-FMP_URL = f"https://financialmodelingprep.com/stable/economic-calendar?country=US&apikey={FMP_API_KEY}"
 CALENDAR_TZ = PARIS
 
 _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
+_calendar_cache: dict[str, dict] = {}
+CALENDAR_CACHE_TTL = 60
 _context_cache: dict = {"data": None, "ts": 0.0}
 CONTEXT_CACHE_TTL = 30
 ACCOUNT_DB_PATH = os.path.join(os.path.dirname(__file__), "terminal_users.db")
@@ -89,6 +90,57 @@ MARKET_SYMBOLS = {
     "oil": {"symbol": "CL=F", "label": "WTI"},
     "spy": {"symbol": "SPY", "label": "SPY"},
     "qqq": {"symbol": "QQQ", "label": "QQQ"},
+}
+
+MARKET_PROFILES = {
+    "xauusd": {
+        "id": "xauusd",
+        "label": "XAU/USD",
+        "symbol": "OANDA:XAUUSD",
+        "calendar_countries": ["US"],
+        "keywords": ["gold", "xau", "bullion", "fed", "fomc", "powell", "cpi", "inflation", "nfp", "yields", "dollar", "dxy", "war"],
+        "tags": ["XAU", "FED", "MACRO", "GEO", "OFFICIAL"],
+    },
+    "usdjpy": {
+        "id": "usdjpy",
+        "label": "USD/JPY",
+        "symbol": "FX:USDJPY",
+        "calendar_countries": ["US", "JP"],
+        "keywords": ["yen", "jpy", "japan", "boj", "ueda", "intervention", "fed", "fomc", "powell", "yields", "treasury", "dollar"],
+        "tags": ["FED", "MACRO", "OFFICIAL"],
+    },
+    "eurusd": {
+        "id": "eurusd",
+        "label": "EUR/USD",
+        "symbol": "FX:EURUSD",
+        "calendar_countries": ["US", "EU"],
+        "keywords": ["euro", "eur", "ecb", "lagarde", "fed", "fomc", "inflation", "cpi", "pmi", "dollar"],
+        "tags": ["FED", "MACRO", "OFFICIAL"],
+    },
+    "gbpusd": {
+        "id": "gbpusd",
+        "label": "GBP/USD",
+        "symbol": "FX:GBPUSD",
+        "calendar_countries": ["US", "GB"],
+        "keywords": ["pound", "sterling", "gbp", "boe", "bailey", "uk", "britain", "fed", "inflation", "cpi", "gilts"],
+        "tags": ["FED", "MACRO", "OFFICIAL"],
+    },
+    "nasdaq": {
+        "id": "nasdaq",
+        "label": "NASDAQ",
+        "symbol": "NASDAQ:QQQ",
+        "calendar_countries": ["US"],
+        "keywords": ["nasdaq", "qqq", "tech", "ai", "semiconductor", "earnings", "fed", "yields", "rates", "risk", "nvidia"],
+        "tags": ["FED", "MACRO", "MARKETS"],
+    },
+    "btcusd": {
+        "id": "btcusd",
+        "label": "BTC/USD",
+        "symbol": "BITSTAMP:BTCUSD",
+        "calendar_countries": ["US"],
+        "keywords": ["bitcoin", "btc", "crypto", "etf", "sec", "fed", "liquidity", "dollar", "rates", "risk"],
+        "tags": ["FED", "MACRO", "MARKETS"],
+    },
 }
 
 
@@ -503,6 +555,45 @@ def classify_news_item(source: str, title_upper: str) -> dict:
     }
 
 
+def get_market_profile(profile_id: Optional[str]) -> dict:
+    key = (profile_id or "xauusd").strip().lower()
+    return MARKET_PROFILES.get(key, MARKET_PROFILES["xauusd"])
+
+
+def score_news_for_profile(item: dict, profile: dict) -> int:
+    title = str(item.get("t", "")).lower()
+    tags = set(item.get("tags") or [])
+    score = 0
+
+    for keyword in profile.get("keywords", []):
+        if keyword.lower() in title:
+            score += 3
+
+    for tag in profile.get("tags", []):
+        if tag in tags:
+            score += 2
+
+    if item.get("priority") == "high":
+        score += 1
+    if item.get("crit"):
+        score += 1
+
+    return score
+
+
+def personalize_news_items(items: list[dict], profile: dict) -> list[dict]:
+    personalized = []
+    for item in items:
+        score = score_news_for_profile(item, profile)
+        next_item = {**item, "profile_score": score}
+        if score > 0:
+            next_item["priority"] = "high" if score >= 7 else "medium" if score >= 3 else next_item.get("priority", "low")
+        personalized.append(next_item)
+
+    personalized.sort(key=lambda item: (item["profile_score"], item.get("ts", 0)), reverse=True)
+    return personalized[:80]
+
+
 def _parse_rss_items(name: str, text: str) -> list[dict]:
     try:
         feed = feedparser.parse(text)
@@ -586,27 +677,40 @@ async def _fetch_source(session: aiohttp.ClientSession, name: str, config: dict 
     return await asyncio.to_thread(_parse_rss_items, name, text)
 
 
-async def fetch_calendar() -> tuple[list[dict], str | None]:
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get(FMP_URL, timeout=20) as resp:
-                if resp.status != 200:
-                    return [], f"Calendar feed HTTP {resp.status}"
-                payload = await resp.json()
-        except Exception:
-            return [], "Calendar feed unavailable"
+async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
+    country_key = ",".join(sorted(set(countries or ["US"])))
+    now = time.time()
+    cached = _calendar_cache.get(country_key)
+    if cached and (now - cached["ts"]) < CALENDAR_CACHE_TTL:
+        return cached["events"], cached["error"]
 
-    raw_events = payload.get("value", payload) if isinstance(payload, dict) else payload
-    if not isinstance(raw_events, list):
-        return [], "Calendar payload invalid"
+    async with aiohttp.ClientSession() as session:
+        payloads = []
+        for country in countries or ["US"]:
+            url = f"https://financialmodelingprep.com/stable/economic-calendar?country={country}&apikey={FMP_API_KEY}"
+            try:
+                async with session.get(url, timeout=20) as resp:
+                    if resp.status != 200:
+                        continue
+                    payloads.append(await resp.json())
+            except Exception:
+                continue
+
+    if not payloads:
+        _calendar_cache[country_key] = {"events": [], "error": "Calendar feed unavailable", "ts": now}
+        return [], "Calendar feed unavailable"
 
     events: list[dict] = []
-    for event in raw_events:
-        if not isinstance(event, dict):
+    for payload in payloads:
+        raw_events = payload.get("value", payload) if isinstance(payload, dict) else payload
+        if not isinstance(raw_events, list):
             continue
-        normalized = normalize_calendar_event(event)
-        if normalized:
-            events.append(normalized)
+        for event in raw_events:
+            if not isinstance(event, dict):
+                continue
+            normalized = normalize_calendar_event(event)
+            if normalized:
+                events.append(normalized)
 
     week_start, week_end = get_current_week_bounds()
     week_start_ts = int(week_start.timestamp())
@@ -617,6 +721,7 @@ async def fetch_calendar() -> tuple[list[dict], str | None]:
         if week_start_ts <= event["ts"] < week_end_ts
     ]
     filtered_events.sort(key=lambda item: item["ts"])
+    _calendar_cache[country_key] = {"events": filtered_events, "error": None, "ts": now}
     return filtered_events, None
 
 
@@ -1072,13 +1177,21 @@ async def admin_update_user_access(user_id: int, payload: AdminAccessPayload, re
     return {"user": normalize_account_row(updated)}
 
 
-@app.get("/api/news")
-async def get_news(request: Request):
+@app.get("/api/market-profiles")
+async def market_profiles(request: Request):
     require_terminal_access(request)
+    return {"profiles": list(MARKET_PROFILES.values())}
+
+
+@app.get("/api/news")
+async def get_news(request: Request, profile: Optional[str] = None):
+    require_terminal_access(request)
+    market_profile = get_market_profile(profile)
     now = time.time()
     if _news_cache["data"] and (now - _news_cache["ts"]) < NEWS_CACHE_TTL:
         return {
-            "items": _news_cache["data"],
+            "items": personalize_news_items(_news_cache["data"], market_profile),
+            "profile": market_profile["id"],
             "cached": True,
             "age": int(now - _news_cache["ts"]),
         }
@@ -1092,19 +1205,22 @@ async def get_news(request: Request):
 
     _news_cache["data"] = all_news
     _news_cache["ts"] = now
-    return {"items": all_news, "cached": False, "age": 0}
+    return {"items": personalize_news_items(all_news, market_profile), "profile": market_profile["id"], "cached": False, "age": 0}
 
 
 @app.get("/api/calendar")
-async def get_calendar(request: Request):
+async def get_calendar(request: Request, profile: Optional[str] = None):
     require_terminal_access(request)
-    events, error = await fetch_calendar()
+    market_profile = get_market_profile(profile)
+    events, error = await fetch_calendar(market_profile.get("calendar_countries", ["US"]))
     week_start, week_end = get_current_week_bounds()
     if error:
         return {
             "events": [],
             "count": 0,
             "timezone": "Europe/Paris",
+            "profile": market_profile["id"],
+            "countries": market_profile.get("calendar_countries", ["US"]),
             "hot": False,
             "error": error,
             "week_start": week_start.isoformat(),
@@ -1118,6 +1234,8 @@ async def get_calendar(request: Request):
         "events": events,
         "count": len(events),
         "timezone": "Europe/Paris",
+        "profile": market_profile["id"],
+        "countries": market_profile.get("calendar_countries", ["US"]),
         "hot": hot,
         "error": None,
         "week_start": week_start.isoformat(),

@@ -81,6 +81,18 @@ body.gated .main-layout > .layout-splitter {
     font-size: 13px;
 }
 
+.market-profile-select {
+    min-height: 26px;
+    margin-right: 8px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #0b0f15;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 800;
+    outline: none;
+}
+
 .cmd-bar input {
     flex: 1;
     background: transparent;

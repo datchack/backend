@@ -4,6 +4,15 @@ const NEWS_REFRESH_MS = 8000;
 const CONTEXT_REFRESH_MS = 15000;
 const IMPACT_LEVELS = ['High', 'Medium', 'Low'];
 const DEFAULT_ACCOUNT_MODE = 'register';
+const DEFAULT_MARKET_PROFILE = 'xauusd';
+const MARKET_PROFILES = {
+    xauusd: { id: 'xauusd', label: 'XAU/USD', symbol: 'OANDA:XAUUSD', countries: ['US'] },
+    usdjpy: { id: 'usdjpy', label: 'USD/JPY', symbol: 'FX:USDJPY', countries: ['US', 'JP'] },
+    eurusd: { id: 'eurusd', label: 'EUR/USD', symbol: 'FX:EURUSD', countries: ['US', 'EU'] },
+    gbpusd: { id: 'gbpusd', label: 'GBP/USD', symbol: 'FX:GBPUSD', countries: ['US', 'GB'] },
+    nasdaq: { id: 'nasdaq', label: 'NASDAQ', symbol: 'NASDAQ:QQQ', countries: ['US'] },
+    btcusd: { id: 'btcusd', label: 'BTC/USD', symbol: 'BITSTAMP:BTCUSD', countries: ['US'] },
+};
 
 function loadPrefs() {
     try {
@@ -35,7 +44,8 @@ const DEFAULT_LAYOUT = {
     },
 };
 
-let currentSymbol = PREFS.symbol || 'OANDA:XAUUSD';
+let currentMarketProfile = PREFS.marketProfile || DEFAULT_MARKET_PROFILE;
+let currentSymbol = PREFS.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || MARKET_PROFILES[DEFAULT_MARKET_PROFILE].symbol;
 let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let currentCenterTab = PREFS.centerTab || 'bias';
@@ -50,6 +60,8 @@ let calEvents = [];
 let contextState = null;
 let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null };
 let audioCtx = null;
+let calendarRefreshTimer = null;
+let contextRefreshTimer = null;
 
 const calFilters = {
     impact: new Set(PREFS.impactFilters || IMPACT_LEVELS),
@@ -88,6 +100,7 @@ function persistLayout() {
 function getClientPrefsSnapshot() {
     return {
         ...loadPrefs(),
+        marketProfile: currentMarketProfile,
         symbol: currentSymbol,
         soundEnabled,
         soundType,
@@ -126,7 +139,8 @@ function applyLoadedPrefs(prefs = {}) {
 
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
 
-    currentSymbol = prefs.symbol || currentSymbol;
+    currentMarketProfile = prefs.marketProfile || currentMarketProfile;
+    currentSymbol = prefs.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || currentSymbol;
     soundEnabled = typeof prefs.soundEnabled === 'boolean' ? prefs.soundEnabled : soundEnabled;
     soundType = prefs.soundType || soundType;
     currentCenterTab = prefs.centerTab || currentCenterTab;
@@ -149,6 +163,7 @@ function applyLoadedPrefs(prefs = {}) {
     if (soundSelect) soundSelect.value = soundType;
     const cmdInput = document.getElementById('cmd');
     if (cmdInput) cmdInput.value = currentSymbol;
+    renderMarketProfileSelect();
     setCenterTab(currentCenterTab);
     applyLayoutState();
     if (appBooted) {
@@ -238,11 +253,45 @@ function bootTerminalApp() {
     if (appBooted) return;
     appBooted = true;
 
+    renderMarketProfileSelect();
     initChart(currentSymbol);
     getNews();
     fetchCalendar();
     fetchContext();
     window.setInterval(getNews, NEWS_REFRESH_MS);
+}
+
+function getActiveMarketProfile() {
+    return MARKET_PROFILES[currentMarketProfile] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
+}
+
+function getProfileQuery() {
+    return encodeURIComponent(getActiveMarketProfile().id);
+}
+
+function renderMarketProfileSelect() {
+    const select = document.getElementById('market-profile');
+    if (!select) return;
+
+    select.innerHTML = Object.values(MARKET_PROFILES).map((profile) => `
+        <option value="${profile.id}" ${profile.id === currentMarketProfile ? 'selected' : ''}>${profile.label}</option>
+    `).join('');
+}
+
+function setMarketProfile(profileId) {
+    const profile = MARKET_PROFILES[profileId] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
+    currentMarketProfile = profile.id;
+    currentSymbol = profile.symbol;
+    lastSeenNewsTs = 0;
+
+    const cmdInput = document.getElementById('cmd');
+    if (cmdInput) cmdInput.value = currentSymbol;
+
+    changeChart(currentSymbol, { save: false });
+    savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol });
+    getNews();
+    fetchCalendar(false);
+    fetchContext(false);
 }
 
 function ensureAudio() {
@@ -583,6 +632,16 @@ function bindAccountControls() {
     renderAccessGate();
 }
 
+function bindMarketProfileControls() {
+    const select = document.getElementById('market-profile');
+    if (!select) return;
+
+    renderMarketProfileSelect();
+    select.addEventListener('change', () => {
+        setMarketProfile(select.value);
+    });
+}
+
 function updateToggleButtons(panel, collapsed) {
     document.querySelectorAll(`.panel-btn[data-toggle-panel="${panel}"]`).forEach((button) => {
         button.textContent = collapsed ? '+' : '-';
@@ -758,9 +817,11 @@ function initChart(symbol) {
     });
 }
 
-function changeChart(symbol) {
+function changeChart(symbol, options = {}) {
     initChart(symbol);
-    savePrefs({ symbol });
+    if (options.save !== false) {
+        savePrefs({ symbol, marketProfile: currentMarketProfile });
+    }
 
     document.querySelectorAll('.qcard').forEach((card) => {
         card.classList.toggle('active', card.dataset.symbol === symbol);
@@ -1058,9 +1119,9 @@ function updateCalendarStatus(meta) {
     liveEl.style.color = meta.hot ? '#f59e0b' : '#22c55e';
 }
 
-async function fetchCalendar() {
+async function fetchCalendar(scheduleNext = true) {
     try {
-        const response = await fetch('/api/calendar', { cache: 'no-store' });
+        const response = await fetch(`/api/calendar?profile=${getProfileQuery()}`, { cache: 'no-store' });
         const payload = await response.json();
 
         calEvents = Array.isArray(payload.events) ? payload.events : [];
@@ -1083,7 +1144,10 @@ async function fetchCalendar() {
         renderCalendar();
     }
 
-    window.setTimeout(fetchCalendar, CALENDAR_REFRESH_MS);
+    if (scheduleNext) {
+        window.clearTimeout(calendarRefreshTimer);
+        calendarRefreshTimer = window.setTimeout(fetchCalendar, CALENDAR_REFRESH_MS);
+    }
 }
 
 function renderBiasCard(context) {
@@ -1182,9 +1246,9 @@ function renderWatchlist(context) {
     });
 }
 
-async function fetchContext() {
+async function fetchContext(scheduleNext = true) {
     try {
-        const response = await fetch('/api/context', { cache: 'no-store' });
+        const response = await fetch(`/api/context?profile=${getProfileQuery()}`, { cache: 'no-store' });
         const payload = await response.json();
         contextState = payload;
         renderBiasCard(payload);
@@ -1195,7 +1259,10 @@ async function fetchContext() {
         console.error(error);
     }
 
-    window.setTimeout(fetchContext, CONTEXT_REFRESH_MS);
+    if (scheduleNext) {
+        window.clearTimeout(contextRefreshTimer);
+        contextRefreshTimer = window.setTimeout(fetchContext, CONTEXT_REFRESH_MS);
+    }
 }
 
 function sourceClass(source) {
@@ -1216,7 +1283,7 @@ function renderNewsSummaries(items) {
 
 async function getNews() {
     try {
-        const response = await fetch('/api/news');
+        const response = await fetch(`/api/news?profile=${getProfileQuery()}`);
         const data = await response.json();
         const items = data.items || [];
         const container = document.getElementById('news-content');
@@ -1349,6 +1416,7 @@ function bindSoundToggle() {
 function init() {
     renderSoundToggle();
     renderCalendarFilters();
+    bindMarketProfileControls();
     bindQuoteCards();
     bindAccountControls();
     bindLayoutControls();
