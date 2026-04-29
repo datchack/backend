@@ -231,13 +231,13 @@ async function submitLandingAuth(event) {
             throw new Error(payload.detail || 'Action impossible');
         }
 
-        if (!payload.account?.has_access) {
-            setLandingMessage(t('auth_no_access'), 'err');
+        if (selectedBillingPlan) {
+            await startBillingCheckout(selectedBillingPlan);
             return;
         }
 
-        if (selectedBillingPlan) {
-            await startBillingCheckout(selectedBillingPlan);
+        if (!payload.account?.has_access) {
+            setLandingMessage(t('auth_no_access'), 'err');
             return;
         }
 
@@ -282,6 +282,13 @@ async function handleBillingPlan(plan) {
 }
 
 function bindLanding() {
+    document.querySelectorAll('[data-pricing-scroll]').forEach((button) => {
+        button.addEventListener('click', () => {
+            selectedBillingPlan = null;
+            document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
     document.querySelectorAll('[data-auth-mode]').forEach((button) => {
         button.addEventListener('click', () => {
             selectedBillingPlan = null;
