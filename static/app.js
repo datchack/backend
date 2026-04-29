@@ -66,6 +66,8 @@ let audioCtx = null;
 let calendarRefreshTimer = null;
 let contextRefreshTimer = null;
 let quotesRefreshTimer = null;
+let quoteSocket = null;
+let quoteSocketReconnectTimer = null;
 
 const calFilters = {
     impact: new Set(PREFS.impactFilters || IMPACT_LEVELS),
@@ -877,6 +879,44 @@ function renderQuoteCards(items = []) {
     });
 }
 
+function getQuoteSocketUrl() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}/ws/market-quotes`;
+}
+
+function connectQuoteStream() {
+    if (!hasTerminalAccess() || quoteSocket?.readyState === WebSocket.OPEN || quoteSocket?.readyState === WebSocket.CONNECTING) {
+        return;
+    }
+
+    window.clearTimeout(quoteSocketReconnectTimer);
+    quoteSocket = new WebSocket(getQuoteSocketUrl());
+
+    quoteSocket.addEventListener('message', (event) => {
+        try {
+            const payload = JSON.parse(event.data);
+            if (payload.type === 'snapshot') {
+                renderQuoteCards(payload.items || []);
+            } else if (payload.type === 'quote' && payload.item) {
+                renderQuoteCards([payload.item]);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    });
+
+    quoteSocket.addEventListener('close', () => {
+        quoteSocket = null;
+        if (hasTerminalAccess()) {
+            quoteSocketReconnectTimer = window.setTimeout(connectQuoteStream, 3000);
+        }
+    });
+
+    quoteSocket.addEventListener('error', () => {
+        quoteSocket?.close();
+    });
+}
+
 async function getMarketQuotes() {
     if (!hasTerminalAccess()) return;
 
@@ -896,7 +936,11 @@ async function getMarketQuotes() {
 function startQuotesRefresh() {
     window.clearInterval(quotesRefreshTimer);
     getMarketQuotes();
-    quotesRefreshTimer = window.setInterval(getMarketQuotes, QUOTES_REFRESH_MS);
+    connectQuoteStream();
+    quotesRefreshTimer = window.setInterval(() => {
+        getMarketQuotes();
+        connectQuoteStream();
+    }, QUOTES_REFRESH_MS);
 }
 
 function getTzParts(tz) {
