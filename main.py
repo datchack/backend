@@ -1291,6 +1291,11 @@ async def get_context(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
+    return FileResponse("templates/landing.html")
+
+
+@app.get("/terminal", response_class=HTMLResponse)
+async def terminal():
     return FileResponse("templates/index.html")
 
 
@@ -1313,6 +1318,12 @@ async def sitemap_xml():
     <lastmod>{today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://xauterminal.com/terminal</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>
 """

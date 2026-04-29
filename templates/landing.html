@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAUTERMINAL - Terminal macro et trading professionnel</title>
+    <meta name="description" content="XAUTERMINAL centralise charting, calendrier economique, news multi-source, alertes macro et profils de marche dans un terminal professionnel pour traders.">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="landing-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            <span class="brand-mark"></span>
+            <span>XAUTERMINAL</span>
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="#features">Outils</a>
+            <a href="#profiles">Marches</a>
+            <button type="button" class="landing-login" data-auth-mode="login">Connexion</button>
+            <a class="landing-terminal-link hidden" id="landing-terminal-link" href="/terminal">Ouvrir le terminal</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="landing-hero">
+            <div class="landing-hero-copy">
+                <div class="landing-kicker">TRADING TERMINAL</div>
+                <h1>XAUTERMINAL</h1>
+                <p>Un poste de travail macro pour suivre les news, le calendrier economique, les drivers de marche et tes charts dans une interface rapide, personnalisable et orientee decision.</p>
+                <div class="landing-actions">
+                    <button type="button" class="landing-primary" data-auth-mode="register">Demarrer l'essai 7 jours</button>
+                    <button type="button" class="landing-secondary" data-auth-mode="login">J'ai deja un compte</button>
+                </div>
+                <div class="landing-proof">
+                    <span>News multi-source</span>
+                    <span>Calendrier macro</span>
+                    <span>Profils XAU, Forex, Indices, Crypto</span>
+                </div>
+            </div>
+
+            <div class="landing-terminal-preview" aria-label="Apercu du terminal">
+                <div class="preview-top">
+                    <span>XAU/USD</span>
+                    <span class="preview-live">LIVE</span>
+                </div>
+                <div class="preview-grid">
+                    <div class="preview-panel preview-calendar">
+                        <div class="preview-head">CALENDRIER</div>
+                        <div class="preview-event high">
+                            <span>14:30 US</span>
+                            <strong>Core CPI MoM</strong>
+                            <em>Actual 0.4% / Forecast 0.3%</em>
+                        </div>
+                        <div class="preview-event">
+                            <span>16:00 US</span>
+                            <strong>Fed Chair Powell Speech</strong>
+                            <em>Volatilite attendue</em>
+                        </div>
+                    </div>
+                    <div class="preview-panel preview-chart">
+                        <div class="preview-candle up"></div>
+                        <div class="preview-candle down"></div>
+                        <div class="preview-candle up tall"></div>
+                        <div class="preview-candle down short"></div>
+                        <div class="preview-candle up"></div>
+                    </div>
+                    <div class="preview-panel preview-news">
+                        <div class="preview-head">NEWS</div>
+                        <div class="preview-news-item">Fed officials signal rates will stay restrictive</div>
+                        <div class="preview-news-item">Dollar extends gains as yields rise</div>
+                        <div class="preview-news-item">Gold slips before US inflation data</div>
+                    </div>
+                    <div class="preview-panel preview-bias">
+                        <div class="preview-head">BIAS DESK</div>
+                        <strong>BEARISH -8.0</strong>
+                        <span>Dollar strength + yields pressure</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="landing-band" id="features">
+            <div class="landing-section-head">
+                <div class="landing-kicker">OUTILS</div>
+                <h2>Tout ce qui compte avant une decision de marche.</h2>
+            </div>
+            <div class="feature-grid">
+                <article class="feature-card">
+                    <span>01</span>
+                    <h3>Calendrier economique intelligent</h3>
+                    <p>Evenements classes par jour, impact, pays et donnees actual/forecast/previous avec lecture visuelle du resultat.</p>
+                </article>
+                <article class="feature-card">
+                    <span>02</span>
+                    <h3>News multi-source filtrees</h3>
+                    <p>Le feed priorise les informations recentes selon ton profil de marche: Fed, BoJ, inflation, geopolitique, indices ou crypto.</p>
+                </article>
+                <article class="feature-card">
+                    <span>03</span>
+                    <h3>Workspace personnalisable</h3>
+                    <p>Layouts sauvegardes, panels redimensionnables, alertes sonores, watchlist et symboles TradingView adaptes a ton trading.</p>
+                </article>
+                <article class="feature-card">
+                    <span>04</span>
+                    <h3>Bias desk et drivers</h3>
+                    <p>Un tableau de lecture rapide pour comprendre les pressions macro dominantes avant d'entrer en position.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="landing-band compact" id="profiles">
+            <div class="landing-section-head">
+                <div class="landing-kicker">PROFILS DE MARCHE</div>
+                <h2>Un terminal qui s'adapte au marche que tu trades.</h2>
+            </div>
+            <div class="profile-strip">
+                <span>XAU/USD</span>
+                <span>USD/JPY</span>
+                <span>EUR/USD</span>
+                <span>GBP/USD</span>
+                <span>NASDAQ</span>
+                <span>BTC/USD</span>
+            </div>
+        </section>
+
+        <section class="landing-cta">
+            <h2>Construis ton poste de decision macro.</h2>
+            <p>Active ton essai gratuit et teste le terminal complet avec ton propre profil de marche.</p>
+            <button type="button" class="landing-primary" data-auth-mode="register">Creer mon compte</button>
+        </section>
+    </main>
+
+    <div class="landing-auth hidden" id="landing-auth" aria-modal="true" role="dialog">
+        <div class="landing-auth-panel">
+            <button type="button" class="landing-auth-close" id="landing-auth-close" aria-label="Fermer">x</button>
+            <div class="landing-kicker" id="landing-auth-kicker">CREATION DE COMPTE</div>
+            <h2 id="landing-auth-title">Demarrer l'essai 7 jours</h2>
+            <p id="landing-auth-copy">Cree ton compte pour ouvrir le terminal complet et sauvegarder ton workspace.</p>
+            <form id="landing-auth-form" class="landing-auth-form">
+                <input id="landing-auth-email" type="email" placeholder="Email" autocomplete="email" required>
+                <input id="landing-auth-password" type="password" placeholder="Mot de passe (8 caracteres min.)" autocomplete="new-password" required>
+                <button type="submit" class="landing-primary" id="landing-auth-submit">Creer mon compte</button>
+            </form>
+            <button type="button" class="landing-auth-switch" id="landing-auth-switch">J'ai deja un compte</button>
+            <div class="landing-auth-message" id="landing-auth-message"></div>
+        </div>
+    </div>
+
+    <script src="/static/landing.js"></script>
+</body>
+</html>
