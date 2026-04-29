@@ -18,6 +18,11 @@ except ImportError:
     psycopg2 = None
     RealDictCursor = None
 
+try:
+    import databento as db
+except ImportError:
+    db = None
+
 import aiohttp
 import feedparser
 import uvicorn
@@ -32,6 +37,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+DATABENTO_API_KEY = os.getenv("DATABENTO_API_KEY", "")
 
 def get_db_connection():
     if not DATABASE_URL:
@@ -559,6 +565,34 @@ def classify_news_item(source: str, title_upper: str) -> dict:
 def get_market_profile(profile_id: Optional[str]) -> dict:
     key = (profile_id or "xauusd").strip().lower()
     return MARKET_PROFILES.get(key, MARKET_PROFILES["xauusd"])
+
+
+def test_databento_connection() -> dict:
+    if db is None:
+        return {
+            "ok": False,
+            "configured": bool(DATABENTO_API_KEY),
+            "installed": False,
+            "message": "Le package databento n'est pas installe",
+        }
+
+    if not DATABENTO_API_KEY:
+        return {
+            "ok": False,
+            "configured": False,
+            "installed": True,
+            "message": "DATABENTO_API_KEY n'est pas configuree",
+        }
+
+    client = db.Historical(DATABENTO_API_KEY)
+    datasets = client.metadata.list_datasets()
+    return {
+        "ok": True,
+        "configured": True,
+        "installed": True,
+        "datasets_count": len(datasets) if hasattr(datasets, "__len__") else None,
+        "datasets_preview": list(datasets)[:8],
+    }
 
 
 def score_news_for_profile(item: dict, profile: dict) -> int:
@@ -1204,6 +1238,20 @@ async def admin_update_user_access(user_id: int, payload: AdminAccessPayload, re
 async def market_profiles(request: Request):
     require_terminal_access(request)
     return {"profiles": list(MARKET_PROFILES.values())}
+
+
+@app.get("/api/integrations/databento/test")
+async def databento_test(request: Request):
+    require_owner(request)
+    try:
+        return await asyncio.to_thread(test_databento_connection)
+    except Exception as exc:
+        return {
+            "ok": False,
+            "configured": bool(DATABENTO_API_KEY),
+            "installed": db is not None,
+            "message": str(exc),
+        }
 
 
 @app.get("/api/news")
