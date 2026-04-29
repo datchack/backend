@@ -56,6 +56,7 @@ let prefsSyncTimer = null;
 let appBooted = false;
 let accessFormMode = 'intro';
 let lastSeenNewsTs = 0;
+let suppressNextNewsFresh = false;
 let calEvents = [];
 let contextState = null;
 let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null };
@@ -282,7 +283,7 @@ function setMarketProfile(profileId) {
     const profile = MARKET_PROFILES[profileId] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
     currentMarketProfile = profile.id;
     currentSymbol = profile.symbol;
-    lastSeenNewsTs = 0;
+    suppressNextNewsFresh = true;
 
     const cmdInput = document.getElementById('cmd');
     if (cmdInput) cmdInput.value = currentSymbol;
@@ -896,6 +897,15 @@ function formatValue(value, unit = '') {
     return unit ? `${text}${unit}` : text;
 }
 
+function renderCalendarValue(label, value, unit = '') {
+    return `
+        <span class="cal-stat">
+            <span class="cal-stat-label">${label}</span>
+            <strong>${formatValue(value, unit)}</strong>
+        </span>
+    `;
+}
+
 function formatSignedPercent(value) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
         return '-';
@@ -1058,14 +1068,10 @@ function renderCalendar() {
         if (dayEvents.length === 0) {
             html += `
             <div class="cal-row cal-row-empty">
-                <span class="cal-time">--:--</span>
-                <span class="cal-flag">-</span>
-                <span class="cal-title">
+                <div class="cal-event-main">
+                    <span class="cal-time">--:--</span>
                     <span class="cal-title-text">Aucun evenement programme</span>
-                </span>
-                <span class="cal-num">-</span>
-                <span class="cal-num">-</span>
-                <span class="cal-num">-</span>
+                </div>
             </div>`;
             continue;
         }
@@ -1089,15 +1095,19 @@ function renderCalendar() {
 
             html += `
             <div class="${rowClasses}">
-                <span class="cal-time">${time}</span>
-                <span class="cal-flag">${event.country || '-'}</span>
-                <span class="cal-title">
-                    ${buildImpactDots(event.impact)}
-                    <span class="cal-title-text">${event.title || '-'}</span>
-                </span>
-                <span class="cal-num">${formatValue(event.actual, event.unit)}</span>
-                <span class="cal-num">${formatValue(event.forecast, event.unit)}</span>
-                <span class="cal-num">${formatValue(event.previous, event.unit)}</span>
+                <div class="cal-event-main">
+                    <div class="cal-event-top">
+                        <span class="cal-time">${time}</span>
+                        <span class="cal-country">${event.country || '-'}</span>
+                        ${buildImpactDots(event.impact)}
+                    </div>
+                    <div class="cal-title-text">${event.title || '-'}</div>
+                    <div class="cal-stats">
+                        ${renderCalendarValue('Actual', event.actual, event.unit)}
+                        ${renderCalendarValue('Forecast', event.forecast, event.unit)}
+                        ${renderCalendarValue('Previous', event.previous, event.unit)}
+                    </div>
+                </div>
             </div>`;
         });
     }
@@ -1277,7 +1287,8 @@ function renderNewsSummaries(items) {
     const high = items.filter((item) => item.priority === 'high').length;
     const official = items.filter((item) => (item.tags || []).includes('OFFICIAL')).length;
 
-    priorityEl.textContent = `HIGH ${high}`;
+    const matched = items.filter((item) => Number(item.profile_score || 0) > 0).length;
+    priorityEl.textContent = `MATCH ${matched} / HIGH ${high}`;
     officialEl.textContent = `OFFICIAL ${official}`;
 }
 
@@ -1292,11 +1303,12 @@ async function getNews() {
         container.innerHTML = '';
 
         let freshCount = 0;
+        const suppressFresh = suppressNextNewsFresh;
         renderNewsSummaries(items);
 
         items.forEach((itemData) => {
             const item = document.createElement('div');
-            const isFresh = itemData.ts > lastSeenNewsTs;
+            const isFresh = !suppressFresh && itemData.ts > lastSeenNewsTs;
             if (isFresh) {
                 freshCount += 1;
             }
@@ -1342,14 +1354,16 @@ async function getNews() {
         if (items.length) {
             lastSeenNewsTs = Math.max(lastSeenNewsTs, items[0].ts || 0);
         }
+        suppressNextNewsFresh = false;
 
         const statusNews = document.getElementById('status-news');
         if (statusNews) {
             const highCount = items.filter((item) => item.priority === 'high').length;
-            statusNews.textContent = `News: ${items.length} items - high ${highCount}${data.cached ? ` - cache ${data.age}s` : ''}`;
+            const matchedCount = items.filter((item) => Number(item.profile_score || 0) > 0).length;
+            statusNews.textContent = `News: ${items.length} items - match ${matchedCount} - high ${highCount} - ${data.window_hours || 72}h${data.cached ? ` - cache ${data.age}s` : ''}`;
         }
 
-        if (freshCount > 0) {
+        if (freshCount > 0 && !suppressFresh) {
             ensureAudio();
             beep();
         }

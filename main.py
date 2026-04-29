@@ -67,6 +67,7 @@ CALENDAR_TZ = PARIS
 
 _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
+NEWS_MAX_AGE_HOURS = 72
 _calendar_cache: dict[str, dict] = {}
 CALENDAR_CACHE_TTL = 60
 _context_cache: dict = {"data": None, "ts": 0.0}
@@ -582,15 +583,27 @@ def score_news_for_profile(item: dict, profile: dict) -> int:
 
 
 def personalize_news_items(items: list[dict], profile: dict) -> list[dict]:
+    cutoff_ts = (utc_now() - timedelta(hours=NEWS_MAX_AGE_HOURS)).timestamp()
+    recent_items = [item for item in items if float(item.get("ts", 0)) >= cutoff_ts]
     personalized = []
-    for item in items:
+
+    relevant_items = []
+    fallback_items = []
+    for item in recent_items:
         score = score_news_for_profile(item, profile)
         next_item = {**item, "profile_score": score}
         if score > 0:
             next_item["priority"] = "high" if score >= 7 else "medium" if score >= 3 else next_item.get("priority", "low")
-        personalized.append(next_item)
+            relevant_items.append(next_item)
+        elif item.get("priority") == "high" or item.get("crit"):
+            fallback_items.append(next_item)
 
-    personalized.sort(key=lambda item: (item["profile_score"], item.get("ts", 0)), reverse=True)
+    if relevant_items:
+        personalized = relevant_items + fallback_items
+    else:
+        personalized = [{**item, "profile_score": 0} for item in recent_items]
+
+    personalized.sort(key=lambda item: (item.get("profile_score", 0), item.get("ts", 0)), reverse=True)
     return personalized[:80]
 
 
@@ -1192,6 +1205,7 @@ async def get_news(request: Request, profile: Optional[str] = None):
         return {
             "items": personalize_news_items(_news_cache["data"], market_profile),
             "profile": market_profile["id"],
+            "window_hours": NEWS_MAX_AGE_HOURS,
             "cached": True,
             "age": int(now - _news_cache["ts"]),
         }
@@ -1205,7 +1219,13 @@ async def get_news(request: Request, profile: Optional[str] = None):
 
     _news_cache["data"] = all_news
     _news_cache["ts"] = now
-    return {"items": personalize_news_items(all_news, market_profile), "profile": market_profile["id"], "cached": False, "age": 0}
+    return {
+        "items": personalize_news_items(all_news, market_profile),
+        "profile": market_profile["id"],
+        "window_hours": NEWS_MAX_AGE_HOURS,
+        "cached": False,
+        "age": 0,
+    }
 
 
 @app.get("/api/calendar")
