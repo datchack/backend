@@ -176,6 +176,14 @@ body.gated .main-layout > .layout-splitter {
     overflow: hidden;
     height: 78px;
     transition: border-color 0.15s, box-shadow 0.15s;
+    padding: 10px 12px 9px;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 4px;
 }
 
 .qcard:hover { border-color: var(--border-hot); }
@@ -183,6 +191,99 @@ body.gated .main-layout > .layout-splitter {
 .qcard.active {
     border-color: var(--accent);
     box-shadow: 0 0 10px rgba(162, 89, 255, 0.2);
+}
+
+.qcard.up { border-color: rgba(0, 242, 173, 0.22); }
+.qcard.down { border-color: rgba(255, 77, 109, 0.22); }
+
+.quote-accent {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--muted);
+}
+
+.qcard.up .quote-accent { background: var(--buy); }
+.qcard.down .quote-accent { background: var(--sell); }
+.qcard.active .quote-accent { background: var(--accent); }
+
+.quote-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.quote-card-head strong,
+.quote-card-head em,
+.quote-price,
+.quote-change,
+.quote-loading {
+    display: block;
+}
+
+.quote-card-head strong {
+    font-size: 13px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+}
+
+.quote-card-head em {
+    margin-top: 3px;
+    color: var(--muted);
+    font-style: normal;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.quote-source {
+    min-height: 18px;
+    padding: 0 5px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 16px;
+}
+
+.quote-price {
+    align-self: end;
+    font-size: clamp(22px, 1.8vw, 32px);
+    line-height: 0.95;
+    font-weight: 900;
+    letter-spacing: 0;
+    white-space: nowrap;
+}
+
+.quote-change {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.qcard.up .quote-change { color: var(--buy); }
+.qcard.down .quote-change { color: var(--sell); }
+
+.quote-loading {
+    align-self: center;
+    justify-self: center;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.6px;
 }
 
 .click-overlay {

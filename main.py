@@ -75,6 +75,8 @@ NEWS_CACHE_TTL = 30
 NEWS_MAX_AGE_HOURS = 72
 _calendar_cache: dict[str, dict] = {}
 CALENDAR_CACHE_TTL = 600
+_quotes_cache: dict = {"data": None, "ts": 0.0}
+QUOTES_CACHE_TTL = 15
 _context_cache: dict = {"data": None, "ts": 0.0}
 CONTEXT_CACHE_TTL = 30
 ACCOUNT_DB_PATH = os.path.join(os.path.dirname(__file__), "terminal_users.db")
@@ -106,6 +108,17 @@ MARKET_SYMBOLS = {
     "spy": {"symbol": "SPY", "label": "SPY"},
     "qqq": {"symbol": "QQQ", "label": "QQQ"},
 }
+
+QUOTE_CARDS = [
+    {"key": "xauusd", "label": "XAUUSD", "name": "OR / DOLLAR AMERICAIN", "fmp_symbol": "GCUSD", "fallback_symbol": "GC=F", "tv_symbol": "OANDA:XAUUSD", "decimals": 2},
+    {"key": "xagusd", "label": "XAGUSD", "name": "ARGENT / DOLLAR AMERICAIN", "fmp_symbol": "SIUSD", "fallback_symbol": "SI=F", "tv_symbol": "OANDA:XAGUSD", "decimals": 4},
+    {"key": "dxy", "label": "DXY", "name": "US DOLLAR INDEX", "fmp_symbol": "^DXY", "fallback_symbol": "DX-Y.NYB", "tv_symbol": "CAPITALCOM:DXY", "decimals": 3},
+    {"key": "usoil", "label": "USOIL", "name": "CFD SUR PETROLE WTI", "fmp_symbol": "CLUSD", "fallback_symbol": "CL=F", "tv_symbol": "TVC:USOIL", "decimals": 2},
+    {"key": "eurusd", "label": "EURUSD", "name": "EURO / DOLLAR AMERICAIN", "fmp_symbol": "EURUSD", "fallback_symbol": "EURUSD=X", "tv_symbol": "FX:EURUSD", "decimals": 5},
+    {"key": "tlt", "label": "TLT", "name": "OBLIGATIONS DU TRESOR US", "fmp_symbol": "TLT", "fallback_symbol": "TLT", "tv_symbol": "NASDAQ:TLT", "decimals": 2},
+    {"key": "spy", "label": "SPY", "name": "S&P 500 ETF", "fmp_symbol": "SPY", "fallback_symbol": "SPY", "tv_symbol": "AMEX:SPY", "decimals": 2},
+    {"key": "qqq", "label": "QQQ", "name": "NASDAQ 100 ETF", "fmp_symbol": "QQQ", "fallback_symbol": "QQQ", "tv_symbol": "NASDAQ:QQQ", "decimals": 2},
+]
 
 MARKET_PROFILES = {
     "xauusd": {
@@ -919,6 +932,96 @@ async def fetch_market_snapshot(session: aiohttp.ClientSession, symbol: str) -> 
     }
 
 
+def parse_float(value: Any) -> float | None:
+    if value in (None, "", "None"):
+        return None
+    try:
+        return float(str(value).replace("%", "").replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+
+
+async def fetch_fmp_quote(session: aiohttp.ClientSession, card: dict) -> dict | None:
+    symbol = card["fmp_symbol"]
+    url = f"https://financialmodelingprep.com/stable/quote?symbol={symbol}&apikey={FMP_API_KEY}"
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+            if resp.status != 200:
+                return None
+            payload = await resp.json()
+    except Exception:
+        return None
+
+    raw = payload[0] if isinstance(payload, list) and payload else payload if isinstance(payload, dict) else None
+    if not raw:
+        return None
+
+    price = parse_float(raw.get("price"))
+    change = parse_float(raw.get("change"))
+    change_pct = parse_float(raw.get("changePercentage", raw.get("changesPercentage")))
+    previous = parse_float(raw.get("previousClose"))
+
+    if price is None:
+        return None
+    if change is None and previous not in (None, 0):
+        change = price - previous
+    if change_pct is None and previous not in (None, 0) and change is not None:
+        change_pct = (change / previous) * 100
+
+    return {
+        **card,
+        "symbol": symbol,
+        "price": round(price, 6),
+        "previous_close": round(previous, 6) if previous is not None else None,
+        "change": round(change or 0, 6),
+        "change_pct": round(change_pct or 0, 4),
+        "high": parse_float(raw.get("dayHigh")),
+        "low": parse_float(raw.get("dayLow")),
+        "time": raw.get("timestamp"),
+        "source": "FMP",
+    }
+
+
+async def fetch_quote_card(session: aiohttp.ClientSession, card: dict) -> dict:
+    fmp_quote = await fetch_fmp_quote(session, card)
+    if fmp_quote:
+        return fmp_quote
+
+    fallback = await fetch_market_snapshot(session, card["fallback_symbol"])
+    if fallback:
+        return {
+            **card,
+            **fallback,
+            "source": "YAHOO",
+        }
+
+    return {
+        **card,
+        "symbol": card["fmp_symbol"],
+        "price": None,
+        "previous_close": None,
+        "change": 0,
+        "change_pct": 0,
+        "high": None,
+        "low": None,
+        "time": None,
+        "source": "UNAVAILABLE",
+    }
+
+
+async def fetch_quote_cards() -> list[dict]:
+    now = time.time()
+    if _quotes_cache["data"] and (now - _quotes_cache["ts"]) < QUOTES_CACHE_TTL:
+        return _quotes_cache["data"]
+
+    async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0 TradingTerminal"}) as session:
+        quotes = await asyncio.gather(*(fetch_quote_card(session, card) for card in QUOTE_CARDS))
+
+    _quotes_cache["data"] = quotes
+    _quotes_cache["ts"] = now
+    return quotes
+
+
 def evaluate_driver(
     *,
     key: str,
@@ -1489,6 +1592,18 @@ async def admin_update_user_access(user_id: int, payload: AdminAccessPayload, re
 async def market_profiles(request: Request):
     require_terminal_access(request)
     return {"profiles": list(MARKET_PROFILES.values())}
+
+
+@app.get("/api/market-quotes")
+async def market_quotes(request: Request):
+    require_terminal_access(request)
+    quotes = await fetch_quote_cards()
+    return {
+        "items": quotes,
+        "count": len(quotes),
+        "cached": bool(_quotes_cache["data"]),
+        "age": int(time.time() - _quotes_cache["ts"]) if _quotes_cache["ts"] else 0,
+    }
 
 
 @app.get("/api/news")

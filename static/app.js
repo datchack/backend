@@ -2,6 +2,7 @@ const PREFS_KEY = 'tt_prefs_v1';
 const CALENDAR_REFRESH_MS = 60000;
 const NEWS_REFRESH_MS = 8000;
 const CONTEXT_REFRESH_MS = 15000;
+const QUOTES_REFRESH_MS = 15000;
 const IMPACT_LEVELS = ['High', 'Medium', 'Low'];
 const DEFAULT_ACCOUNT_MODE = 'register';
 const DEFAULT_MARKET_PROFILE = 'xauusd';
@@ -64,6 +65,7 @@ let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart:
 let audioCtx = null;
 let calendarRefreshTimer = null;
 let contextRefreshTimer = null;
+let quotesRefreshTimer = null;
 
 const calFilters = {
     impact: new Set(PREFS.impactFilters || IMPACT_LEVELS),
@@ -257,6 +259,7 @@ function bootTerminalApp() {
 
     renderMarketProfileSelect();
     initChart(currentSymbol);
+    startQuotesRefresh();
     getNews();
     fetchCalendar();
     fetchContext();
@@ -830,6 +833,72 @@ function changeChart(symbol, options = {}) {
     });
 }
 
+function formatQuotePrice(value, decimals = 2) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '--';
+    return number.toLocaleString('fr-FR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    });
+}
+
+function formatQuoteChange(value, pct) {
+    const change = Number(value);
+    const changePct = Number(pct);
+    if (!Number.isFinite(change) || !Number.isFinite(changePct)) return '--';
+    const sign = change > 0 ? '+' : '';
+    return `${sign}${change.toFixed(2)} (${sign}${changePct.toFixed(2)}%)`;
+}
+
+function renderQuoteCards(items = []) {
+    const byKey = new Map(items.map((item) => [item.key, item]));
+    document.querySelectorAll('.qcard').forEach((card) => {
+        const quote = byKey.get(card.dataset.quoteKey);
+        if (!quote) return;
+
+        const change = Number(quote.change || 0);
+        const tone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+        card.classList.remove('loading', 'up', 'down', 'flat');
+        card.classList.add(tone);
+        card.dataset.symbol = quote.tv_symbol || card.dataset.symbol;
+        card.classList.toggle('active', card.dataset.symbol === currentSymbol);
+        card.innerHTML = `
+            <span class="quote-accent"></span>
+            <span class="quote-card-head">
+                <span>
+                    <strong>${quote.label || quote.symbol}</strong>
+                    <em>${quote.name || ''}</em>
+                </span>
+                <span class="quote-source">${quote.source || 'FMP'}</span>
+            </span>
+            <span class="quote-price">${formatQuotePrice(quote.price, quote.decimals ?? 2)}</span>
+            <span class="quote-change">${formatQuoteChange(quote.change, quote.change_pct)}</span>
+        `;
+    });
+}
+
+async function getMarketQuotes() {
+    if (!hasTerminalAccess()) return;
+
+    try {
+        const response = await fetch('/api/market-quotes', { cache: 'no-store' });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.detail || 'Quotes unavailable');
+        renderQuoteCards(payload.items || []);
+    } catch (error) {
+        console.error(error);
+        document.querySelectorAll('.qcard.loading').forEach((card) => {
+            card.innerHTML = `<span class="quote-loading">${card.dataset.quoteKey || 'QUOTE'} indisponible</span>`;
+        });
+    }
+}
+
+function startQuotesRefresh() {
+    window.clearInterval(quotesRefreshTimer);
+    getMarketQuotes();
+    quotesRefreshTimer = window.setInterval(getMarketQuotes, QUOTES_REFRESH_MS);
+}
+
 function getTzParts(tz) {
     const formatter = new Intl.DateTimeFormat('en-GB', {
         timeZone: tz,
@@ -1379,13 +1448,15 @@ async function getNews() {
 }
 
 function bindQuoteCards() {
-    document.querySelectorAll('.qcard').forEach((card) => {
-        card.addEventListener('click', () => {
-            const symbol = card.dataset.symbol;
-            if (symbol) {
-                changeChart(symbol);
-            }
-        });
+    const header = document.querySelector('.header');
+    if (!header) return;
+
+    header.addEventListener('click', (event) => {
+        const card = event.target.closest('.qcard');
+        const symbol = card?.dataset.symbol;
+        if (symbol) {
+            changeChart(symbol);
+        }
     });
 }
 
