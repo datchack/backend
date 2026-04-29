@@ -6,4 +6,3 @@ aiohttp
 feedparser
 beautifulsoup4
 psycopg2-binary
-databento
