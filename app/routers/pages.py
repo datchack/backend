@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response as FastAPIResponse
 from fastapi.templating import Jinja2Templates
@@ -7,8 +5,7 @@ from fastapi.templating import Jinja2Templates
 from app.core import *
 
 router = APIRouter()
-TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "templates"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = Jinja2Templates(directory="templates")
 
 
 def legal_context(title: str, kicker: str, sections: list[tuple[str, str]]) -> dict:
@@ -28,12 +25,12 @@ def legal_context(title: str, kicker: str, sections: list[tuple[str, str]]) -> d
 
 @router.get("/", response_class=HTMLResponse)
 async def index():
-    return FileResponse(str(TEMPLATES_DIR / "landing.html"))
+    return FileResponse("templates/landing.html")
 
 
 @router.get("/terminal", response_class=HTMLResponse)
 async def terminal():
-    return FileResponse(str(TEMPLATES_DIR / "index.html"))
+    return FileResponse("templates/index.html")
 
 
 @router.get("/terms")
