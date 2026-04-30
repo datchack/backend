@@ -39,8 +39,8 @@ import {
     bindResizers as bindResizersModule,
     loadLayoutPrefs,
 } from './terminal-layout.js';
-import { sourceClass } from './terminal-formatters.js';
 import { fetchCalendarFeed, fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
+import { renderNewsError, renderNewsFeed } from './terminal-news.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
 import { bindQuoteCards, startQuotesRefresh } from './terminal-quotes.js';
 import {
@@ -585,120 +585,27 @@ async function fetchContext(scheduleNext = true) {
     }
 }
 
-function renderNewsSummaries(items) {
-    const priorityEl = document.getElementById('news-priority-summary');
-    const officialEl = document.getElementById('official-summary');
-    if (!priorityEl || !officialEl) return;
-
-    const high = items.filter((item) => item.priority === 'high').length;
-    const official = items.filter((item) => (item.tags || []).includes('OFFICIAL')).length;
-    const moving = items.filter((item) => item.market_moving).length;
-
-    const matched = items.filter((item) => Number(item.profile_score || 0) > 0).length;
-    priorityEl.textContent = `MOVING ${moving} / MATCH ${matched}`;
-    officialEl.textContent = `HIGH ${high} / OFFICIAL ${official}`;
-}
-
 async function getNews() {
     try {
         const data = await fetchNewsFeed(getProfileQuery());
-        const items = data.items || [];
-        const container = document.getElementById('news-content');
-
-        if (!container) return;
-        container.innerHTML = '';
-
-        let freshAlertCount = 0;
-        const suppressFresh = suppressNextNewsFresh;
-        renderNewsSummaries(items);
-
-        items.forEach((itemData) => {
-            const item = document.createElement('div');
-            const newsId = itemData.id || `${itemData.s}:${itemData.ts}:${itemData.t}`;
-            const isFresh = hasLoadedNews && !suppressFresh && itemData.ts > lastSeenNewsTs && !alertedNewsIds.has(newsId);
-            const shouldAlert = isFresh && (itemData.market_moving || itemData.priority === 'high' || itemData.crit);
-            if (shouldAlert) {
-                freshAlertCount += 1;
-                alertedNewsIds.add(newsId);
-            }
-
-            item.className = `n-item ${itemData.priority || 'low'}${itemData.crit ? ' critical' : ''}${itemData.market_moving ? ' moving' : ''}${isFresh ? ' fresh' : ''}`;
-
-            const meta = document.createElement('div');
-            meta.className = 'n-meta';
-
-            const time = document.createElement('span');
-            time.textContent = itemData.time;
-
-            const source = document.createElement('span');
-            source.className = `tag ${sourceClass(itemData.s)}`;
-            source.textContent = itemData.s;
-
-            const priority = document.createElement('span');
-            priority.className = `tag priority ${itemData.priority || 'low'}`;
-            priority.textContent = (itemData.priority || 'low').toUpperCase();
-
-            meta.appendChild(time);
-            meta.appendChild(source);
-            meta.appendChild(priority);
-
-            if (itemData.market_moving) {
-                const moving = document.createElement('span');
-                moving.className = 'tag moving';
-                moving.textContent = 'MOVING';
-                meta.appendChild(moving);
-            }
-
-            (itemData.tags || []).slice(0, 3).forEach((tagName) => {
-                const tag = document.createElement('span');
-                tag.className = `tag topic ${tagName.toLowerCase()}`;
-                tag.textContent = tagName;
-                meta.appendChild(tag);
-            });
-
-            const link = document.createElement('a');
-            link.href = itemData.l;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.textContent = itemData.t;
-
-            item.appendChild(meta);
-            item.appendChild(link);
-
-            if (Number(itemData.duplicate_count || 1) > 1 || (itemData.related_sources || []).length > 1) {
-                const cluster = document.createElement('div');
-                cluster.className = 'n-cluster';
-                const sources = (itemData.related_sources || []).join(' + ');
-                cluster.textContent = `${itemData.duplicate_count || 1} sources: ${sources}`;
-                item.appendChild(cluster);
-            }
-            container.appendChild(item);
+        const rendered = renderNewsFeed(data, {
+            lastSeenTs: lastSeenNewsTs,
+            hasLoaded: hasLoadedNews,
+            suppressNextFresh: suppressNextNewsFresh,
+            alertedNewsIds,
         });
+        lastSeenNewsTs = rendered.state.lastSeenTs;
+        hasLoadedNews = rendered.state.hasLoaded;
+        suppressNextNewsFresh = rendered.state.suppressNextFresh;
+        alertedNewsIds = rendered.state.alertedNewsIds;
 
-        const latestNewsTs = items.reduce((latest, item) => Math.max(latest, Number(item.ts) || 0), lastSeenNewsTs);
-        if (latestNewsTs > lastSeenNewsTs) {
-            lastSeenNewsTs = latestNewsTs;
-        }
-        hasLoadedNews = true;
-        suppressNextNewsFresh = false;
-
-        const statusNews = document.getElementById('status-news');
-        if (statusNews) {
-            const highCount = items.filter((item) => item.priority === 'high').length;
-            const matchedCount = items.filter((item) => Number(item.profile_score || 0) > 0).length;
-            statusNews.textContent = `News: ${items.length} items - match ${matchedCount} - high ${highCount} - ${data.window_hours || 72}h${data.cached ? ` - cache ${data.age}s` : ''}`;
-        }
-
-        if (freshAlertCount > 0 && !suppressFresh) {
+        if (rendered.freshAlertCount > 0 && !rendered.suppressFresh) {
             ensureAudio();
             beep();
         }
     } catch (error) {
         console.error(error);
-        const statusNews = document.getElementById('status-news');
-        if (statusNews) {
-            statusNews.textContent = 'News: erreur de chargement';
-        }
+        renderNewsError();
     }
 }
 
