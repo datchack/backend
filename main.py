@@ -102,10 +102,11 @@ STRIPE_PRICE_MONTHLY = os.getenv("STRIPE_PRICE_MONTHLY", "")
 STRIPE_PRICE_YEARLY = os.getenv("STRIPE_PRICE_YEARLY", "")
 STRIPE_PRICE_LIFETIME = os.getenv("STRIPE_PRICE_LIFETIME", "")
 APP_BASE_URL = os.getenv("APP_BASE_URL", "https://xauterminal.com").rstrip("/")
-LEGAL_BUSINESS_NAME = os.getenv("LEGAL_BUSINESS_NAME", "XAUTERMINAL")
-LEGAL_PUBLISHER_NAME = os.getenv("LEGAL_PUBLISHER_NAME", LEGAL_BUSINESS_NAME)
-LEGAL_CONTACT_EMAIL = os.getenv("LEGAL_CONTACT_EMAIL", "support@xauterminal.com")
-LEGAL_BUSINESS_ADDRESS = os.getenv("LEGAL_BUSINESS_ADDRESS", "Adresse disponible sur demande")
+LEGAL_BUSINESS_NAME = os.getenv("LEGAL_BUSINESS_NAME", "MDTrading")
+LEGAL_PUBLISHER_NAME = os.getenv("LEGAL_PUBLISHER_NAME", "Marc Debiais")
+LEGAL_CONTACT_EMAIL = os.getenv("LEGAL_CONTACT_EMAIL", "mdtrading@xauterminal.com")
+LEGAL_BUSINESS_ADDRESS = os.getenv("LEGAL_BUSINESS_ADDRESS", "42 Av. de Bordeaux, 86130 Jaunay-Marigny, France")
+LEGAL_BUSINESS_ID = os.getenv("LEGAL_BUSINESS_ID", "SIREN 824468789")
 LEGAL_HOSTING_PROVIDER = os.getenv("LEGAL_HOSTING_PROVIDER", "Render")
 
 if stripe is not None and STRIPE_SECRET_KEY:
@@ -2576,6 +2577,7 @@ def legal_page(title: str, kicker: str, sections: list[tuple[str, str]]) -> str:
     publisher = html.escape(LEGAL_PUBLISHER_NAME)
     email = html.escape(LEGAL_CONTACT_EMAIL)
     address = html.escape(LEGAL_BUSINESS_ADDRESS)
+    business_id = html.escape(LEGAL_BUSINESS_ID)
     host = html.escape(LEGAL_HOSTING_PROVIDER)
     updated = utc_now().date().strftime("%d/%m/%Y")
     section_html = "\n".join(
@@ -2608,7 +2610,7 @@ def legal_page(title: str, kicker: str, sections: list[tuple[str, str]]) -> str:
         <p class="legal-updated">Dernière mise à jour : {updated}</p>
         <section>
             <h2>Informations générales</h2>
-            <p>Éditeur : {publisher}<br>Contact : <a href="mailto:{email}">{email}</a><br>Adresse : {address}<br>Hébergement : {host}</p>
+            <p>Éditeur : {publisher}<br>Entreprise : {business_name}<br>Identifiant : {business_id}<br>Contact : <a href="mailto:{email}">{email}</a><br>Adresse : {address}<br>Hébergement : {host}</p>
         </section>
         {section_html}
         <section class="legal-note">
