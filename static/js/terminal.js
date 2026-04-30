@@ -26,6 +26,14 @@ import { sourceClass } from './terminal-formatters.js';
 import { fetchCalendarFeed, fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
 import { bindQuoteCards, startQuotesRefresh } from './terminal-quotes.js';
+import {
+    beep as playNotificationSound,
+    bindSoundPicker as bindSoundPickerControl,
+    bindSoundToggle as bindSoundToggleControl,
+    ensureAudio,
+    renderSoundToggle as renderSoundToggleControl,
+    syncSoundPicker,
+} from './terminal-sound.js';
 
 function loadPrefs() {
     return loadStoredPrefs(PREFS_KEY);
@@ -60,7 +68,6 @@ let alertedNewsIds = new Set();
 let calEvents = [];
 let contextState = null;
 let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null, refreshMs: CALENDAR_REFRESH_MS };
-let audioCtx = null;
 let calendarRefreshTimer = null;
 let contextRefreshTimer = null;
 
@@ -134,10 +141,9 @@ function applyLoadedPrefs(prefs = {}) {
     const impactPrefs = Array.isArray(prefs.impactFilters) && prefs.impactFilters.length ? prefs.impactFilters : IMPACT_LEVELS;
     calFilters.impact = new Set(impactPrefs);
 
-    renderSoundToggle();
+    renderSoundToggleControl(soundEnabled);
     renderCalendarFilters();
-    const soundSelect = document.getElementById('sound-pick');
-    if (soundSelect) soundSelect.value = soundType;
+    syncSoundPicker(soundType);
     const cmdInput = document.getElementById('cmd');
     if (cmdInput) cmdInput.value = currentSymbol;
     renderMarketProfileSelect();
@@ -295,73 +301,8 @@ function setMarketProfile(profileId) {
     fetchContext(false);
 }
 
-function ensureAudio() {
-    if (!audioCtx) {
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        } catch {
-            audioCtx = null;
-        }
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-}
-
-function tone(freq, startOffset, duration, peak, type) {
-    const now = audioCtx.currentTime;
-    const oscillator = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    oscillator.type = type;
-    oscillator.frequency.value = freq;
-
-    gain.gain.setValueAtTime(0.0001, now + startOffset);
-    gain.gain.exponentialRampToValueAtTime(peak, now + startOffset + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
-
-    oscillator.connect(gain).connect(audioCtx.destination);
-    oscillator.start(now + startOffset);
-    oscillator.stop(now + startOffset + duration + 0.02);
-}
-
-function playSound(kind) {
-    if (!audioCtx) return;
-
-    switch (kind) {
-        case 'ping':
-            tone(1760, 0, 0.18, 0.22, 'sine');
-            break;
-        case 'chime':
-            tone(880, 0, 0.2, 0.25, 'sine');
-            tone(1320, 0.12, 0.2, 0.25, 'sine');
-            break;
-        case 'siren':
-            [0, 0.18, 0.36].forEach((offset) => {
-                tone(700, offset, 0.1, 0.22, 'square');
-                tone(1100, offset + 0.09, 0.1, 0.22, 'square');
-            });
-            break;
-        case 'bloop':
-            tone(440, 0, 0.15, 0.22, 'triangle');
-            break;
-        case 'alert':
-            [0, 0.14, 0.28].forEach((offset) => tone(2000, offset, 0.08, 0.28, 'sawtooth'));
-            break;
-    }
-}
-
 function beep() {
-    if (!soundEnabled || !audioCtx) return;
-    playSound(soundType);
-}
-
-function renderSoundToggle() {
-    const soundEl = document.getElementById('status-sound');
-    if (!soundEl) return;
-
-    soundEl.textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF';
-    soundEl.style.color = soundEnabled ? '#22c55e' : '';
+    playNotificationSound(soundEnabled, soundType);
 }
 
 function setAccountMessage(message = '', tone = '') {
@@ -1141,33 +1082,29 @@ function bindCommandInput() {
 }
 
 function bindSoundPicker() {
-    const select = document.getElementById('sound-pick');
-    if (!select) return;
-
-    select.value = soundType;
-    select.addEventListener('change', () => {
-        soundType = select.value;
-        savePrefs({ soundType });
-        ensureAudio();
-        beep();
+    bindSoundPickerControl({
+        getSoundType: () => soundType,
+        setSoundType: (nextSoundType) => {
+            soundType = nextSoundType;
+        },
+        isSoundEnabled: () => soundEnabled,
+        savePrefs,
     });
 }
 
 function bindSoundToggle() {
-    const soundEl = document.getElementById('status-sound');
-    if (!soundEl) return;
-
-    soundEl.addEventListener('click', () => {
-        soundEnabled = !soundEnabled;
-        savePrefs({ soundEnabled });
-        renderSoundToggle();
-        ensureAudio();
-        beep();
+    bindSoundToggleControl({
+        isSoundEnabled: () => soundEnabled,
+        setSoundEnabled: (enabled) => {
+            soundEnabled = enabled;
+        },
+        getSoundType: () => soundType,
+        savePrefs,
     });
 }
 
 function init() {
-    renderSoundToggle();
+    renderSoundToggleControl(soundEnabled);
     renderCalendarFilters();
     applyWidgetVisibility();
     renderCustomizePanel();
