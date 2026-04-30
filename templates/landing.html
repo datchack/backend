@@ -136,6 +136,11 @@
                     <div class="pricing-label" data-i18n="pricing_monthly_label">Mensuel</div>
                     <div class="pricing-price">29€ <span data-i18n="pricing_monthly_period">/ mois</span></div>
                     <p data-i18n="pricing_monthly_copy">Pour tester sérieusement le terminal sans engagement long.</p>
+                    <ul class="pricing-points">
+                        <li>Essai gratuit 7 jours</li>
+                        <li>Renouvellement mensuel</li>
+                        <li>Annulation possible depuis Stripe</li>
+                    </ul>
                     <button type="button" class="landing-secondary" data-billing-plan="monthly" data-i18n="pricing_choose">Choisir mensuel</button>
                 </article>
                 <article class="pricing-card featured">
@@ -143,13 +148,45 @@
                     <div class="pricing-label" data-i18n="pricing_yearly_label">Annuel</div>
                     <div class="pricing-price">249€ <span data-i18n="pricing_yearly_period">/ an</span></div>
                     <p data-i18n="pricing_yearly_copy">L'accès complet avec un prix plus avantageux pour l'utiliser toute l'année.</p>
+                    <ul class="pricing-points">
+                        <li>Essai gratuit 7 jours</li>
+                        <li>Environ 2 mois offerts</li>
+                        <li>Accès complet au terminal</li>
+                    </ul>
                     <button type="button" class="landing-primary" data-billing-plan="yearly" data-i18n="pricing_choose">Choisir annuel</button>
                 </article>
                 <article class="pricing-card">
                     <div class="pricing-label" data-i18n="pricing_lifetime_label">Lifetime</div>
                     <div class="pricing-price">599€ <span data-i18n="pricing_lifetime_period">une fois</span></div>
                     <p data-i18n="pricing_lifetime_copy">Un accès à vie pensé comme offre fondateur, limité tant que le produit se construit.</p>
+                    <ul class="pricing-points">
+                        <li>Paiement unique</li>
+                        <li>Accès lifetime au terminal</li>
+                        <li>Offre fondateur limitée</li>
+                    </ul>
                     <button type="button" class="landing-secondary" data-billing-plan="lifetime" data-i18n="pricing_choose">Choisir lifetime</button>
+                </article>
+            </div>
+            <div class="pricing-note">
+                <strong>Essai et paiement sécurisé</strong>
+                <span>Pour les abonnements mensuel et annuel, Stripe peut demander une carte afin d'activer l'essai gratuit de 7 jours et préparer le renouvellement. Aucun débit d'abonnement n'est prévu avant la fin de l'essai. L'offre lifetime est un achat unique.</span>
+            </div>
+            <div class="faq-grid">
+                <article>
+                    <h3>Que se passe-t-il après les 7 jours ?</h3>
+                    <p>L'abonnement choisi démarre automatiquement si le paiement est validé par Stripe. Tu peux gérer l'accès depuis ton compte et le support peut intervenir en cas de souci.</p>
+                </article>
+                <article>
+                    <h3>Le terminal donne-t-il des signaux ?</h3>
+                    <p>Non. XAUTERMINAL est un outil d'aide à la décision: news, calendrier, drivers, bias et charting. Il ne remplace pas ta stratégie ni ta gestion du risque.</p>
+                </article>
+                <article>
+                    <h3>Puis-je changer de marché ?</h3>
+                    <p>Oui. Les profils XAU/USD, Forex, indices et crypto adaptent le calendrier, le flux news, le Bias Desk et la watchlist.</p>
+                </article>
+                <article>
+                    <h3>Mes paiements sont-ils sécurisés ?</h3>
+                    <p>Les paiements et abonnements sont traités par Stripe. XAUTERMINAL ne stocke pas les numéros de carte bancaire.</p>
                 </article>
             </div>
         </section>
@@ -159,6 +196,18 @@
             <p data-i18n="cta_copy">Active ton essai gratuit et teste le terminal complet avec ton propre profil de marché.</p>
             <button type="button" class="landing-primary" data-pricing-scroll data-i18n="cta_button">Créer mon compte</button>
         </section>
+
+        <footer class="landing-footer">
+            <div>
+                <strong>XAUTERMINAL</strong>
+                <span>Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+            </div>
+            <nav aria-label="Documents légaux">
+                <a href="/terms">CGU</a>
+                <a href="/privacy">Confidentialité</a>
+                <a href="/risk-disclaimer">Disclaimer trading</a>
+            </nav>
+        </footer>
     </main>
 
     <div class="landing-auth hidden" id="landing-auth" aria-modal="true" role="dialog">
