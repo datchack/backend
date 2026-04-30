@@ -259,7 +259,10 @@ function applyLandingLanguage() {
     });
 
     const title = document.querySelector('title');
-    if (title) title.textContent = t('meta_title');
+    if (title) {
+        const titleKey = title.dataset.i18n || 'meta_title';
+        title.textContent = titleKey === 'meta_title' ? t('meta_title') : `${t(titleKey)} - XAUTERMINAL`;
+    }
 
     const toggle = document.querySelector('[data-lang-toggle]');
     if (toggle) toggle.textContent = landingLang === 'fr' ? 'EN' : 'FR';

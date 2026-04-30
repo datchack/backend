@@ -5,8 +5,27 @@ from app.core import *
 
 router = APIRouter()
 
+LEGAL_PAGE_META = {
+    "terms_title": {
+        "title": "Conditions générales d'utilisation",
+        "kicker": "CGU",
+        "description": "Conditions générales d'utilisation de XAUTERMINAL, accès au service, abonnements, paiement et responsabilités.",
+    },
+    "privacy_title": {
+        "title": "Politique de confidentialité",
+        "kicker": "CONFIDENTIALITÉ",
+        "description": "Politique de confidentialité de XAUTERMINAL concernant les données de compte, sessions, paiements et prestataires.",
+    },
+    "risk_title": {
+        "title": "Disclaimer trading et risques",
+        "kicker": "RISQUES",
+        "description": "Avertissement sur les risques liés au trading, aux données de marché et à l'utilisation des outils XAUTERMINAL.",
+    },
+}
+
 
 def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]]) -> str:
+    meta = LEGAL_PAGE_META[title_key]
     business_name = LEGAL_BUSINESS_NAME
     email = LEGAL_CONTACT_EMAIL
     updated = utc_now().date().strftime("%d/%m/%Y")
@@ -19,8 +38,8 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="{title_key}">...</title>
-    <meta name="description" content="">
+    <title data-i18n="{title_key}">{meta["title"]} - {business_name}</title>
+    <meta name="description" content="{meta["description"]}">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="legal-body">
@@ -36,8 +55,8 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
         </nav>
     </header>
     <main class="legal-page">
-        <div class="landing-kicker" data-i18n="{kicker_key}">{kicker_key}</div>
-        <h1 data-i18n="{title_key}">{title_key}</h1>
+        <div class="landing-kicker" data-i18n="{kicker_key}">{meta["kicker"]}</div>
+        <h1 data-i18n="{title_key}">{meta["title"]}</h1>
         <p class="legal-updated"><span data-i18n="legal_updated">Dernière mise à jour :</span> {updated}</p>
         <section>
             <h2 data-i18n="legal_general">Informations générales</h2>
