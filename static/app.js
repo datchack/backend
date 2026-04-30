@@ -1222,9 +1222,13 @@ function renderCalendar() {
             const rowClasses = [
                 'cal-row',
                 getCalendarBiasClass(event),
+                event.market_label ? `priority-${String(event.market_label).toLowerCase()}` : '',
                 dueSoon ? 'due' : '',
                 isPast ? 'past' : '',
             ].filter(Boolean).join(' ');
+            const priorityBadge = event.market_label
+                ? `<span class="cal-priority ${String(event.market_label).toLowerCase()}">${event.market_label}</span>`
+                : '';
 
             html += `
             <div class="${rowClasses}">
@@ -1233,6 +1237,7 @@ function renderCalendar() {
                         <span class="cal-time">${time}</span>
                         <span class="cal-country">${event.country || '-'}</span>
                         ${buildImpactDots(event.impact)}
+                        ${priorityBadge}
                     </div>
                     <div class="cal-title-text">${event.title || '-'}</div>
                     <div class="cal-stats">

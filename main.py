@@ -624,31 +624,75 @@ def parse_fmp_datetime(raw_date: str) -> datetime | None:
 
 
 CALENDAR_HIGH_KEYWORDS = (
-    "core pce", "pce price index", "cpi", "consumer price", "nfp", "nonfarm",
-    "payroll", "unemployment rate", "fomc", "fed interest rate", "fed press",
-    "powell", "gdp growth", "gross domestic product", "retail sales",
-    "ism manufacturing", "ism services", "ppi", "initial jobless",
+    "core cpi", "consumer price index", "core pce price index", "nonfarm",
+    "nfp", "payroll", "unemployment rate", "fomc", "fed interest rate",
+    "fed press", "powell", "gdp growth rate", "gross domestic product qoq",
+    "retail sales", "ism manufacturing", "ism services", "ppi",
     "employment cost index",
 )
 
 CALENDAR_MEDIUM_KEYWORDS = (
+    "pce price index", "initial jobless claims", "continuing jobless",
     "chicago pmi", "leading index", "gdp price", "personal income",
     "personal spending", "durable goods", "consumer confidence",
-    "jolts", "adp", "beige book", "treasury refunding",
+    "jolts", "adp", "beige book", "treasury refunding", "pce prices qoq",
+    "core pce prices qoq",
+)
+
+CALENDAR_LOW_KEYWORDS = (
+    "4-week average", "4 week average", "mortgage rate", "bill auction",
+    "fed balance sheet", "real consumer spending", "gdp sales",
+)
+
+CALENDAR_KEY_EVENT_KEYWORDS = (
+    "core cpi", "consumer price index", "core pce price index",
+    "nonfarm", "nfp", "payroll", "unemployment rate", "fomc",
+    "fed interest rate", "fed press", "powell", "gdp growth rate",
+    "gross domestic product qoq", "retail sales", "ism manufacturing",
+    "ism services", "ppi", "employment cost index",
 )
 
 
 def calendar_impact_override(title: str, original: str) -> str:
     clean = title.lower()
-    if "4-week average" in clean or "4 week average" in clean:
+    if any(keyword in clean for keyword in CALENDAR_LOW_KEYWORDS):
         return "Low"
-    if "continuing jobless" in clean or "chicago pmi" in clean:
-        return "Medium"
     if any(keyword in clean for keyword in CALENDAR_HIGH_KEYWORDS):
         return "High"
-    if original != "High" and any(keyword in clean for keyword in CALENDAR_MEDIUM_KEYWORDS):
+    if any(keyword in clean for keyword in CALENDAR_MEDIUM_KEYWORDS):
         return "Medium"
     return original
+
+
+def calendar_market_priority(title: str, impact: str) -> tuple[int, str]:
+    clean = title.lower()
+    priority = {"High": 70, "Medium": 45, "Low": 20}.get(impact, 10)
+
+    if any(keyword in clean for keyword in CALENDAR_KEY_EVENT_KEYWORDS):
+        priority += 25
+    if "core pce price index mom" in clean or "core cpi" in clean:
+        priority += 16
+    if "gross domestic product qoq" in clean or "gdp growth rate qoq" in clean:
+        priority += 14
+    if "employment cost index" in clean:
+        priority += 12
+    if "pce price index" in clean:
+        priority += 10
+    if "initial jobless claims" in clean:
+        priority += 8
+    if "personal income" in clean or "personal spending" in clean:
+        priority += 6
+    if any(keyword in clean for keyword in CALENDAR_LOW_KEYWORDS):
+        priority -= 15
+
+    if priority >= 90:
+        label = "KEY"
+    elif priority >= 50:
+        label = "WATCH"
+    else:
+        label = ""
+
+    return priority, label
 
 
 def calendar_event_family(title: str) -> str:
@@ -659,6 +703,10 @@ def calendar_event_family(title: str) -> str:
         "initial jobless claims": "initial jobless claims",
         "jobless claims 4 week average": "jobless claims 4 week average",
         "continuing jobless claims": "continuing jobless claims",
+        "employment cost wages qoq": "employment cost wages qoq",
+        "employment wages qoq": "employment cost wages qoq",
+        "employment cost benefits qoq": "employment cost benefits qoq",
+        "employment benefits qoq": "employment cost benefits qoq",
     }
     for needle, family in replacements.items():
         if needle in clean:
@@ -668,6 +716,7 @@ def calendar_event_family(title: str) -> str:
 
 def event_quality_score(event: dict) -> int:
     score = {"High": 300, "Medium": 200, "Low": 100}.get(event.get("impact"), 0)
+    score += int(event.get("market_priority") or 0)
     title = str(event.get("title") or "").lower()
     if "gross domestic product" in title:
         score += 12
@@ -685,10 +734,15 @@ def event_quality_score(event: dict) -> int:
 def dedupe_calendar_events(events: list[dict]) -> list[dict]:
     best: dict[tuple, dict] = {}
     passthrough: list[dict] = []
+    dedupe_families = {
+        "gdp growth rate qoq",
+        "employment cost wages qoq",
+        "employment cost benefits qoq",
+    }
     for event in events:
         family = calendar_event_family(event.get("title") or "")
         key = (event.get("country"), event.get("ts"), family)
-        if family in {"gdp growth rate qoq"}:
+        if family in dedupe_families:
             current = best.get(key)
             if current is None or event_quality_score(event) > event_quality_score(current):
                 best[key] = event
@@ -696,7 +750,12 @@ def dedupe_calendar_events(events: list[dict]) -> list[dict]:
             passthrough.append(event)
 
     deduped = passthrough + list(best.values())
-    deduped.sort(key=lambda item: (item["ts"], {"High": 0, "Medium": 1, "Low": 2}.get(item.get("impact"), 3), item.get("title", "")))
+    deduped.sort(key=lambda item: (
+        item["ts"],
+        -int(item.get("market_priority") or 0),
+        {"High": 0, "Medium": 1, "Low": 2}.get(item.get("impact"), 3),
+        item.get("title", ""),
+    ))
     return deduped
 
 
@@ -716,6 +775,7 @@ def normalize_calendar_event(event: dict) -> dict | None:
     estimate = event.get("estimate")
     title = event.get("event") or ""
     impact = calendar_impact_override(title, impact)
+    market_priority, market_label = calendar_market_priority(title, impact)
 
     return {
         "title": title,
@@ -728,6 +788,8 @@ def normalize_calendar_event(event: dict) -> dict | None:
         "unit": event.get("unit"),
         "ts": int(dt.timestamp()),
         "date_utc": dt.isoformat(),
+        "market_priority": market_priority,
+        "market_label": market_label,
     }
 
 
