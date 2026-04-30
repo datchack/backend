@@ -61,7 +61,7 @@ let hasLoadedNews = false;
 let suppressNextNewsFresh = false;
 let calEvents = [];
 let contextState = null;
-let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null };
+let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null, refreshMs: CALENDAR_REFRESH_MS };
 let audioCtx = null;
 let calendarRefreshTimer = null;
 let contextRefreshTimer = null;
@@ -1258,8 +1258,8 @@ function updateCalendarStatus(meta) {
         return;
     }
 
-    liveEl.textContent = meta.hot ? 'HOT' : 'LIVE';
-    liveEl.style.color = meta.hot ? '#f59e0b' : '#22c55e';
+    liveEl.textContent = meta.releaseWatch ? 'LIVE 2S' : meta.hot ? 'HOT' : 'LIVE';
+    liveEl.style.color = meta.releaseWatch ? '#ffcc00' : meta.hot ? '#f59e0b' : '#22c55e';
 }
 
 async function fetchCalendar(scheduleNext = true) {
@@ -1273,6 +1273,8 @@ async function fetchCalendar(scheduleNext = true) {
             error: payload.error || null,
             count: payload.count || 0,
             hot: !!payload.hot,
+            releaseWatch: !!payload.release_watch,
+            refreshMs: Number(payload.refresh_ms) || CALENDAR_REFRESH_MS,
             weekStart: payload.week_start || null,
             weekEnd: payload.week_end || null,
         };
@@ -1281,7 +1283,7 @@ async function fetchCalendar(scheduleNext = true) {
         renderCalendar();
     } catch (error) {
         console.error(error);
-        calendarMeta = { timezone: 'Europe/Paris', error: 'Requete impossible', count: 0, hot: false, weekStart: null, weekEnd: null };
+        calendarMeta = { timezone: 'Europe/Paris', error: 'Requete impossible', count: 0, hot: false, releaseWatch: false, refreshMs: CALENDAR_REFRESH_MS, weekStart: null, weekEnd: null };
         calEvents = [];
         updateCalendarStatus(calendarMeta);
         renderCalendar();
@@ -1289,7 +1291,7 @@ async function fetchCalendar(scheduleNext = true) {
 
     if (scheduleNext) {
         window.clearTimeout(calendarRefreshTimer);
-        calendarRefreshTimer = window.setTimeout(fetchCalendar, CALENDAR_REFRESH_MS);
+        calendarRefreshTimer = window.setTimeout(fetchCalendar, calendarMeta.refreshMs || CALENDAR_REFRESH_MS);
     }
 }
 

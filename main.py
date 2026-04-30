@@ -74,7 +74,8 @@ _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
 NEWS_MAX_AGE_HOURS = 72
 _calendar_cache: dict[str, dict] = {}
-CALENDAR_CACHE_TTL = 600
+CALENDAR_CACHE_TTL = 30
+CALENDAR_HOT_CACHE_TTL = 2
 _quotes_cache: dict = {"data": None, "ts": 0.0}
 QUOTES_CACHE_TTL = 5
 _quote_latest_by_key: dict[str, dict] = {}
@@ -622,6 +623,83 @@ def parse_fmp_datetime(raw_date: str) -> datetime | None:
     return None
 
 
+CALENDAR_HIGH_KEYWORDS = (
+    "core pce", "pce price index", "cpi", "consumer price", "nfp", "nonfarm",
+    "payroll", "unemployment rate", "fomc", "fed interest rate", "fed press",
+    "powell", "gdp growth", "gross domestic product", "retail sales",
+    "ism manufacturing", "ism services", "ppi", "initial jobless",
+    "employment cost index",
+)
+
+CALENDAR_MEDIUM_KEYWORDS = (
+    "chicago pmi", "leading index", "gdp price", "personal income",
+    "personal spending", "durable goods", "consumer confidence",
+    "jolts", "adp", "beige book", "treasury refunding",
+)
+
+
+def calendar_impact_override(title: str, original: str) -> str:
+    clean = title.lower()
+    if "4-week average" in clean or "4 week average" in clean:
+        return "Low"
+    if "continuing jobless" in clean or "chicago pmi" in clean:
+        return "Medium"
+    if any(keyword in clean for keyword in CALENDAR_HIGH_KEYWORDS):
+        return "High"
+    if original != "High" and any(keyword in clean for keyword in CALENDAR_MEDIUM_KEYWORDS):
+        return "Medium"
+    return original
+
+
+def calendar_event_family(title: str) -> str:
+    clean = " ".join(title.lower().replace("-", " ").split())
+    replacements = {
+        "gross domestic product qoq": "gdp growth rate qoq",
+        "gdp growth rate qoq": "gdp growth rate qoq",
+        "initial jobless claims": "initial jobless claims",
+        "jobless claims 4 week average": "jobless claims 4 week average",
+        "continuing jobless claims": "continuing jobless claims",
+    }
+    for needle, family in replacements.items():
+        if needle in clean:
+            return family
+    return clean
+
+
+def event_quality_score(event: dict) -> int:
+    score = {"High": 300, "Medium": 200, "Low": 100}.get(event.get("impact"), 0)
+    title = str(event.get("title") or "").lower()
+    if "gross domestic product" in title:
+        score += 12
+    if "gdp growth rate" in title:
+        score += 10
+    if "core pce" in title:
+        score += 10
+    if event.get("forecast") not in (None, ""):
+        score += 4
+    if event.get("previous") not in (None, ""):
+        score += 2
+    return score
+
+
+def dedupe_calendar_events(events: list[dict]) -> list[dict]:
+    best: dict[tuple, dict] = {}
+    passthrough: list[dict] = []
+    for event in events:
+        family = calendar_event_family(event.get("title") or "")
+        key = (event.get("country"), event.get("ts"), family)
+        if family in {"gdp growth rate qoq"}:
+            current = best.get(key)
+            if current is None or event_quality_score(event) > event_quality_score(current):
+                best[key] = event
+        else:
+            passthrough.append(event)
+
+    deduped = passthrough + list(best.values())
+    deduped.sort(key=lambda item: (item["ts"], {"High": 0, "Medium": 1, "Low": 2}.get(item.get("impact"), 3), item.get("title", "")))
+    return deduped
+
+
 def normalize_calendar_event(event: dict) -> dict | None:
     dt = parse_fmp_datetime(event.get("date", ""))
     if not dt:
@@ -636,9 +714,11 @@ def normalize_calendar_event(event: dict) -> dict | None:
         impact = "Low"
 
     estimate = event.get("estimate")
+    title = event.get("event") or ""
+    impact = calendar_impact_override(title, impact)
 
     return {
-        "title": event.get("event") or "",
+        "title": title,
         "country": event.get("country") or "US",
         "currency": event.get("currency") or "",
         "impact": impact,
@@ -657,6 +737,22 @@ def get_current_week_bounds(now: datetime | None = None) -> tuple[datetime, date
     week_start = week_start - timedelta(days=week_start.weekday())
     week_end = week_start + timedelta(days=7)
     return week_start, week_end
+
+
+def calendar_cache_ttl(events: list[dict], now_ts: float | None = None) -> int:
+    now_value = now_ts or time.time()
+    if any(abs(float(event.get("ts", 0)) - now_value) <= 900 and event.get("impact") in {"High", "Medium"} for event in events):
+        return CALENDAR_HOT_CACHE_TTL
+    return CALENDAR_CACHE_TTL
+
+
+def calendar_refresh_ms(events: list[dict], now_ts: float | None = None) -> int:
+    now_value = now_ts or time.time()
+    if any(abs(float(event.get("ts", 0)) - now_value) <= 900 and event.get("impact") in {"High", "Medium"} for event in events):
+        return 2000
+    if any(0 <= float(event.get("ts", 0)) - now_value <= 3600 and event.get("impact") in {"High", "Medium"} for event in events):
+        return 10000
+    return 60000
 
 
 def _format_news_item(name: str, title: str, link: str, dt: datetime) -> dict:
@@ -851,7 +947,7 @@ async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
     to_date = (week_end - timedelta(days=1)).date().isoformat()
     cache_key = f"{country_key}:{from_date}:{to_date}"
     cached = _calendar_cache.get(cache_key)
-    if cached and (now - cached["ts"]) < CALENDAR_CACHE_TTL:
+    if cached and (now - cached["ts"]) < calendar_cache_ttl(cached["events"], now):
         return cached["events"], cached["error"]
 
     errors = []
@@ -904,7 +1000,7 @@ async def fetch_calendar(countries: list[str]) -> tuple[list[dict], str | None]:
         event for event in events
         if week_start_ts <= event["ts"] < week_end_ts
     ]
-    filtered_events.sort(key=lambda item: item["ts"])
+    filtered_events = dedupe_calendar_events(filtered_events)
     _calendar_cache[cache_key] = {"events": filtered_events, "error": None, "ts": now}
     return filtered_events, None
 
@@ -1932,6 +2028,8 @@ async def get_calendar(request: Request, profile: Optional[str] = None):
             "profile": market_profile["id"],
             "countries": market_profile.get("calendar_countries", ["US"]),
             "hot": False,
+            "release_watch": False,
+            "refresh_ms": 30000,
             "error": error,
             "week_start": week_start.isoformat(),
             "week_end": week_end.isoformat(),
@@ -1939,6 +2037,8 @@ async def get_calendar(request: Request, profile: Optional[str] = None):
 
     now_ts = int(time.time())
     hot = any(0 <= (event["ts"] - now_ts) <= 3600 for event in events)
+    release_watch = any(abs(event["ts"] - now_ts) <= 900 and event.get("impact") in {"High", "Medium"} for event in events)
+    refresh_ms = calendar_refresh_ms(events, now_ts)
 
     return {
         "events": events,
@@ -1947,6 +2047,8 @@ async def get_calendar(request: Request, profile: Optional[str] = None):
         "profile": market_profile["id"],
         "countries": market_profile.get("calendar_countries", ["US"]),
         "hot": hot,
+        "release_watch": release_watch,
+        "refresh_ms": refresh_ms,
         "error": None,
         "week_start": week_start.isoformat(),
         "week_end": week_end.isoformat(),
