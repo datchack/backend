@@ -7,7 +7,6 @@ import {
     MARKET_PROFILES,
     NEWS_REFRESH_MS,
     PREFS_KEY,
-    QUOTES_REFRESH_MS,
 } from './terminal-config.js';
 import { saveAccountPreferences } from './terminal-account-api.js';
 import {
@@ -23,9 +22,7 @@ import {
     renderAccountState as renderAccountStateView,
     toggleAccountPanel as toggleAccountPanelView,
 } from './terminal-account-ui.js';
-import {
-    createCalendarController,
-} from './terminal-calendar.js';
+import { createCalendarController } from './terminal-calendar.js';
 import {
     bindCenterTabs as bindCenterTabsModule,
     bindCommandInput as bindCommandInputModule,
