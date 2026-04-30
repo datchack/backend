@@ -5,9 +5,10 @@ import asyncio
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .core import _fmp_ws_tasks, fetch_quote_cards, init_account_db, start_fmp_quote_websockets
 from .routers import account, admin, billing, market, pages
 from .security import add_security_headers
+from .services.accounts import init_account_db
+from .services.quotes import _fmp_ws_tasks, fetch_quote_cards, start_fmp_quote_websockets
 
 
 app = FastAPI()
