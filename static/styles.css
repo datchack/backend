@@ -2047,8 +2047,8 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     color: var(--buy);
 }
 
-.legal-note {
-    border-color: rgba(255, 204, 0, 0.22) !important;
+.legal-contact {
+    border-color: rgba(0, 242, 173, 0.22) !important;
 }
 
 .pricing-badge {

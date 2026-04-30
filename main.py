@@ -2613,9 +2613,9 @@ def legal_page(title: str, kicker: str, sections: list[tuple[str, str]]) -> str:
             <p>Éditeur : {publisher}<br>Entreprise : {business_name}<br>Identifiant : {business_id}<br>Contact : <a href="mailto:{email}">{email}</a><br>Adresse : {address}<br>Hébergement : {host}</p>
         </section>
         {section_html}
-        <section class="legal-note">
-            <h2>Note importante</h2>
-            <p>Ces documents constituent une base opérationnelle pour présenter le service. Ils doivent être relus et adaptés par un professionnel du droit avant une exploitation commerciale à grande échelle.</p>
+        <section class="legal-contact">
+            <h2>Contact</h2>
+            <p>Pour toute question relative aux conditions d'utilisation, à la confidentialité ou aux risques liés au trading, vous pouvez nous contacter à <a href="mailto:{email}">{email}</a>.</p>
         </section>
     </main>
     <footer class="landing-footer">
