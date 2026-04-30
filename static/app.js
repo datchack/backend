@@ -59,6 +59,7 @@ let accessFormMode = 'intro';
 let lastSeenNewsTs = 0;
 let hasLoadedNews = false;
 let suppressNextNewsFresh = false;
+let alertedNewsIds = new Set();
 let calEvents = [];
 let contextState = null;
 let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null, refreshMs: CALENDAR_REFRESH_MS };
@@ -1475,10 +1476,11 @@ function renderNewsSummaries(items) {
 
     const high = items.filter((item) => item.priority === 'high').length;
     const official = items.filter((item) => (item.tags || []).includes('OFFICIAL')).length;
+    const moving = items.filter((item) => item.market_moving).length;
 
     const matched = items.filter((item) => Number(item.profile_score || 0) > 0).length;
-    priorityEl.textContent = `MATCH ${matched} / HIGH ${high}`;
-    officialEl.textContent = `OFFICIAL ${official}`;
+    priorityEl.textContent = `MOVING ${moving} / MATCH ${matched}`;
+    officialEl.textContent = `HIGH ${high} / OFFICIAL ${official}`;
 }
 
 async function getNews() {
@@ -1491,18 +1493,21 @@ async function getNews() {
         if (!container) return;
         container.innerHTML = '';
 
-        let freshCount = 0;
+        let freshAlertCount = 0;
         const suppressFresh = suppressNextNewsFresh;
         renderNewsSummaries(items);
 
         items.forEach((itemData) => {
             const item = document.createElement('div');
-            const isFresh = hasLoadedNews && !suppressFresh && itemData.ts > lastSeenNewsTs;
-            if (isFresh) {
-                freshCount += 1;
+            const newsId = itemData.id || `${itemData.s}:${itemData.ts}:${itemData.t}`;
+            const isFresh = hasLoadedNews && !suppressFresh && itemData.ts > lastSeenNewsTs && !alertedNewsIds.has(newsId);
+            const shouldAlert = isFresh && (itemData.market_moving || itemData.priority === 'high' || itemData.crit);
+            if (shouldAlert) {
+                freshAlertCount += 1;
+                alertedNewsIds.add(newsId);
             }
 
-            item.className = `n-item ${itemData.priority || 'low'}${itemData.crit ? ' critical' : ''}${isFresh ? ' fresh' : ''}`;
+            item.className = `n-item ${itemData.priority || 'low'}${itemData.crit ? ' critical' : ''}${itemData.market_moving ? ' moving' : ''}${isFresh ? ' fresh' : ''}`;
 
             const meta = document.createElement('div');
             meta.className = 'n-meta';
@@ -1522,6 +1527,13 @@ async function getNews() {
             meta.appendChild(source);
             meta.appendChild(priority);
 
+            if (itemData.market_moving) {
+                const moving = document.createElement('span');
+                moving.className = 'tag moving';
+                moving.textContent = 'MOVING';
+                meta.appendChild(moving);
+            }
+
             (itemData.tags || []).slice(0, 3).forEach((tagName) => {
                 const tag = document.createElement('span');
                 tag.className = `tag topic ${tagName.toLowerCase()}`;
@@ -1537,6 +1549,14 @@ async function getNews() {
 
             item.appendChild(meta);
             item.appendChild(link);
+
+            if (Number(itemData.duplicate_count || 1) > 1 || (itemData.related_sources || []).length > 1) {
+                const cluster = document.createElement('div');
+                cluster.className = 'n-cluster';
+                const sources = (itemData.related_sources || []).join(' + ');
+                cluster.textContent = `${itemData.duplicate_count || 1} sources: ${sources}`;
+                item.appendChild(cluster);
+            }
             container.appendChild(item);
         });
 
@@ -1554,7 +1574,7 @@ async function getNews() {
             statusNews.textContent = `News: ${items.length} items - match ${matchedCount} - high ${highCount} - ${data.window_hours || 72}h${data.cached ? ` - cache ${data.age}s` : ''}`;
         }
 
-        if (freshCount > 0 && !suppressFresh) {
+        if (freshAlertCount > 0 && !suppressFresh) {
             ensureAudio();
             beep();
         }

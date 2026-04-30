@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -73,6 +74,7 @@ CALENDAR_TZ = PARIS
 _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
 NEWS_MAX_AGE_HOURS = 72
+NEWS_DEDUP_WINDOW_SECONDS = 2 * 60 * 60
 _calendar_cache: dict[str, dict] = {}
 CALENDAR_CACHE_TTL = 30
 CALENDAR_HOT_CACHE_TTL = 2
@@ -871,16 +873,59 @@ def calendar_refresh_ms(events: list[dict], now_ts: float | None = None) -> int:
     return 60000
 
 
+OFFICIAL_NEWS_SOURCES = {"FED", "TREASURY", "DOL"}
+
+
+def clean_news_title(title: str) -> str:
+    clean = " ".join((title or "").split())
+    if " - " in clean:
+        head, tail = clean.rsplit(" - ", 1)
+        if tail.strip().lower() in {"reuters", "bloomberg", "cnbc", "investing.com", "forexlive"}:
+            clean = head.strip()
+    return clean
+
+
+def news_fingerprint(title: str) -> str:
+    clean = clean_news_title(title).lower()
+    clean = re.sub(r"https?://\S+", " ", clean)
+    clean = re.sub(r"[^a-z0-9%$]+", " ", clean)
+    stopwords = {
+        "the", "a", "an", "to", "of", "and", "or", "for", "in", "on", "as",
+        "by", "with", "from", "at", "is", "are", "be", "will", "says", "say",
+    }
+    tokens = [token for token in clean.split() if len(token) > 2 and token not in stopwords]
+    return " ".join(tokens[:18])
+
+
+def news_similarity(left: str, right: str) -> float:
+    left_tokens = set(left.split())
+    right_tokens = set(right.split())
+    if not left_tokens or not right_tokens:
+        return 0.0
+    return len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
+
+
+def stable_news_id(title: str) -> str:
+    fingerprint = news_fingerprint(title) or clean_news_title(title).lower()
+    return hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()[:16]
+
+
 def _format_news_item(name: str, title: str, link: str, dt: datetime) -> dict:
-    title_upper = title.upper()
+    clean_title = clean_news_title(title)
+    title_upper = clean_title.upper()
+    classification = classify_news_item(name, title_upper)
+    item_id = stable_news_id(clean_title)
     return {
+        "id": item_id,
         "s": name,
-        "t": title,
+        "t": clean_title,
         "l": link,
         "time": dt.astimezone(PARIS).strftime("%H:%M:%S"),
         "ts": dt.timestamp(),
         "crit": any(keyword in title_upper for keyword in ALERTS_CRITICAL),
-        **classify_news_item(name, title_upper),
+        "duplicate_count": 1,
+        "related_sources": [name],
+        **classification,
     }
 
 
@@ -900,9 +945,12 @@ def classify_news_item(source: str, title_upper: str) -> dict:
     if any(keyword in title_upper for keyword in ("GOLD", "XAU", "BULLION", "TREASURY YIELD", "DOLLAR")):
         categories.append("XAU")
         score += 3
-    if source in {"FED", "TREASURY", "DOL"}:
+    if source in OFFICIAL_NEWS_SOURCES:
         categories.append("OFFICIAL")
-        score += 2
+        score += 4
+    if any(keyword in title_upper for keyword in ("BREAKING", "URGENT", "EXCLUSIVE", "STATEMENT", "HOLDS RATES", "RATE DECISION", "PRESS CONFERENCE")):
+        categories.append("MOVING")
+        score += 3
 
     if not categories:
         categories.append("MARKETS")
@@ -918,7 +966,73 @@ def classify_news_item(source: str, title_upper: str) -> dict:
     return {
         "priority": priority,
         "tags": list(dict.fromkeys(categories)),
+        "news_score": score,
+        "market_moving": priority == "high" or "MOVING" in categories or source in OFFICIAL_NEWS_SOURCES,
     }
+
+
+def news_item_rank(item: dict) -> tuple[int, float]:
+    source_rank = {
+        "FED": 7,
+        "DOL": 6,
+        "TREASURY": 6,
+        "REUTERS": 5,
+        "BLOOMBERG": 5,
+        "FOREXLIVE": 4,
+        "CNBC": 3,
+        "INVESTING": 2,
+    }.get(str(item.get("s") or ""), 1)
+    return int(item.get("news_score") or 0) + source_rank, float(item.get("ts") or 0)
+
+
+def dedupe_news_items(items: list[dict]) -> list[dict]:
+    clusters: list[dict] = []
+
+    for item in sorted(items, key=lambda row: row.get("ts", 0), reverse=True):
+        fingerprint = news_fingerprint(item.get("t") or "")
+        matched = None
+        for cluster in clusters:
+            if abs(float(cluster["best"].get("ts", 0)) - float(item.get("ts", 0))) > NEWS_DEDUP_WINDOW_SECONDS:
+                continue
+            if fingerprint and fingerprint == cluster["fingerprint"]:
+                matched = cluster
+                break
+            if fingerprint and news_similarity(fingerprint, cluster["fingerprint"]) >= 0.82:
+                matched = cluster
+                break
+
+        if matched is None:
+            clusters.append({"fingerprint": fingerprint, "items": [item], "best": item})
+            continue
+
+        matched["items"].append(item)
+        if news_item_rank(item) > news_item_rank(matched["best"]):
+            matched["best"] = item
+
+    deduped = []
+    for cluster in clusters:
+        best = dict(cluster["best"])
+        sources = list(dict.fromkeys(str(item.get("s") or "") for item in cluster["items"] if item.get("s")))
+        tags = []
+        for item in cluster["items"]:
+            tags.extend(item.get("tags") or [])
+        best["id"] = stable_news_id(best.get("t") or "")
+        best["duplicate_count"] = len(cluster["items"])
+        best["related_sources"] = sources
+        best["tags"] = list(dict.fromkeys(tags))
+        best["crit"] = any(item.get("crit") for item in cluster["items"])
+        best["market_moving"] = any(item.get("market_moving") for item in cluster["items"])
+        best["news_score"] = max(int(item.get("news_score") or 0) for item in cluster["items"])
+        if any(item.get("priority") == "high" for item in cluster["items"]):
+            best["priority"] = "high"
+        elif any(item.get("priority") == "medium" for item in cluster["items"]):
+            best["priority"] = "medium"
+        else:
+            best["priority"] = "low"
+        deduped.append(best)
+
+    deduped.sort(key=lambda item: (float(item.get("ts") or 0), int(item.get("news_score") or 0)), reverse=True)
+    return deduped
 
 
 def get_market_profile(profile_id: Optional[str]) -> dict:
@@ -959,6 +1073,7 @@ def personalize_news_items(items: list[dict], profile: dict) -> list[dict]:
         next_item = {**item, "profile_score": score}
         if score > 0:
             next_item["priority"] = "high" if score >= 7 else "medium" if score >= 3 else next_item.get("priority", "low")
+            next_item["market_moving"] = next_item.get("market_moving") or score >= 7
             relevant_items.append(next_item)
         elif item.get("priority") == "high" or item.get("crit"):
             fallback_items.append(next_item)
@@ -2116,8 +2231,8 @@ async def get_news(request: Request, profile: Optional[str] = None):
         results = await asyncio.gather(*(_fetch_source(session, name, url) for name, url in NEWS_SOURCES.items()))
 
     all_news = [item for chunk in results for item in chunk]
-    all_news.sort(key=lambda item: item["ts"], reverse=True)
-    all_news = all_news[:80]
+    all_news = dedupe_news_items(all_news)
+    all_news = all_news[:100]
 
     _news_cache["data"] = all_news
     _news_cache["ts"] = now
