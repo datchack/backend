@@ -1,10 +1,11 @@
-import { IMPACT_LEVELS } from './terminal-config.js';
+import { CALENDAR_REFRESH_MS, IMPACT_LEVELS } from './terminal-config.js';
 import {
     formatValue,
     getActualVsPreviousTone,
     getCalendarBiasClass,
     getDateKeyFromTs,
 } from './terminal-formatters.js';
+import { fetchCalendarFeed } from './terminal-market-api.js';
 
 function renderCalendarValue(label, value, unit = '', tone = '') {
     return `
@@ -184,4 +185,99 @@ export function updateCalendarStatus(meta) {
 
     liveEl.textContent = meta.releaseWatch ? 'LIVE 2S' : meta.hot ? 'HOT' : 'LIVE';
     liveEl.style.color = meta.releaseWatch ? '#ffcc00' : meta.hot ? '#f59e0b' : '#22c55e';
+}
+
+function defaultCalendarMeta() {
+    return {
+        timezone: 'Europe/Paris',
+        error: null,
+        count: 0,
+        hot: false,
+        releaseWatch: false,
+        refreshMs: CALENDAR_REFRESH_MS,
+        weekStart: null,
+        weekEnd: null,
+    };
+}
+
+export function createCalendarController({
+    initialImpactFilters = IMPACT_LEVELS,
+    getProfileQuery,
+    getCalendarCountryQuery,
+    savePrefs,
+}) {
+    let events = [];
+    let meta = defaultCalendarMeta();
+    let refreshTimer = null;
+    const filters = {
+        impact: new Set(Array.isArray(initialImpactFilters) && initialImpactFilters.length ? initialImpactFilters : IMPACT_LEVELS),
+    };
+
+    function getImpactFilters() {
+        return [...filters.impact];
+    }
+
+    function setImpactFilters(nextImpactFilters) {
+        filters.impact = new Set(Array.isArray(nextImpactFilters) && nextImpactFilters.length ? nextImpactFilters : IMPACT_LEVELS);
+    }
+
+    function renderFilters() {
+        renderCalendarFilters(filters, handleFilterChange);
+    }
+
+    function render() {
+        renderCalendar(events, meta, filters);
+    }
+
+    function handleFilterChange(impact) {
+        if (filters.impact.has(impact) && filters.impact.size > 1) {
+            filters.impact.delete(impact);
+        } else {
+            filters.impact.add(impact);
+        }
+
+        savePrefs?.({ impactFilters: getImpactFilters() });
+        renderFilters();
+        render();
+    }
+
+    async function fetch(scheduleNext = true) {
+        try {
+            const payload = await fetchCalendarFeed(getProfileQuery(), getCalendarCountryQuery());
+
+            events = Array.isArray(payload.events) ? payload.events : [];
+            meta = {
+                timezone: payload.timezone || 'Europe/Paris',
+                error: payload.error || null,
+                count: payload.count || 0,
+                hot: !!payload.hot,
+                releaseWatch: !!payload.release_watch,
+                refreshMs: Number(payload.refresh_ms) || CALENDAR_REFRESH_MS,
+                weekStart: payload.week_start || null,
+                weekEnd: payload.week_end || null,
+            };
+
+            updateCalendarStatus(meta);
+            render();
+        } catch (error) {
+            console.error(error);
+            meta = { ...defaultCalendarMeta(), error: 'Requete impossible' };
+            events = [];
+            updateCalendarStatus(meta);
+            render();
+        }
+
+        if (scheduleNext) {
+            window.clearTimeout(refreshTimer);
+            refreshTimer = window.setTimeout(fetch, meta.refreshMs || CALENDAR_REFRESH_MS);
+        }
+    }
+
+    return {
+        fetch,
+        getImpactFilters,
+        render,
+        renderFilters,
+        setImpactFilters,
+    };
 }

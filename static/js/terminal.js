@@ -1,10 +1,8 @@
 import {
-    CALENDAR_REFRESH_MS,
     CONTEXT_REFRESH_MS,
     DEFAULT_ACCOUNT_MODE,
     DEFAULT_MARKET_PROFILE,
     DEFAULT_WIDGETS,
-    IMPACT_LEVELS,
     MARKETS,
     MARKET_PROFILES,
     NEWS_REFRESH_MS,
@@ -26,9 +24,7 @@ import {
     toggleAccountPanel as toggleAccountPanelView,
 } from './terminal-account-ui.js';
 import {
-    renderCalendar as renderCalendarView,
-    renderCalendarFilters as renderCalendarFilterView,
-    updateCalendarStatus,
+    createCalendarController,
 } from './terminal-calendar.js';
 import {
     bindCenterTabs as bindCenterTabsModule,
@@ -53,7 +49,7 @@ import {
     bindResizers as bindResizersModule,
     loadLayoutPrefs,
 } from './terminal-layout.js';
-import { fetchCalendarFeed, fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
+import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
 import { renderNewsError, renderNewsFeed } from './terminal-news.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
 import { bindQuoteCards, startQuotesRefresh } from './terminal-quotes.js';
@@ -96,15 +92,9 @@ let lastSeenNewsTs = 0;
 let hasLoadedNews = false;
 let suppressNextNewsFresh = false;
 let alertedNewsIds = new Set();
-let calEvents = [];
 let contextState = null;
-let calendarMeta = { timezone: 'Europe/Paris', error: null, count: 0, weekStart: null, weekEnd: null, refreshMs: CALENDAR_REFRESH_MS };
-let calendarRefreshTimer = null;
 let contextRefreshTimer = null;
-
-const calFilters = {
-    impact: new Set(PREFS.impactFilters || IMPACT_LEVELS),
-};
+let calendarController = null;
 
 function persistLayout() {
     savePrefs({ layout: layoutState });
@@ -118,7 +108,7 @@ function getClientPrefsSnapshot() {
         soundEnabled,
         soundType,
         centerTab: currentCenterTab,
-        impactFilters: [...calFilters.impact],
+        impactFilters: calendarController?.getImpactFilters() || [],
         calendarCountries: getCalendarCountries(),
         watchlistKeys: customWatchlistKeys,
         widgets: widgetVisibility,
@@ -169,8 +159,7 @@ function applyLoadedPrefs(prefs = {}) {
         },
     };
 
-    const impactPrefs = Array.isArray(prefs.impactFilters) && prefs.impactFilters.length ? prefs.impactFilters : IMPACT_LEVELS;
-    calFilters.impact = new Set(impactPrefs);
+    calendarController?.setImpactFilters(prefs.impactFilters);
 
     renderSoundToggleControl(soundEnabled);
     renderCalendarFilters();
@@ -228,6 +217,13 @@ function getCalendarCountries() {
 function getCalendarCountryQuery() {
     return encodeURIComponent(getCalendarCountries().join(','));
 }
+
+calendarController = createCalendarController({
+    initialImpactFilters: PREFS.impactFilters,
+    getProfileQuery,
+    getCalendarCountryQuery,
+    savePrefs,
+});
 
 function renderMarketProfileSelect() {
     renderMarketProfileSelectView(MARKET_PROFILES, currentMarketProfile);
@@ -383,56 +379,16 @@ function updateClocks() {
     updateClocksView(MARKETS);
 }
 
-function handleCalendarFilterChange(impact) {
-    if (calFilters.impact.has(impact) && calFilters.impact.size > 1) {
-        calFilters.impact.delete(impact);
-    } else {
-        calFilters.impact.add(impact);
-    }
-
-    savePrefs({ impactFilters: [...calFilters.impact] });
-    renderCalendarFilters();
-    renderCalendar();
-}
-
 function renderCalendarFilters() {
-    renderCalendarFilterView(calFilters, handleCalendarFilterChange);
+    calendarController.renderFilters();
 }
 
 function renderCalendar() {
-    renderCalendarView(calEvents, calendarMeta, calFilters);
+    calendarController.render();
 }
 
 async function fetchCalendar(scheduleNext = true) {
-    try {
-        const payload = await fetchCalendarFeed(getProfileQuery(), getCalendarCountryQuery());
-
-        calEvents = Array.isArray(payload.events) ? payload.events : [];
-        calendarMeta = {
-            timezone: payload.timezone || 'Europe/Paris',
-            error: payload.error || null,
-            count: payload.count || 0,
-            hot: !!payload.hot,
-            releaseWatch: !!payload.release_watch,
-            refreshMs: Number(payload.refresh_ms) || CALENDAR_REFRESH_MS,
-            weekStart: payload.week_start || null,
-            weekEnd: payload.week_end || null,
-        };
-
-        updateCalendarStatus(calendarMeta);
-        renderCalendar();
-    } catch (error) {
-        console.error(error);
-        calendarMeta = { timezone: 'Europe/Paris', error: 'Requete impossible', count: 0, hot: false, releaseWatch: false, refreshMs: CALENDAR_REFRESH_MS, weekStart: null, weekEnd: null };
-        calEvents = [];
-        updateCalendarStatus(calendarMeta);
-        renderCalendar();
-    }
-
-    if (scheduleNext) {
-        window.clearTimeout(calendarRefreshTimer);
-        calendarRefreshTimer = window.setTimeout(fetchCalendar, calendarMeta.refreshMs || CALENDAR_REFRESH_MS);
-    }
+    await calendarController.fetch(scheduleNext);
 }
 
 function renderCustomizePanel() {
