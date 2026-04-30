@@ -603,7 +603,7 @@ async function submitAccessAuthForm(event) {
 async function logoutAccount() {
     try {
         await fetch('/api/account/logout', { method: 'POST' });
-        window.location.reload();
+        window.location.href = '/';
     } catch (error) {
         setAccountMessage('Impossible de fermer la session.', 'err');
     }
