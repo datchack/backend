@@ -1,5 +1,4 @@
 import {
-    CALENDAR_COUNTRY_OPTIONS,
     CALENDAR_REFRESH_MS,
     CONTEXT_REFRESH_MS,
     DEFAULT_ACCOUNT_MODE,
@@ -11,7 +10,6 @@ import {
     NEWS_REFRESH_MS,
     PREFS_KEY,
     QUOTES_REFRESH_MS,
-    WIDGET_OPTIONS,
 } from './terminal-config.js';
 import { fetchAccount, logoutAccountSession, saveAccountPreferences, submitAccountAuth } from './terminal-account-api.js';
 import {
@@ -21,6 +19,10 @@ import {
 } from './terminal-calendar.js';
 import { getTzParts, isMarketOpen } from './terminal-clocks.js';
 import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js';
+import {
+    bindCustomizeControls as bindCustomizeControlsModule,
+    renderCustomizePanel as renderCustomizePanelView,
+} from './terminal-customize.js';
 import {
     applyLayoutState,
     applyWidgetVisibility,
@@ -736,100 +738,37 @@ async function fetchCalendar(scheduleNext = true) {
     }
 }
 
-function toggleCustomizePanel(open = null) {
-    const panel = document.getElementById('customize-panel');
-    if (!panel) return;
-    const shouldOpen = open === null ? panel.classList.contains('hidden') : open;
-    panel.classList.toggle('hidden', !shouldOpen);
-    if (shouldOpen) renderCustomizePanel();
-}
-
 function renderCustomizePanel() {
-    const countriesRoot = document.getElementById('customize-countries');
-    const watchRoot = document.getElementById('customize-watchlist');
-    const widgetsRoot = document.getElementById('customize-widgets');
-    const countries = new Set(getCalendarCountries());
-
-    if (countriesRoot) {
-        countriesRoot.innerHTML = CALENDAR_COUNTRY_OPTIONS.map((country) => `
-            <label class="customize-check">
-                <input type="checkbox" data-custom-country="${country}" ${countries.has(country) ? 'checked' : ''}>
-                <span>${country}</span>
-            </label>
-        `).join('');
-    }
-
-    if (watchRoot) {
-        const available = contextState?.available_watchlist || contextState?.watchlist || [];
-        const activeKeys = new Set(customWatchlistKeys || (contextState?.watchlist || []).map((item) => item.key));
-        watchRoot.innerHTML = available.map((item) => `
-            <label class="customize-check">
-                <input type="checkbox" data-custom-watch="${item.key}" ${activeKeys.has(item.key) ? 'checked' : ''}>
-                <span>${item.label}</span>
-            </label>
-        `).join('') || '<span class="customize-empty">Watchlist en chargement</span>';
-    }
-
-    if (widgetsRoot) {
-        widgetsRoot.innerHTML = WIDGET_OPTIONS.map((widget) => `
-            <label class="customize-check">
-                <input type="checkbox" data-custom-widget="${widget.key}" ${widgetVisibility[widget.key] !== false ? 'checked' : ''}>
-                <span>${widget.label}</span>
-            </label>
-        `).join('');
-    }
+    renderCustomizePanelView({
+        countries: getCalendarCountries(),
+        context: contextState,
+        selectedWatchlistKeys: customWatchlistKeys,
+        widgetVisibility,
+    });
 }
 
 function bindCustomizeControls() {
-    const toggle = document.getElementById('customize-toggle');
-    const close = document.getElementById('customize-close');
-    const reset = document.getElementById('customize-reset');
-    const panel = document.getElementById('customize-panel');
-
-    toggle?.addEventListener('click', () => toggleCustomizePanel());
-    close?.addEventListener('click', () => toggleCustomizePanel(false));
-    reset?.addEventListener('click', () => {
-        customCalendarCountries = null;
-        customWatchlistKeys = null;
-        widgetVisibility = { ...DEFAULT_WIDGETS };
-        savePrefs({ calendarCountries: null, watchlistKeys: null, widgets: widgetVisibility });
-        applyWidgetVisibility(widgetVisibility);
-        renderCustomizePanel();
-        fetchCalendar(false);
-        fetchContext(false);
-    });
-
-    panel?.addEventListener('change', (event) => {
-        const input = event.target;
-        if (!(input instanceof HTMLInputElement)) return;
-
-        if (input.dataset.customCountry) {
-            const next = new Set(getCalendarCountries());
-            if (input.checked) next.add(input.dataset.customCountry);
-            else if (next.size > 1) next.delete(input.dataset.customCountry);
-            customCalendarCountries = [...next];
-            savePrefs({ calendarCountries: customCalendarCountries });
-            renderCustomizePanel();
-            fetchCalendar(false);
-            fetchContext(false);
-        }
-
-        if (input.dataset.customWatch) {
-            const fallback = (contextState?.watchlist || []).map((item) => item.key);
-            const next = new Set(customWatchlistKeys || fallback);
-            if (input.checked) next.add(input.dataset.customWatch);
-            else if (next.size > 1) next.delete(input.dataset.customWatch);
-            customWatchlistKeys = [...next];
-            savePrefs({ watchlistKeys: customWatchlistKeys });
-            renderWatchlist(contextState || {}, { selectedKeys: customWatchlistKeys, onSymbolSelect: changeChart });
-            renderCustomizePanel();
-        }
-
-        if (input.dataset.customWidget) {
-            widgetVisibility = { ...widgetVisibility, [input.dataset.customWidget]: input.checked };
-            savePrefs({ widgets: widgetVisibility });
-            applyWidgetVisibility(widgetVisibility);
-        }
+    bindCustomizeControlsModule({
+        getCalendarCountries,
+        getContext: () => contextState,
+        getSelectedWatchlistKeys: () => customWatchlistKeys,
+        getWidgetVisibility: () => widgetVisibility,
+        setCalendarCountries: (countries) => {
+            customCalendarCountries = countries;
+        },
+        setSelectedWatchlistKeys: (keys) => {
+            customWatchlistKeys = keys;
+        },
+        setWidgetVisibility: (nextWidgetVisibility) => {
+            widgetVisibility = nextWidgetVisibility;
+        },
+        savePrefs,
+        applyWidgetVisibility,
+        renderPanel: renderCustomizePanel,
+        renderWatchlist,
+        onSymbolSelect: changeChart,
+        refreshCalendar: fetchCalendar,
+        refreshContext: fetchContext,
     });
 }
 
