@@ -11,14 +11,18 @@ import {
     PREFS_KEY,
     QUOTES_REFRESH_MS,
 } from './terminal-config.js';
-import { fetchAccount, logoutAccountSession, saveAccountPreferences, submitAccountAuth } from './terminal-account-api.js';
+import { saveAccountPreferences } from './terminal-account-api.js';
+import {
+    fetchAccountState as fetchAccountStateAction,
+    logoutAccount as logoutAccountAction,
+    submitAccessAuthForm as submitAccessAuthFormAction,
+    submitAccountForm as submitAccountFormAction,
+} from './terminal-account-actions.js';
 import {
     bindAccountControls as bindAccountControlsModule,
     hasTerminalAccess as accountHasTerminalAccess,
     renderAccessGate as renderAccessGateView,
     renderAccountState as renderAccountStateView,
-    setAccessAuthMessage,
-    setAccountMessage,
     toggleAccountPanel as toggleAccountPanelView,
 } from './terminal-account-ui.js';
 import {
@@ -258,93 +262,52 @@ function toggleAccountPanel(forceOpen = null, heroOpen = false) {
 }
 
 async function fetchAccountState() {
-    try {
-        const payload = await fetchAccount();
-        accountState = { ...payload, loading: false };
-        if (accountState.authenticated && accountState.account?.prefs) {
-            applyLoadedPrefs(accountState.account.prefs);
-        }
-        renderAccountState();
-        if (hasTerminalAccess()) {
-            bootTerminalApp();
-        }
-    } catch (error) {
-        console.error(error);
-        accountState = { authenticated: false, account: null, loading: false };
-        renderAccountState();
-    }
+    await fetchAccountStateAction({
+        setAccountState: (nextAccountState) => {
+            accountState = nextAccountState;
+        },
+        getAccountState: () => accountState,
+        applyLoadedPrefs,
+        renderAccountState,
+        hasTerminalAccess,
+        bootTerminalApp,
+    });
 }
 
 async function submitAccountForm(event) {
-    event.preventDefault();
-
-    const emailEl = document.getElementById('account-email');
-    const passwordEl = document.getElementById('account-password');
-    if (!emailEl || !passwordEl) return;
-
-    const email = emailEl.value.trim().toLowerCase();
-    const password = passwordEl.value;
-    if (!email || !password) return;
-
-    try {
-        setAccountMessage('Connexion en cours...');
-        const payload = await submitAccountAuth(accountMode, email, password);
-
-        accountState = { ...payload, loading: false };
-        renderAccountState();
-        setAccountMessage(accountMode === 'login' ? 'Connexion reussie.' : 'Compte cree. Essai 7 jours active.', 'ok');
-        await syncPreferences();
-        emailEl.value = '';
-        passwordEl.value = '';
-        if (hasTerminalAccess()) {
-            bootTerminalApp();
-            renderAccessGate();
-            toggleAccountPanel(false, false);
-        }
-    } catch (error) {
-        setAccountMessage(error.message || 'Erreur compte', 'err');
-    }
+    await submitAccountFormAction(event, {
+        getAccountMode: () => accountMode,
+        setAccountState: (nextAccountState) => {
+            accountState = nextAccountState;
+        },
+        renderAccountState,
+        syncPreferences,
+        hasTerminalAccess,
+        bootTerminalApp,
+        renderAccessGate,
+        toggleAccountPanel,
+    });
 }
 
 async function submitAccessAuthForm(event) {
-    event.preventDefault();
-
-    const emailEl = document.getElementById('access-auth-email');
-    const passwordEl = document.getElementById('access-auth-password');
-    if (!emailEl || !passwordEl) return;
-
-    const email = emailEl.value.trim().toLowerCase();
-    const password = passwordEl.value;
-    if (!email || !password) return;
-
-    try {
-        setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion en cours...' : 'Creation du compte...');
-        const endpoint = accessFormMode === 'login' ? 'login' : 'register';
-        const payload = await submitAccountAuth(endpoint, email, password);
-
-        accountState = { ...payload, loading: false };
-        renderAccountState();
-        setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion reussie.' : 'Compte cree. Essai active.', 'ok');
-        await syncPreferences();
-        emailEl.value = '';
-        passwordEl.value = '';
-        if (hasTerminalAccess()) {
-            bootTerminalApp();
-            accessFormMode = 'intro';
-            renderAccessGate();
-        }
-    } catch (error) {
-        setAccessAuthMessage(error.message || 'Erreur compte', 'err');
-    }
+    await submitAccessAuthFormAction(event, {
+        getAccessFormMode: () => accessFormMode,
+        setAccessFormMode: (mode) => {
+            accessFormMode = mode;
+        },
+        setAccountState: (nextAccountState) => {
+            accountState = nextAccountState;
+        },
+        renderAccountState,
+        syncPreferences,
+        hasTerminalAccess,
+        bootTerminalApp,
+        renderAccessGate,
+    });
 }
 
 async function logoutAccount() {
-    try {
-        await logoutAccountSession();
-        window.location.href = '/';
-    } catch (error) {
-        setAccountMessage('Impossible de fermer la session.', 'err');
-    }
+    await logoutAccountAction();
 }
 
 function bindAccountControls() {
