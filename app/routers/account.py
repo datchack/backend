@@ -1,6 +1,28 @@
-from fastapi import APIRouter, Request, Response
+from datetime import timedelta
+import json
 
-from app.core import *
+from fastapi import APIRouter, Request, Response
+from fastapi import HTTPException
+
+from app.config import ACCOUNT_DB_BACKEND, SESSION_COOKIE, TRIAL_DAYS
+from app.preferences import validate_preferences_payload
+from app.schemas import AccountAuthPayload, PreferencesPayload
+from app.services.accounts import (
+    check_rate_limit,
+    clear_session,
+    client_ip,
+    create_session,
+    db_integrity_errors,
+    execute_one,
+    execute_write,
+    get_user_by_session,
+    hash_password,
+    normalize_account_row,
+    require_user,
+    set_session_cookie,
+    utc_now,
+    verify_password,
+)
 
 router = APIRouter()
 

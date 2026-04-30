@@ -1,7 +1,15 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response as FastAPIResponse
 
-from app.core import *
+from app.config import (
+    LEGAL_BUSINESS_ADDRESS,
+    LEGAL_BUSINESS_ID,
+    LEGAL_BUSINESS_NAME,
+    LEGAL_CONTACT_EMAIL,
+    LEGAL_HOSTING_PROVIDER,
+    LEGAL_PUBLISHER_NAME,
+)
+from app.services.accounts import get_db_connection, require_owner, utc_now
 
 router = APIRouter()
 

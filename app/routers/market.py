@@ -1,9 +1,32 @@
+import asyncio
+import time
 from typing import Optional
 
+import aiohttp
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 
-from app.core import *
-from app.core import _fetch_source, _news_cache, _quote_latest_by_key, _quote_ws_clients, _quotes_cache
+from app.config import SESSION_COOKIE
+from app.services.accounts import get_user_by_session, require_terminal_access
+from app.services.calendar import calendar_refresh_ms, fetch_calendar, get_current_week_bounds, require_fmp_key
+from app.services.context import fetch_market_context
+from app.services.news import (
+    NEWS_CACHE_TTL,
+    NEWS_MAX_AGE_HOURS,
+    NEWS_SOURCES,
+    _fetch_source,
+    _news_cache,
+    dedupe_news_items,
+    personalize_news_items,
+)
+from app.services.profiles import MARKET_PROFILES, get_market_profile, parse_country_filter
+from app.services.quotes import (
+    QUOTE_CARDS,
+    _quote_latest_by_key,
+    _quote_ws_clients,
+    _quotes_cache,
+    fetch_quote_cards,
+    public_quote_snapshot,
+)
 
 router = APIRouter()
 
