@@ -13,6 +13,7 @@ import {
     QUOTES_REFRESH_MS,
     WIDGET_OPTIONS,
 } from './terminal-config.js';
+import { fetchAccount, logoutAccountSession, saveAccountPreferences, submitAccountAuth } from './terminal-account-api.js';
 import { clamp, defaultLayoutState, loadLayoutPrefs } from './terminal-layout.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
 
@@ -94,11 +95,7 @@ async function syncPreferences(prefs = null) {
     if (!accountState.authenticated) return;
 
     try {
-        await fetch('/api/account/preferences', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prefs: prefs || getClientPrefsSnapshot() }),
-        });
+        await saveAccountPreferences(prefs || getClientPrefsSnapshot());
     } catch (error) {
         console.error(error);
     }
@@ -444,8 +441,7 @@ function toggleAccountPanel(forceOpen = null, heroOpen = false) {
 
 async function fetchAccountState() {
     try {
-        const response = await fetch('/api/account/me', { cache: 'no-store' });
-        const payload = await response.json();
+        const payload = await fetchAccount();
         accountState = { ...payload, loading: false };
         if (accountState.authenticated && accountState.account?.prefs) {
             applyLoadedPrefs(accountState.account.prefs);
@@ -474,15 +470,7 @@ async function submitAccountForm(event) {
 
     try {
         setAccountMessage('Connexion en cours...');
-        const response = await fetch(`/api/account/${accountMode}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-            throw new Error(payload.detail || 'Action impossible');
-        }
+        const payload = await submitAccountAuth(accountMode, email, password);
 
         accountState = { ...payload, loading: false };
         renderAccountState();
@@ -514,15 +502,7 @@ async function submitAccessAuthForm(event) {
     try {
         setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion en cours...' : 'Creation du compte...');
         const endpoint = accessFormMode === 'login' ? 'login' : 'register';
-        const response = await fetch(`/api/account/${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-            throw new Error(payload.detail || 'Action impossible');
-        }
+        const payload = await submitAccountAuth(endpoint, email, password);
 
         accountState = { ...payload, loading: false };
         renderAccountState();
@@ -542,7 +522,7 @@ async function submitAccessAuthForm(event) {
 
 async function logoutAccount() {
     try {
-        await fetch('/api/account/logout', { method: 'POST' });
+        await logoutAccountSession();
         window.location.href = '/';
     } catch (error) {
         setAccountMessage('Impossible de fermer la session.', 'err');
