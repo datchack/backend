@@ -1,7 +1,10 @@
+from html import escape
+
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response as FastAPIResponse
 
 from app.config import (
+    APP_BASE_URL,
     LEGAL_BUSINESS_ADDRESS,
     LEGAL_BUSINESS_ID,
     LEGAL_BUSINESS_NAME,
@@ -12,6 +15,11 @@ from app.config import (
 from app.services.accounts import get_db_connection, require_owner, utc_now
 
 router = APIRouter()
+
+
+def absolute_url(path: str = "/") -> str:
+    suffix = path if path.startswith("/") else f"/{path}"
+    return f"{APP_BASE_URL}{suffix}"
 
 LEGAL_PAGE_META = {
     "terms_title": {
@@ -37,6 +45,14 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     business_name = LEGAL_BUSINESS_NAME
     email = LEGAL_CONTACT_EMAIL
     updated = utc_now().date().strftime("%d/%m/%Y")
+    page_path = {
+        "terms_title": "/terms",
+        "privacy_title": "/privacy",
+        "risk_title": "/risk-disclaimer",
+    }[title_key]
+    canonical = absolute_url(page_path)
+    page_title = f'{meta["title"]} - {business_name}'
+    escaped_description = escape(meta["description"], quote=True)
     section_html = "\n".join(
         f'<section><h2 data-i18n="{section_title_key}">{section_title_key}</h2><p data-i18n="{section_content_key}">{section_content_key}</p></section>'
         for section_title_key, section_content_key in sections
@@ -46,8 +62,15 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="{title_key}">{meta["title"]} - {business_name}</title>
-    <meta name="description" content="{meta["description"]}">
+    <title data-i18n="{title_key}">{page_title}</title>
+    <meta name="description" content="{escaped_description}">
+    <link rel="canonical" href="{canonical}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{business_name}">
+    <meta property="og:title" content="{page_title}">
+    <meta property="og:description" content="{escaped_description}">
+    <meta property="og:url" content="{canonical}">
+    <meta name="twitter:card" content="summary">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="legal-body">
@@ -151,48 +174,39 @@ async def risk_disclaimer_page():
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt():
-    return """User-agent: *
+    return f"""User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /db-test
+Disallow: /api/
+Disallow: /ws/
 
-Sitemap: https://xauterminal.com/sitemap.xml
+Sitemap: {absolute_url('/sitemap.xml')}
 """
 
 
 @router.get("/sitemap.xml")
 async def sitemap_xml():
     today = utc_now().date().isoformat()
+    urls = [
+        ("/", "daily", "1.0"),
+        ("/terminal", "daily", "0.8"),
+        ("/terms", "monthly", "0.5"),
+        ("/privacy", "monthly", "0.5"),
+        ("/risk-disclaimer", "monthly", "0.5"),
+    ]
+    items = "\n".join(
+        f"""  <url>
+    <loc>{absolute_url(path)}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>{changefreq}</changefreq>
+    <priority>{priority}</priority>
+  </url>"""
+        for path, changefreq, priority in urls
+    )
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://xauterminal.com/</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://xauterminal.com/terminal</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://xauterminal.com/terms</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://xauterminal.com/privacy</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://xauterminal.com/risk-disclaimer</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
+{items}
 </urlset>
 """
     return FastAPIResponse(content=xml, media_type="application/xml")
