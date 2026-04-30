@@ -700,11 +700,54 @@ body.gated .main-layout > .layout-splitter {
 .bias-label.bearish { color: var(--sell); }
 .bias-label.neutral { color: var(--warn); }
 
+.bias-action {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    min-height: 24px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+}
+
+.bias-action.bullish { color: var(--buy); border-color: rgba(0, 242, 173, 0.3); }
+.bias-action.bearish { color: var(--sell); border-color: rgba(255, 77, 109, 0.3); }
+.bias-action.neutral { color: var(--warn); border-color: rgba(255, 204, 0, 0.28); }
+
 .bias-tone {
     color: var(--muted);
     font-size: 11px;
     line-height: 1.4;
 }
+
+.bias-layers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.bias-layer {
+    min-height: 20px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 900;
+    line-height: 18px;
+    letter-spacing: 0.35px;
+}
+
+.bias-layer.bullish,
+.bias-layer.low { color: var(--buy); border-color: rgba(0, 242, 173, 0.25); }
+.bias-layer.bearish,
+.bias-layer.high { color: var(--sell); border-color: rgba(255, 77, 109, 0.28); }
+.bias-layer.neutral,
+.bias-layer.elevated { color: var(--warn); border-color: rgba(255, 204, 0, 0.25); }
 
 .bias-reasons {
     display: flex;

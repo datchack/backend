@@ -1217,7 +1217,63 @@ def evaluate_driver(
     }
 
 
-def build_gold_context(markets: dict[str, dict]) -> dict:
+def score_bucket(score: float, bullish_label: str = "Bullish", bearish_label: str = "Bearish") -> str:
+    if score >= 1.2:
+        return bullish_label
+    if score <= -1.2:
+        return bearish_label
+    return "Neutral"
+
+
+def build_event_risk(events: list[dict] | None = None) -> dict:
+    now_ts = int(time.time())
+    upcoming = [
+        event for event in events or []
+        if event.get("ts", 0) >= now_ts and event.get("impact") in {"High", "Medium"}
+    ]
+    upcoming.sort(key=lambda item: item["ts"])
+    next_high = next((event for event in upcoming if event.get("impact") == "High"), None)
+    next_event = next_high or (upcoming[0] if upcoming else None)
+
+    if not next_event:
+        return {
+            "level": "Low",
+            "score": 0,
+            "minutes": None,
+            "title": "No high-impact event nearby",
+            "action": "Tradeable",
+        }
+
+    minutes = max(0, int((next_event["ts"] - now_ts) / 60))
+    if next_event.get("impact") == "High" and minutes <= 45:
+        level = "High"
+        score = 3
+        action = "No Trade"
+    elif next_event.get("impact") == "High" and minutes <= 120:
+        level = "Elevated"
+        score = 2
+        action = "Reduce Risk"
+    elif next_event.get("impact") == "Medium" and minutes <= 45:
+        level = "Elevated"
+        score = 1
+        action = "Caution"
+    else:
+        level = "Low"
+        score = 0
+        action = "Tradeable"
+
+    return {
+        "level": level,
+        "score": score,
+        "minutes": minutes,
+        "title": next_event.get("title") or "Upcoming macro event",
+        "impact": next_event.get("impact"),
+        "country": next_event.get("country"),
+        "action": action,
+    }
+
+
+def build_gold_context(markets: dict[str, dict], events: list[dict] | None = None) -> dict:
     gold = markets.get("gold")
     silver = markets.get("silver")
     dxy = markets.get("dxy")
@@ -1321,6 +1377,11 @@ def build_gold_context(markets: dict[str, dict]) -> dict:
 
     score = round(sum(driver["contribution"] for driver in drivers), 2)
     max_score = round(sum(driver["weight"] for driver in drivers), 2) or 1.0
+    macro_keys = {"dxy", "us10y", "oil"}
+    momentum_keys = {"gold_momo", "silver", "risk"}
+    macro_score = round(sum(driver["contribution"] for driver in drivers if driver["key"] in macro_keys), 2)
+    momentum_score = round(sum(driver["contribution"] for driver in drivers if driver["key"] in momentum_keys), 2)
+    event_risk = build_event_risk(events)
 
     if score >= 2.5:
         bias = "Bullish"
@@ -1349,6 +1410,10 @@ def build_gold_context(markets: dict[str, dict]) -> dict:
     else:
         confidence = int(round((magnitude_ratio * 0.6 + alignment_ratio * 0.4) * 100))
     confidence = max(18, min(confidence, 92))
+    if event_risk["level"] == "High":
+        confidence = min(confidence, 58)
+    elif event_risk["level"] == "Elevated":
+        confidence = min(confidence, 72)
 
     top_reasons = [
         driver["note"]
@@ -1363,6 +1428,30 @@ def build_gold_context(markets: dict[str, dict]) -> dict:
         summary = " / ".join(top_reasons[:2])
     else:
         summary = " / ".join(top_reasons[:2])
+
+    conflicting = (
+        (macro_score > 1.2 and momentum_score < -1.2)
+        or (macro_score < -1.2 and momentum_score > 1.2)
+    )
+    if event_risk["level"] == "High":
+        action = "NO TRADE"
+        action_reason = f"{event_risk['title']} in {event_risk['minutes']} min"
+    elif confidence < 45 or conflicting or bias == "Neutral":
+        action = "WAIT"
+        action_reason = "Drivers mixed or confidence too low"
+    elif bias == "Bullish":
+        action = "LONG ONLY"
+        action_reason = "Macro/momentum alignment favors upside"
+    else:
+        action = "SHORT ONLY"
+        action_reason = "Macro/momentum alignment favors downside"
+
+    if bias == "Bullish":
+        invalidation = "XAU loses momentum while DXY/yields turn higher"
+    elif bias == "Bearish":
+        invalidation = "XAU reclaims momentum while DXY/yields roll over"
+    else:
+        invalidation = "Wait for macro and price momentum to align"
 
     session_flags = {
         "asia": datetime.now(PARIS).hour < 8,
@@ -1390,6 +1479,14 @@ def build_gold_context(markets: dict[str, dict]) -> dict:
         "confidence": confidence,
         "summary": summary,
         "reasons": top_reasons,
+        "action": action,
+        "action_reason": action_reason,
+        "invalidation": invalidation,
+        "layers": {
+            "macro": {"label": score_bucket(macro_score), "score": macro_score},
+            "momentum": {"label": score_bucket(momentum_score), "score": momentum_score},
+            "event_risk": event_risk,
+        },
         "volatility": volatility,
         "session": active_session,
         "drivers": drivers,
@@ -1418,7 +1515,8 @@ async def fetch_xau_context() -> dict:
         for (key, _cfg), snapshot in zip(MARKET_SYMBOLS.items(), snapshots)
         if snapshot
     }
-    context = build_gold_context(markets)
+    events, _error = await fetch_calendar(["US"])
+    context = build_gold_context(markets, events)
     _context_cache["data"] = context
     _context_cache["ts"] = now
     return context

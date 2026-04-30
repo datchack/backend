@@ -1036,6 +1036,14 @@ function formatSignedPercent(value) {
     return `${num > 0 ? '+' : ''}${num.toFixed(2)}%`;
 }
 
+function formatLayerScore(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return '';
+    }
+    const num = Number(value);
+    return `${num > 0 ? '+' : ''}${num.toFixed(1)}`;
+}
+
 function parseComparable(value) {
     if (value === null || value === undefined || value === '') {
         return NaN;
@@ -1289,7 +1297,9 @@ function renderBiasCard(context) {
     const card = document.getElementById('bias-card');
     const scoreEl = document.getElementById('bias-score');
     const labelEl = document.getElementById('bias-label');
+    const actionEl = document.getElementById('bias-action');
     const toneEl = document.getElementById('bias-tone');
+    const layersEl = document.getElementById('bias-layers');
     const reasonsEl = document.getElementById('bias-reasons');
     const confidenceEl = document.getElementById('confidence-badge');
     const volEl = document.getElementById('volatility-badge');
@@ -1299,7 +1309,7 @@ function renderBiasCard(context) {
     const snapshotSession = document.getElementById('snapshot-session');
     const snapshotVol = document.getElementById('snapshot-vol');
 
-    if (!card || !scoreEl || !labelEl || !toneEl || !reasonsEl || !confidenceEl || !volEl || !sessionEl) return;
+    if (!card || !scoreEl || !labelEl || !actionEl || !toneEl || !layersEl || !reasonsEl || !confidenceEl || !volEl || !sessionEl) return;
 
     const toneClass = context.bias === 'Bullish' ? 'bullish' : context.bias === 'Bearish' ? 'bearish' : 'neutral';
     card.classList.remove('bullish', 'bearish', 'neutral');
@@ -1309,7 +1319,19 @@ function renderBiasCard(context) {
     scoreEl.className = `desk-pill ${toneClass}`;
     labelEl.textContent = context.bias.toUpperCase();
     labelEl.className = `bias-label ${toneClass}`;
-    toneEl.textContent = `${context.tone.toUpperCase()} - ${context.summary || (context.gold ? `Gold ${formatSignedPercent(context.gold.change_pct)}` : 'Gold feed live')}`;
+    actionEl.textContent = context.action || 'WAIT';
+    actionEl.className = `bias-action ${context.action === 'NO TRADE' ? 'neutral' : toneClass}`;
+    toneEl.textContent = `${(context.action_reason || context.tone).toUpperCase()} - ${context.summary || (context.gold ? `Gold ${formatSignedPercent(context.gold.change_pct)}` : 'Gold feed live')}`;
+    const layers = context.layers || {};
+    const eventRisk = layers.event_risk || {};
+    const eventMinutes = ['High', 'Elevated'].includes(eventRisk.level) && eventRisk.minutes !== null && eventRisk.minutes !== undefined
+        ? ` ${eventRisk.minutes}m`
+        : '';
+    layersEl.innerHTML = `
+        <span class="bias-layer ${String(layers.macro?.label || '').toLowerCase()}">MACRO ${layers.macro?.label || '-'} ${formatLayerScore(layers.macro?.score)}</span>
+        <span class="bias-layer ${String(layers.momentum?.label || '').toLowerCase()}">MOMO ${layers.momentum?.label || '-'} ${formatLayerScore(layers.momentum?.score)}</span>
+        <span class="bias-layer ${String(eventRisk.level || '').toLowerCase()}">EVENT ${eventRisk.level || '-'}${eventMinutes}</span>
+    `;
     reasonsEl.innerHTML = (context.reasons || []).slice(0, 3).map((reason) => `<span class="bias-reason">${reason}</span>`).join('');
     confidenceEl.textContent = `CONF ${context.confidence || 0}%`;
     confidenceEl.className = `desk-pill ${toneClass}`;
@@ -1328,7 +1350,7 @@ function renderBiasCard(context) {
     }
 
     if (statusContext) {
-        statusContext.textContent = `Bias: ${context.bias} (${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}) - ${context.confidence || 0}%`;
+        statusContext.textContent = `Bias: ${context.action || context.bias} (${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}) - ${context.confidence || 0}%`;
     }
 }
 
