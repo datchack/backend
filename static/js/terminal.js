@@ -28,6 +28,7 @@ import {
     getDateKeyFromTs,
     sourceClass,
 } from './terminal-formatters.js';
+import { fetchCalendarFeed, fetchMarketContext, fetchMarketQuotes, fetchNewsFeed } from './terminal-market-api.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
 
 function loadPrefs() {
@@ -902,9 +903,7 @@ async function getMarketQuotes() {
     if (!hasTerminalAccess()) return;
 
     try {
-        const response = await fetch('/api/market-quotes', { cache: 'no-store' });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.detail || 'Quotes unavailable');
+        const payload = await fetchMarketQuotes();
         renderQuoteCards(payload.items || []);
     } catch (error) {
         console.error(error);
@@ -1171,8 +1170,7 @@ function updateCalendarStatus(meta) {
 
 async function fetchCalendar(scheduleNext = true) {
     try {
-        const response = await fetch(`/api/calendar?profile=${getProfileQuery()}&countries=${getCalendarCountryQuery()}`, { cache: 'no-store' });
-        const payload = await response.json();
+        const payload = await fetchCalendarFeed(getProfileQuery(), getCalendarCountryQuery());
 
         calEvents = Array.isArray(payload.events) ? payload.events : [];
         calendarMeta = {
@@ -1430,8 +1428,7 @@ function bindCustomizeControls() {
 
 async function fetchContext(scheduleNext = true) {
     try {
-        const response = await fetch(`/api/context?profile=${getProfileQuery()}&countries=${getCalendarCountryQuery()}`, { cache: 'no-store' });
-        const payload = await response.json();
+        const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery());
         contextState = payload;
         renderBiasCard(payload);
         renderDrivers(payload);
@@ -1464,8 +1461,7 @@ function renderNewsSummaries(items) {
 
 async function getNews() {
     try {
-        const response = await fetch(`/api/news?profile=${getProfileQuery()}`);
-        const data = await response.json();
+        const data = await fetchNewsFeed(getProfileQuery());
         const items = data.items || [];
         const container = document.getElementById('news-content');
 
