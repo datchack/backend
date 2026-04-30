@@ -1028,6 +1028,20 @@ function renderCalendarValue(label, value, unit = '', tone = '') {
     `;
 }
 
+function renderCalendarRead(event) {
+    const parts = [];
+    if (event.surprise_label) {
+        const tone = event.result_tone || '';
+        const pct = Number.isFinite(Number(event.surprise_pct)) ? ` (${Number(event.surprise_pct).toFixed(2)}%)` : '';
+        parts.push(`<span class="cal-read ${tone}">SURPRISE ${event.surprise_label}${pct}</span>`);
+    }
+    if (event.market_read) {
+        parts.push(`<span class="cal-read ${event.result_tone || ''}">${event.market_read}</span>`);
+    }
+    if (!parts.length) return '';
+    return `<div class="cal-read-row">${parts.join('')}</div>`;
+}
+
 function formatSignedPercent(value) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
         return '-';
@@ -1208,17 +1222,37 @@ function renderCalendar() {
 
         html += `<div class="cal-day">${dayLabel}</div>`;
 
+        const clusters = new Map();
         dayEvents.forEach((event) => {
+            const key = `${event.ts}:${event.country || '-'}`;
+            if (!clusters.has(key)) clusters.set(key, []);
+            clusters.get(key).push(event);
+        });
+
+        dayEvents.forEach((event, index) => {
             const dt = new Date(event.ts * 1000);
             const time = dt.toLocaleTimeString('fr-FR', {
                 hour: '2-digit',
                 minute: '2-digit',
                 timeZone,
             });
+            const clusterKey = `${event.ts}:${event.country || '-'}`;
+            const cluster = clusters.get(clusterKey) || [];
+            const firstInCluster = index === dayEvents.findIndex((candidate) => `${candidate.ts}:${candidate.country || '-'}` === clusterKey);
+            if (firstInCluster && cluster.length >= 3) {
+                const keyCount = cluster.filter((item) => item.market_label === 'KEY').length;
+                const watchCount = cluster.filter((item) => item.market_label === 'WATCH').length;
+                html += `
+                <div class="cal-release-block">
+                    <span>${time} ${event.country || '-'}</span>
+                    <strong>RELEASE BLOCK</strong>
+                    <em>${cluster.length} events${keyCount ? ` / ${keyCount} key` : ''}${watchCount ? ` / ${watchCount} watch` : ''}</em>
+                </div>`;
+            }
 
             const dueSoon = event.ts >= nowTs && event.ts - nowTs <= 1800;
             const isPast = event.ts < nowTs;
-            const actualTone = getActualVsPreviousTone(event);
+            const actualTone = event.result_tone || getActualVsPreviousTone(event);
             const rowClasses = [
                 'cal-row',
                 getCalendarBiasClass(event),
@@ -1245,6 +1279,7 @@ function renderCalendar() {
                         ${renderCalendarValue('Forecast', event.forecast, event.unit)}
                         ${renderCalendarValue('Previous', event.previous, event.unit)}
                     </div>
+                    ${renderCalendarRead(event)}
                 </div>
             </div>`;
         });

@@ -695,6 +695,58 @@ def calendar_market_priority(title: str, impact: str) -> tuple[int, str]:
     return priority, label
 
 
+def parse_calendar_number(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        cleaned = str(value).replace(",", "").replace("%", "").strip()
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return None
+
+
+def calendar_lower_is_better(title: str) -> bool:
+    clean = title.lower()
+    lower_is_better = (
+        "unemployment", "jobless", "claims", "claimant", "layoffs",
+        "challenger job cuts", "inventories", "stock change", "deficit",
+        "debt", "delinquency", "bankruptcy", "default",
+    )
+    return any(keyword in clean for keyword in lower_is_better)
+
+
+def calendar_surprise(actual: Any, forecast: Any, title: str) -> dict:
+    actual_num = parse_calendar_number(actual)
+    forecast_num = parse_calendar_number(forecast)
+    if actual_num is None or forecast_num is None or actual_num == forecast_num:
+        return {
+            "surprise": None,
+            "surprise_pct": None,
+            "surprise_label": "",
+            "result_tone": "",
+            "market_read": "",
+        }
+
+    delta = actual_num - forecast_num
+    surprise_pct = (delta / abs(forecast_num) * 100) if forecast_num else None
+    lower_better = calendar_lower_is_better(title)
+    better = delta < 0 if lower_better else delta > 0
+    tone = "good" if better else "bad"
+    direction = "USD+" if better else "USD-"
+    if any(keyword in title.lower() for keyword in ("cpi", "pce", "ppi", "inflation")):
+        direction = "HOT DATA" if delta > 0 else "COOL DATA"
+    if "jobless" in title.lower() or "claims" in title.lower() or "unemployment" in title.lower():
+        direction = "LABOR STRONG" if better else "LABOR WEAK"
+
+    return {
+        "surprise": round(delta, 4),
+        "surprise_pct": round(surprise_pct, 2) if surprise_pct is not None else None,
+        "surprise_label": f"{delta:+.3g}",
+        "result_tone": tone,
+        "market_read": direction,
+    }
+
+
 def calendar_event_family(title: str) -> str:
     clean = " ".join(title.lower().replace("-", " ").split())
     replacements = {
@@ -776,6 +828,7 @@ def normalize_calendar_event(event: dict) -> dict | None:
     title = event.get("event") or ""
     impact = calendar_impact_override(title, impact)
     market_priority, market_label = calendar_market_priority(title, impact)
+    surprise = calendar_surprise(event.get("actual"), estimate, title)
 
     return {
         "title": title,
@@ -790,6 +843,7 @@ def normalize_calendar_event(event: dict) -> dict | None:
         "date_utc": dt.isoformat(),
         "market_priority": market_priority,
         "market_label": market_label,
+        **surprise,
     }
 
 
