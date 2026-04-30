@@ -14,6 +14,23 @@ const MARKET_PROFILES = {
     nasdaq: { id: 'nasdaq', label: 'NASDAQ', symbol: 'NASDAQ:QQQ', countries: ['US'] },
     btcusd: { id: 'btcusd', label: 'BTC/USD', symbol: 'BITSTAMP:BTCUSD', countries: ['US'] },
 };
+const CALENDAR_COUNTRY_OPTIONS = ['US', 'EU', 'JP', 'GB', 'CN', 'CA', 'AU', 'DE', 'FR'];
+const WIDGET_OPTIONS = [
+    { key: 'ticker', label: 'Ticker' },
+    { key: 'quotes', label: 'Quotes' },
+    { key: 'calendar', label: 'Calendar' },
+    { key: 'chart', label: 'Chart' },
+    { key: 'bias', label: 'Bias' },
+    { key: 'news', label: 'News' },
+];
+const DEFAULT_WIDGETS = {
+    ticker: true,
+    quotes: true,
+    calendar: true,
+    chart: true,
+    bias: true,
+    news: true,
+};
 
 function loadPrefs() {
     try {
@@ -50,6 +67,9 @@ let currentSymbol = PREFS.symbol || MARKET_PROFILES[currentMarketProfile]?.symbo
 let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let currentCenterTab = PREFS.centerTab || 'bias';
+let customCalendarCountries = Array.isArray(PREFS.calendarCountries) ? PREFS.calendarCountries : null;
+let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKeys : null;
+let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
 let layoutState = loadLayoutPrefs();
 let accountMode = DEFAULT_ACCOUNT_MODE;
 let accountState = { authenticated: false, account: null };
@@ -113,6 +133,9 @@ function getClientPrefsSnapshot() {
         soundType,
         centerTab: currentCenterTab,
         impactFilters: [...calFilters.impact],
+        calendarCountries: getCalendarCountries(),
+        watchlistKeys: customWatchlistKeys,
+        widgets: widgetVisibility,
         layout: layoutState,
     };
 }
@@ -151,6 +174,9 @@ function applyLoadedPrefs(prefs = {}) {
     soundEnabled = typeof prefs.soundEnabled === 'boolean' ? prefs.soundEnabled : soundEnabled;
     soundType = prefs.soundType || soundType;
     currentCenterTab = prefs.centerTab || currentCenterTab;
+    customCalendarCountries = Array.isArray(prefs.calendarCountries) ? prefs.calendarCountries : customCalendarCountries;
+    customWatchlistKeys = Array.isArray(prefs.watchlistKeys) ? prefs.watchlistKeys : customWatchlistKeys;
+    widgetVisibility = { ...DEFAULT_WIDGETS, ...(prefs.widgets || widgetVisibility) };
     layoutState = {
         ...layoutState,
         ...loadLayoutPrefs(prefs.layout),
@@ -171,6 +197,8 @@ function applyLoadedPrefs(prefs = {}) {
     const cmdInput = document.getElementById('cmd');
     if (cmdInput) cmdInput.value = currentSymbol;
     renderMarketProfileSelect();
+    renderCustomizePanel();
+    applyWidgetVisibility();
     setCenterTab(currentCenterTab);
     applyLayoutState();
     if (appBooted) {
@@ -277,6 +305,17 @@ function getProfileQuery() {
     return encodeURIComponent(getActiveMarketProfile().id);
 }
 
+function getCalendarCountries() {
+    const profileCountries = getActiveMarketProfile().countries || ['US'];
+    return Array.isArray(customCalendarCountries) && customCalendarCountries.length
+        ? customCalendarCountries
+        : profileCountries;
+}
+
+function getCalendarCountryQuery() {
+    return encodeURIComponent(getCalendarCountries().join(','));
+}
+
 function renderMarketProfileSelect() {
     const select = document.getElementById('market-profile');
     if (!select) return;
@@ -297,6 +336,7 @@ function setMarketProfile(profileId) {
 
     changeChart(currentSymbol, { save: false });
     savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol });
+    renderCustomizePanel();
     getNews();
     fetchCalendar(false);
     fetchContext(false);
@@ -683,6 +723,15 @@ function applyLayoutState() {
         }
         updateToggleButtons(panel, layoutState.collapsed[panel]);
     });
+}
+
+function applyWidgetVisibility() {
+    document.body.dataset.showTicker = String(widgetVisibility.ticker !== false);
+    document.body.dataset.showQuotes = String(widgetVisibility.quotes !== false);
+    document.body.dataset.showCalendar = String(widgetVisibility.calendar !== false);
+    document.body.dataset.showChart = String(widgetVisibility.chart !== false);
+    document.body.dataset.showBias = String(widgetVisibility.bias !== false);
+    document.body.dataset.showNews = String(widgetVisibility.news !== false);
 }
 
 function togglePanel(panel) {
@@ -1305,7 +1354,7 @@ function updateCalendarStatus(meta) {
 
 async function fetchCalendar(scheduleNext = true) {
     try {
-        const response = await fetch(`/api/calendar?profile=${getProfileQuery()}`, { cache: 'no-store' });
+        const response = await fetch(`/api/calendar?profile=${getProfileQuery()}&countries=${getCalendarCountryQuery()}`, { cache: 'no-store' });
         const payload = await response.json();
 
         calEvents = Array.isArray(payload.events) ? payload.events : [];
@@ -1426,7 +1475,12 @@ function renderWatchlist(context) {
     const root = document.getElementById('watchlist-grid');
     if (!root) return;
 
-    root.innerHTML = (context.watchlist || []).map((item) => {
+    const base = context.available_watchlist || context.watchlist || [];
+    const selected = Array.isArray(customWatchlistKeys) && customWatchlistKeys.length
+        ? base.filter((item) => customWatchlistKeys.includes(item.key))
+        : (context.watchlist || base);
+
+    root.innerHTML = selected.map((item) => {
         const direction = item.change_pct > 0 ? 'up' : item.change_pct < 0 ? 'down' : 'flat';
         return `
         <button type="button" class="watch-item" data-symbol="${item.symbol}">
@@ -1460,14 +1514,112 @@ function renderWatchlist(context) {
     });
 }
 
+function toggleCustomizePanel(open = null) {
+    const panel = document.getElementById('customize-panel');
+    if (!panel) return;
+    const shouldOpen = open === null ? panel.classList.contains('hidden') : open;
+    panel.classList.toggle('hidden', !shouldOpen);
+    if (shouldOpen) renderCustomizePanel();
+}
+
+function renderCustomizePanel() {
+    const countriesRoot = document.getElementById('customize-countries');
+    const watchRoot = document.getElementById('customize-watchlist');
+    const widgetsRoot = document.getElementById('customize-widgets');
+    const countries = new Set(getCalendarCountries());
+
+    if (countriesRoot) {
+        countriesRoot.innerHTML = CALENDAR_COUNTRY_OPTIONS.map((country) => `
+            <label class="customize-check">
+                <input type="checkbox" data-custom-country="${country}" ${countries.has(country) ? 'checked' : ''}>
+                <span>${country}</span>
+            </label>
+        `).join('');
+    }
+
+    if (watchRoot) {
+        const available = contextState?.available_watchlist || contextState?.watchlist || [];
+        const activeKeys = new Set(customWatchlistKeys || (contextState?.watchlist || []).map((item) => item.key));
+        watchRoot.innerHTML = available.map((item) => `
+            <label class="customize-check">
+                <input type="checkbox" data-custom-watch="${item.key}" ${activeKeys.has(item.key) ? 'checked' : ''}>
+                <span>${item.label}</span>
+            </label>
+        `).join('') || '<span class="customize-empty">Watchlist en chargement</span>';
+    }
+
+    if (widgetsRoot) {
+        widgetsRoot.innerHTML = WIDGET_OPTIONS.map((widget) => `
+            <label class="customize-check">
+                <input type="checkbox" data-custom-widget="${widget.key}" ${widgetVisibility[widget.key] !== false ? 'checked' : ''}>
+                <span>${widget.label}</span>
+            </label>
+        `).join('');
+    }
+}
+
+function bindCustomizeControls() {
+    const toggle = document.getElementById('customize-toggle');
+    const close = document.getElementById('customize-close');
+    const reset = document.getElementById('customize-reset');
+    const panel = document.getElementById('customize-panel');
+
+    toggle?.addEventListener('click', () => toggleCustomizePanel());
+    close?.addEventListener('click', () => toggleCustomizePanel(false));
+    reset?.addEventListener('click', () => {
+        customCalendarCountries = null;
+        customWatchlistKeys = null;
+        widgetVisibility = { ...DEFAULT_WIDGETS };
+        savePrefs({ calendarCountries: null, watchlistKeys: null, widgets: widgetVisibility });
+        applyWidgetVisibility();
+        renderCustomizePanel();
+        fetchCalendar(false);
+        fetchContext(false);
+    });
+
+    panel?.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement)) return;
+
+        if (input.dataset.customCountry) {
+            const next = new Set(getCalendarCountries());
+            if (input.checked) next.add(input.dataset.customCountry);
+            else if (next.size > 1) next.delete(input.dataset.customCountry);
+            customCalendarCountries = [...next];
+            savePrefs({ calendarCountries: customCalendarCountries });
+            renderCustomizePanel();
+            fetchCalendar(false);
+            fetchContext(false);
+        }
+
+        if (input.dataset.customWatch) {
+            const fallback = (contextState?.watchlist || []).map((item) => item.key);
+            const next = new Set(customWatchlistKeys || fallback);
+            if (input.checked) next.add(input.dataset.customWatch);
+            else if (next.size > 1) next.delete(input.dataset.customWatch);
+            customWatchlistKeys = [...next];
+            savePrefs({ watchlistKeys: customWatchlistKeys });
+            renderWatchlist(contextState || {});
+            renderCustomizePanel();
+        }
+
+        if (input.dataset.customWidget) {
+            widgetVisibility = { ...widgetVisibility, [input.dataset.customWidget]: input.checked };
+            savePrefs({ widgets: widgetVisibility });
+            applyWidgetVisibility();
+        }
+    });
+}
+
 async function fetchContext(scheduleNext = true) {
     try {
-        const response = await fetch(`/api/context?profile=${getProfileQuery()}`, { cache: 'no-store' });
+        const response = await fetch(`/api/context?profile=${getProfileQuery()}&countries=${getCalendarCountryQuery()}`, { cache: 'no-store' });
         const payload = await response.json();
         contextState = payload;
         renderBiasCard(payload);
         renderDrivers(payload);
         renderWatchlist(payload);
+        renderCustomizePanel();
         updateClocks();
     } catch (error) {
         console.error(error);
@@ -1657,6 +1809,8 @@ function bindSoundToggle() {
 function init() {
     renderSoundToggle();
     renderCalendarFilters();
+    applyWidgetVisibility();
+    renderCustomizePanel();
     bindMarketProfileControls();
     bindQuoteCards();
     bindAccountControls();
@@ -1666,6 +1820,7 @@ function init() {
     bindCommandInput();
     bindSoundPicker();
     bindSoundToggle();
+    bindCustomizeControls();
 
     fetchAccountState();
     updateClocks();

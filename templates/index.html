@@ -222,6 +222,30 @@
                 </select>
             </label>
             <button type="button" id="layout-reset-status" class="status-item status-button" title="Reinitialiser la disposition">RESET LAYOUT</button>
+            <div class="customize-slot">
+                <button type="button" id="customize-toggle" class="status-item status-button" title="Personnaliser le terminal">CUSTOMIZE</button>
+                <div id="customize-panel" class="customize-panel hidden">
+                    <div class="customize-head">
+                        <span>PERSONNALISATION</span>
+                        <button type="button" class="panel-btn" id="customize-close" title="Fermer">x</button>
+                    </div>
+                    <div class="customize-section">
+                        <span class="customize-label">Pays calendrier</span>
+                        <div id="customize-countries" class="customize-grid"></div>
+                    </div>
+                    <div class="customize-section">
+                        <span class="customize-label">Watchlist Bias Desk</span>
+                        <div id="customize-watchlist" class="customize-grid"></div>
+                    </div>
+                    <div class="customize-section">
+                        <span class="customize-label">Modules visibles</span>
+                        <div id="customize-widgets" class="customize-grid"></div>
+                    </div>
+                    <div class="customize-actions">
+                        <button type="button" class="panel-btn" id="customize-reset">RESET</button>
+                    </div>
+                </div>
+            </div>
             <div class="account-slot">
                 <button type="button" id="account-toggle" class="status-item status-button" title="Espace compte">ACCOUNT</button>
                 <div id="account-panel" class="account-panel hidden">

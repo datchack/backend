@@ -1141,6 +1141,17 @@ def get_market_profile(profile_id: Optional[str]) -> dict:
     return MARKET_PROFILES.get(key, MARKET_PROFILES["xauusd"])
 
 
+def parse_country_filter(raw: Optional[str], fallback: list[str]) -> list[str]:
+    if not raw:
+        return fallback
+    countries = [
+        country.strip().upper()
+        for country in raw.split(",")
+        if country.strip()
+    ]
+    return countries[:8] or fallback
+
+
 def score_news_for_profile(item: dict, profile: dict) -> int:
     title = str(item.get("t", "")).lower()
     tags = set(item.get("tags") or [])
@@ -2063,16 +2074,23 @@ def build_market_context(profile_id: str, markets: dict[str, dict], events: list
             for key in watch_keys
             if key in markets and key in MARKET_SYMBOLS
         ],
+        "available_watchlist": [
+            {"key": key, "label": MARKET_SYMBOLS[key]["label"], **markets[key]}
+            for key in MARKET_SYMBOLS
+            if key in markets
+        ],
         "target": target,
         "gold": markets.get("gold"),
     }
 
 
-async def fetch_market_context(profile_id: Optional[str] = None) -> dict:
+async def fetch_market_context(profile_id: Optional[str] = None, countries: Optional[str] = None) -> dict:
     profile = get_market_profile(profile_id)
     bias_profile_id = profile["id"] if profile["id"] in BIAS_PROFILES else "xauusd"
+    event_countries = parse_country_filter(countries, profile.get("calendar_countries", ["US"]))
+    cache_key = f"{bias_profile_id}:{','.join(event_countries)}"
     now = time.time()
-    cached = _context_cache.get(bias_profile_id)
+    cached = _context_cache.get(cache_key)
     if cached and (now - cached["ts"]) < CONTEXT_CACHE_TTL:
         return cached["data"]
 
@@ -2087,9 +2105,9 @@ async def fetch_market_context(profile_id: Optional[str] = None) -> dict:
         for (key, _cfg), snapshot in zip(MARKET_SYMBOLS.items(), snapshots)
         if snapshot
     }
-    events, _error = await fetch_calendar(profile.get("calendar_countries", ["US"]))
+    events, _error = await fetch_calendar(event_countries)
     context = build_market_context(bias_profile_id, markets, events)
-    _context_cache[bias_profile_id] = {"data": context, "ts": now}
+    _context_cache[cache_key] = {"data": context, "ts": now}
     return context
 
 
@@ -2490,10 +2508,11 @@ async def get_news(request: Request, profile: Optional[str] = None):
 
 
 @app.get("/api/calendar")
-async def get_calendar(request: Request, profile: Optional[str] = None):
+async def get_calendar(request: Request, profile: Optional[str] = None, countries: Optional[str] = None):
     require_terminal_access(request)
     market_profile = get_market_profile(profile)
-    events, error = await fetch_calendar(market_profile.get("calendar_countries", ["US"]))
+    calendar_countries = parse_country_filter(countries, market_profile.get("calendar_countries", ["US"]))
+    events, error = await fetch_calendar(calendar_countries)
     week_start, week_end = get_current_week_bounds()
     if error:
         return {
@@ -2501,7 +2520,7 @@ async def get_calendar(request: Request, profile: Optional[str] = None):
             "count": 0,
             "timezone": "Europe/Paris",
             "profile": market_profile["id"],
-            "countries": market_profile.get("calendar_countries", ["US"]),
+            "countries": calendar_countries,
             "hot": False,
             "release_watch": False,
             "refresh_ms": 30000,
@@ -2520,7 +2539,7 @@ async def get_calendar(request: Request, profile: Optional[str] = None):
         "count": len(events),
         "timezone": "Europe/Paris",
         "profile": market_profile["id"],
-        "countries": market_profile.get("calendar_countries", ["US"]),
+        "countries": calendar_countries,
         "hot": hot,
         "release_watch": release_watch,
         "refresh_ms": refresh_ms,
@@ -2540,9 +2559,9 @@ async def health():
 
 
 @app.get("/api/context")
-async def get_context(request: Request, profile: Optional[str] = None):
+async def get_context(request: Request, profile: Optional[str] = None, countries: Optional[str] = None):
     require_terminal_access(request)
-    context = await fetch_market_context(profile)
+    context = await fetch_market_context(profile, countries)
     return context
 
 
