@@ -69,8 +69,10 @@ NEWS_SOURCES = {
     "DOL": {"url": "https://www.dol.gov/rss/releases.xml", "kind": "rss"},
 }
 
-FMP_API_KEY = os.getenv("FMP_API_KEY", "JIUCkZ8STWgYWPA03dt64CxksXRVHWyX")
+FMP_API_KEY = os.getenv("FMP_API_KEY", "")
 CALENDAR_TZ = PARIS
+APP_ENV = os.getenv("APP_ENV", "production").lower()
+IS_PRODUCTION = APP_ENV == "production"
 
 _news_cache: dict = {"data": [], "ts": 0.0}
 NEWS_CACHE_TTL = 30
@@ -101,6 +103,14 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_MONTHLY = os.getenv("STRIPE_PRICE_MONTHLY", "")
 STRIPE_PRICE_YEARLY = os.getenv("STRIPE_PRICE_YEARLY", "")
 STRIPE_PRICE_LIFETIME = os.getenv("STRIPE_PRICE_LIFETIME", "")
+STRIPE_ALLOWED_WEBHOOK_EVENTS = {
+    "checkout.session.completed",
+    "invoice.paid",
+    "invoice.payment_failed",
+    "customer.subscription.updated",
+    "customer.subscription.deleted",
+}
+STRIPE_WEBHOOK_MAX_BYTES = 512 * 1024
 APP_BASE_URL = os.getenv("APP_BASE_URL", "https://xauterminal.com").rstrip("/")
 LEGAL_BUSINESS_NAME = os.getenv("LEGAL_BUSINESS_NAME", "MDTrading")
 LEGAL_PUBLISHER_NAME = os.getenv("LEGAL_PUBLISHER_NAME", "Marc Debiais")
@@ -108,6 +118,10 @@ LEGAL_CONTACT_EMAIL = os.getenv("LEGAL_CONTACT_EMAIL", "mdtrading@xauterminal.co
 LEGAL_BUSINESS_ADDRESS = os.getenv("LEGAL_BUSINESS_ADDRESS", "42 Av. de Bordeaux, 86130 Jaunay-Marigny, France")
 LEGAL_BUSINESS_ID = os.getenv("LEGAL_BUSINESS_ID", "SIREN 824468789")
 LEGAL_HOSTING_PROVIDER = os.getenv("LEGAL_HOSTING_PROVIDER", "Render")
+
+_rate_limits: dict[str, list[float]] = {}
+RATE_LIMIT_WINDOW_SECONDS = 15 * 60
+AUTH_RATE_LIMIT_MAX = 8
 
 if stripe is not None and STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
@@ -618,6 +632,27 @@ def require_stripe_ready() -> None:
         raise HTTPException(status_code=503, detail="STRIPE_SECRET_KEY manquant")
 
 
+def require_fmp_key() -> None:
+    if not FMP_API_KEY:
+        raise HTTPException(status_code=503, detail="FMP_API_KEY manquant")
+
+
+def client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def check_rate_limit(key: str, *, limit: int = AUTH_RATE_LIMIT_MAX, window: int = RATE_LIMIT_WINDOW_SECONDS) -> None:
+    now = time.time()
+    hits = [hit for hit in _rate_limits.get(key, []) if now - hit < window]
+    if len(hits) >= limit:
+        raise HTTPException(status_code=429, detail="Trop de tentatives. Reessaie dans quelques minutes.")
+    hits.append(now)
+    _rate_limits[key] = hits
+
+
 def stripe_plan_from_price(price_id: str | None, fallback: str = "active") -> str:
     if price_id == STRIPE_PRICE_MONTHLY:
         return "monthly"
@@ -626,6 +661,22 @@ def stripe_plan_from_price(price_id: str | None, fallback: str = "active") -> st
     if price_id == STRIPE_PRICE_LIFETIME:
         return "lifetime"
     return fallback
+
+
+def stripe_price_allowed(price_id: str | None) -> bool:
+    if not price_id:
+        return False
+    return price_id in {STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY, STRIPE_PRICE_LIFETIME}
+
+
+def parse_metadata_user_id(metadata: dict) -> int | None:
+    raw_user_id = metadata.get("user_id")
+    if not raw_user_id:
+        return None
+    try:
+        return int(raw_user_id)
+    except (TypeError, ValueError):
+        return None
 
 
 def iso_from_stripe_timestamp(value: Any) -> str | None:
@@ -711,7 +762,7 @@ def set_session_cookie(response: Response, token: str, expires_at: str) -> None:
         max_age=max_age,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=IS_PRODUCTION,
         path="/",
     )
 
@@ -2140,9 +2191,11 @@ async def account_me(request: Request):
 
 
 @app.post("/api/account/register")
-async def account_register(payload: AccountAuthPayload, response: Response):
+async def account_register(payload: AccountAuthPayload, response: Response, request: Request):
     email = payload.email.strip().lower()
     password = payload.password.strip()
+    check_rate_limit(f"register:{client_ip(request)}")
+    check_rate_limit(f"register-email:{email}", limit=4)
 
     if "@" not in email or "." not in email:
         raise HTTPException(status_code=400, detail="Email invalide")
@@ -2209,9 +2262,11 @@ async def account_register(payload: AccountAuthPayload, response: Response):
 
 
 @app.post("/api/account/login")
-async def account_login(payload: AccountAuthPayload, response: Response):
+async def account_login(payload: AccountAuthPayload, response: Response, request: Request):
     email = payload.email.strip().lower()
     password = payload.password
+    check_rate_limit(f"login:{client_ip(request)}")
+    check_rate_limit(f"login-email:{email}", limit=8)
 
     if "@" not in email or "." not in email:
         raise HTTPException(status_code=400, detail="Email invalide")
@@ -2309,7 +2364,11 @@ async def billing_webhook(request: Request):
         raise HTTPException(status_code=503, detail="STRIPE_WEBHOOK_SECRET manquant")
 
     payload = await request.body()
+    if len(payload) > STRIPE_WEBHOOK_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="Webhook Stripe trop volumineux")
     signature = request.headers.get("stripe-signature", "")
+    if not signature:
+        raise HTTPException(status_code=400, detail="Signature Stripe manquante")
 
     try:
         event = stripe.Webhook.construct_event(payload, signature, STRIPE_WEBHOOK_SECRET)
@@ -2319,17 +2378,23 @@ async def billing_webhook(request: Request):
         raise HTTPException(status_code=400, detail="Signature Stripe invalide") from exc
 
     event_type = event["type"]
+    if event_type not in STRIPE_ALLOWED_WEBHOOK_EVENTS:
+        return {"received": True, "ignored": True}
+
     obj = event["data"]["object"]
 
     if event_type == "checkout.session.completed":
         metadata = obj.get("metadata") or {}
-        user_id = int(metadata["user_id"]) if metadata.get("user_id") else None
+        user_id = parse_metadata_user_id(metadata)
         plan = metadata.get("plan") or stripe_plan_from_price(metadata.get("price_id"))
         price_id = metadata.get("price_id")
         customer_id = obj.get("customer")
         subscription_id = obj.get("subscription")
         mode = obj.get("mode")
         payment_status = obj.get("payment_status")
+
+        if not stripe_price_allowed(price_id):
+            return {"received": True, "ignored": True}
 
         if mode == "subscription" or payment_status == "paid":
             mark_user_paid(
@@ -2350,6 +2415,8 @@ async def billing_webhook(request: Request):
         if line_items:
             price = line_items[0].get("price") or {}
             price_id = price.get("id")
+        if not stripe_price_allowed(price_id):
+            return {"received": True, "ignored": True}
         plan = stripe_plan_from_price(price_id, "active")
         mark_user_paid(
             customer_id=customer_id,
@@ -2374,6 +2441,8 @@ async def billing_webhook(request: Request):
             price_id = price.get("id")
 
         if status in {"active", "trialing"}:
+            if not stripe_price_allowed(price_id):
+                return {"received": True, "ignored": True}
             mark_user_paid(
                 customer_id=customer_id,
                 subscription_id=subscription_id,
@@ -2517,6 +2586,7 @@ async def get_news(request: Request, profile: Optional[str] = None):
 @app.get("/api/calendar")
 async def get_calendar(request: Request, profile: Optional[str] = None, countries: Optional[str] = None):
     require_terminal_access(request)
+    require_fmp_key()
     market_profile = get_market_profile(profile)
     calendar_countries = parse_country_filter(countries, market_profile.get("calendar_countries", ["US"]))
     events, error = await fetch_calendar(calendar_countries)
