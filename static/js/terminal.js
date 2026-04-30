@@ -36,7 +36,7 @@ import {
     setCenterTab as setCenterTabView,
     syncCommandSymbol,
 } from './terminal-chart.js';
-import { getTzParts, isMarketOpen } from './terminal-clocks.js';
+import { updateClocks as updateClocksView } from './terminal-clocks.js';
 import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js';
 import {
     bindCustomizeControls as bindCustomizeControlsModule,
@@ -171,8 +171,7 @@ function applyLoadedPrefs(prefs = {}) {
     renderSoundToggleControl(soundEnabled);
     renderCalendarFilters();
     syncSoundPicker(soundType);
-    const cmdInput = document.getElementById('cmd');
-    if (cmdInput) cmdInput.value = currentSymbol;
+    syncCommandSymbol(currentSymbol);
     renderMarketProfileSelect();
     renderCustomizePanel();
     applyWidgetVisibility(widgetVisibility);
@@ -418,28 +417,7 @@ function changeChart(symbol, options = {}) {
 }
 
 function updateClocks() {
-    Object.entries(MARKETS).forEach(([key, market]) => {
-        const parts = getTzParts(market.tz);
-        const timeEl = document.getElementById(`time-${key}`);
-        const clockEl = document.getElementById(`mk-${key}`);
-
-        if (timeEl) {
-            timeEl.textContent = `${parts.hour}:${parts.minute}:${parts.second}`;
-        }
-        if (clockEl) {
-            clockEl.classList.toggle('open', isMarketOpen(parts, market));
-        }
-    });
-
-    const statusClock = document.getElementById('status-clock');
-    if (statusClock) {
-        statusClock.textContent = new Intl.DateTimeFormat('fr-FR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-        }).format(new Date());
-    }
-
+    updateClocksView(MARKETS);
 }
 
 function handleCalendarFilterChange(impact) {
