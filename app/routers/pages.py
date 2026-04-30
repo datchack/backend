@@ -6,25 +6,21 @@ from app.core import *
 router = APIRouter()
 
 
-def legal_page(title: str, kicker: str, sections: list[tuple[str, str]]) -> str:
+def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]]) -> str:
     business_name = LEGAL_BUSINESS_NAME
-    publisher = LEGAL_PUBLISHER_NAME
     email = LEGAL_CONTACT_EMAIL
-    address = LEGAL_BUSINESS_ADDRESS
-    business_id = LEGAL_BUSINESS_ID
-    host = LEGAL_HOSTING_PROVIDER
     updated = utc_now().date().strftime("%d/%m/%Y")
     section_html = "\n".join(
-        f"<section><h2>{section_title}</h2><p>{body}</p></section>"
-        for section_title, body in sections
+        f'<section><h2 data-i18n="{section_title_key}">{section_title_key}</h2><p data-i18n="{section_content_key}">{section_content_key}</p></section>'
+        for section_title_key, section_content_key in sections
     )
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - {business_name}</title>
-    <meta name="description" content="{title} de {business_name}.">
+    <title data-i18n="{title_key}">...</title>
+    <meta name="description" content="">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="legal-body">
@@ -35,22 +31,29 @@ def legal_page(title: str, kicker: str, sections: list[tuple[str, str]]) -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
-            <a href="/terminal" data-i18n="nav_terminal">Terminal</a>
+            <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
     </header>
     <main class="legal-page">
-        <div class="landing-kicker">{kicker}</div>
-        <h1>{title}</h1>
-        <p class="legal-updated">Dernière mise à jour : {updated}</p>
+        <div class="landing-kicker" data-i18n="{kicker_key}">{kicker_key}</div>
+        <h1 data-i18n="{title_key}">{title_key}</h1>
+        <p class="legal-updated"><span data-i18n="legal_updated">Dernière mise à jour :</span> {updated}</p>
         <section>
-            <h2>Informations générales</h2>
-            <p>Éditeur : {publisher}<br>Entreprise : {business_name}<br>Identifiant : {business_id}<br>Contact : <a href="mailto:{email}">{email}</a><br>Adresse : {address}<br>Hébergement : {host}</p>
+            <h2 data-i18n="legal_general">Informations générales</h2>
+            <p>
+                <span data-i18n="legal_editor">Éditeur</span> : {LEGAL_PUBLISHER_NAME}<br>
+                <span data-i18n="legal_business">Entreprise</span> : {business_name}<br>
+                <span data-i18n="legal_id">Identifiant</span> : {LEGAL_BUSINESS_ID}<br>
+                <span data-i18n="legal_contact">Contact</span> : <a href="mailto:{email}">{email}</a><br>
+                <span data-i18n="legal_address">Adresse</span> : {LEGAL_BUSINESS_ADDRESS}<br>
+                <span data-i18n="legal_hosting">Hébergement</span> : {LEGAL_HOSTING_PROVIDER}
+            </p>
         </section>
         {section_html}
         <section class="legal-contact">
-            <h2>Contact</h2>
-            <p>Pour toute question relative aux conditions d'utilisation, à la confidentialité ou aux risques liés au trading, vous pouvez nous contacter à <a href="mailto:{email}">{email}</a>.</p>
+            <h2 data-i18n="legal_contact_title">Contact</h2>
+            <p><span data-i18n="legal_contact_copy">Pour toute question relative aux conditions d'utilisation, à la confidentialité ou aux risques liés au trading, vous pouvez nous contacter à</span> <a href="mailto:{email}">{email}</a>.</p>
         </section>
     </main>
     <footer class="landing-footer">
@@ -81,41 +84,41 @@ async def terminal():
 
 @router.get("/terms", response_class=HTMLResponse)
 async def terms_page():
-    return HTMLResponse(legal_page("Conditions générales d'utilisation", "CGU", [
-        ("Objet du service", "XAUTERMINAL propose un terminal web d'information macro et marché permettant de consulter des news, un calendrier économique, des graphiques, des watchlists, des widgets de prix et des outils de lecture de contexte. Le service est fourni comme outil d'aide à l'organisation et à l'analyse personnelle."),
-        ("Accès au service", "L'accès complet peut être soumis à la création d'un compte, à une période d'essai, à un abonnement ou à une offre lifetime. L'utilisateur s'engage à fournir des informations exactes et à préserver la confidentialité de ses identifiants."),
-        ("Essai gratuit et abonnements", "Les formules mensuelle et annuelle peuvent inclure un essai gratuit de 7 jours. Selon la configuration Stripe, une carte bancaire peut être demandée au démarrage de l'essai afin de préparer le renouvellement. À l'issue de l'essai, l'abonnement choisi peut démarrer automatiquement si le paiement est validé. L'offre lifetime correspond à un paiement unique donnant accès au service tant que celui-ci est exploité."),
-        ("Paiement", "Les paiements sont traités par Stripe. XAUTERMINAL ne stocke pas les numéros de carte bancaire. Les factures, moyens de paiement, renouvellements et éventuels échecs de paiement sont gérés via Stripe et les systèmes associés."),
-        ("Utilisation acceptable", "L'utilisateur s'engage à ne pas perturber le service, contourner les restrictions d'accès, partager un compte de manière abusive, extraire massivement les données ou utiliser le service à des fins illicites."),
-        ("Disponibilité", "Le service dépend de fournisseurs tiers, notamment hébergement, données de marché, flux d'actualité, calendrier économique, graphiques et paiement. Des interruptions, retards, erreurs ou indisponibilités peuvent survenir."),
-        ("Responsabilité", "XAUTERMINAL ne garantit pas l'exactitude, l'exhaustivité, l'actualité ou la continuité des données affichées. L'utilisateur reste seul responsable de ses décisions, notamment financières, et de sa gestion du risque."),
-        ("Modification du service", "Les fonctionnalités, tarifs, offres, sources de données et conditions peuvent évoluer afin d'améliorer le produit, corriger des erreurs ou tenir compte de contraintes techniques ou commerciales."),
+    return HTMLResponse(legal_page("terms_title", "terms_kicker", [
+        ("terms_section1_title", "terms_section1"),
+        ("terms_section2_title", "terms_section2"),
+        ("terms_section3_title", "terms_section3"),
+        ("terms_section4_title", "terms_section4"),
+        ("terms_section5_title", "terms_section5"),
+        ("terms_section6_title", "terms_section6"),
+        ("terms_section7_title", "terms_section7"),
+        ("terms_section8_title", "terms_section8"),
     ]))
 
 
 @router.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
-    return HTMLResponse(legal_page("Politique de confidentialité", "CONFIDENTIALITÉ", [
-        ("Données collectées", "XAUTERMINAL peut collecter l'adresse email, le mot de passe chiffré, les préférences de terminal, l'état d'abonnement, les identifiants Stripe nécessaires au suivi du paiement et des données techniques liées à l'utilisation du service."),
-        ("Finalités", "Ces données servent à créer et sécuriser le compte, gérer l'accès au terminal, synchroniser les préférences, traiter les abonnements, améliorer le produit et assurer le support utilisateur."),
-        ("Paiements", "Les données de paiement sont traitées par Stripe. XAUTERMINAL conserve uniquement les références techniques utiles au suivi du compte, comme l'identifiant client, l'abonnement, le prix sélectionné ou le statut de paiement."),
-        ("Cookies et sessions", "Le service utilise un cookie de session afin de maintenir la connexion au compte. Des préférences peuvent également être conservées localement dans le navigateur pour personnaliser l'expérience."),
-        ("Prestataires", "Le service peut s'appuyer sur des prestataires techniques comme Render pour l'hébergement, Stripe pour le paiement, Financial Modeling Prep, Yahoo Finance, TradingView ou des flux RSS tiers pour les données et l'affichage."),
-        ("Durée de conservation", "Les données de compte sont conservées tant que le compte existe ou tant que cela est nécessaire pour fournir le service, respecter des obligations légales, gérer un litige ou assurer la sécurité."),
-        ("Droits utilisateur", "L'utilisateur peut demander l'accès, la correction ou la suppression de ses données en contactant l'adresse indiquée sur cette page. Certaines données peuvent être conservées si une obligation légale ou technique l'impose."),
-        ("Sécurité", "XAUTERMINAL applique des mesures raisonnables pour protéger les comptes et les données. Aucun système n'étant infaillible, l'utilisateur doit choisir un mot de passe robuste et éviter de le réutiliser."),
+    return HTMLResponse(legal_page("privacy_title", "privacy_kicker", [
+        ("privacy_section1_title", "privacy_section1"),
+        ("privacy_section2_title", "privacy_section2"),
+        ("privacy_section3_title", "privacy_section3"),
+        ("privacy_section4_title", "privacy_section4"),
+        ("privacy_section5_title", "privacy_section5"),
+        ("privacy_section6_title", "privacy_section6"),
+        ("privacy_section7_title", "privacy_section7"),
+        ("privacy_section8_title", "privacy_section8"),
     ]))
 
 
 @router.get("/risk-disclaimer", response_class=HTMLResponse)
 async def risk_disclaimer_page():
-    return HTMLResponse(legal_page("Disclaimer trading et risques", "RISQUES", [
-        ("Information uniquement", "XAUTERMINAL fournit des informations de marché, des outils de visualisation, des classements, des alertes et des lectures de contexte. Le service ne constitue pas un conseil en investissement, une recommandation personnalisée, une gestion de portefeuille, ou une incitation à acheter ou vendre un instrument financier."),
-        ("Risque de perte", "Le trading, les CFD, le Forex, les cryptomonnaies, les actions, les indices, les matières premières et autres instruments financiers comportent un risque élevé de perte. Les performances passées ne préjugent pas des performances futures."),
-        ("Données tierces", "Les prix, news, calendriers économiques, impacts, prévisions, données actual/forecast/previous et graphiques peuvent provenir de fournisseurs tiers. Ces informations peuvent être retardées, erronées, incomplètes ou indisponibles."),
-        ("Bias Desk", "Le Bias Desk et les indicateurs associés sont des outils de lecture mécanique et contextuelle. Ils ne doivent pas être interprétés comme des signaux automatiques ou comme une garantie de résultat."),
-        ("Responsabilité de l'utilisateur", "Chaque utilisateur doit effectuer ses propres vérifications, respecter son plan de trading, adapter la taille de ses positions et ne jamais engager de capitaux qu'il ne peut pas se permettre de perdre."),
-        ("Aucune garantie", "XAUTERMINAL ne garantit aucun gain, aucune précision parfaite des données, aucune disponibilité continue et aucune adéquation du service à une situation financière particulière."),
+    return HTMLResponse(legal_page("risk_title", "risk_kicker", [
+        ("risk_section1_title", "risk_section1"),
+        ("risk_section2_title", "risk_section2"),
+        ("risk_section3_title", "risk_section3"),
+        ("risk_section4_title", "risk_section4"),
+        ("risk_section5_title", "risk_section5"),
+        ("risk_section6_title", "risk_section6"),
     ]))
 
 
