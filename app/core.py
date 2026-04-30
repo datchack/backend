@@ -4,7 +4,7 @@ Routers import from this module while the legacy runtime is being split into
 smaller services.
 """
 
-from .services.runtime import *  # noqa: F403
+from .services.context import *  # noqa: F403
 from .services.profiles import *  # noqa: F403
 from .services.calendar import *  # noqa: F403
 from .services.news import *  # noqa: F403
