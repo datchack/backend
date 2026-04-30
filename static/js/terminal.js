@@ -26,6 +26,16 @@ import {
     renderCalendarFilters as renderCalendarFilterView,
     updateCalendarStatus,
 } from './terminal-calendar.js';
+import {
+    bindCenterTabs as bindCenterTabsModule,
+    bindCommandInput as bindCommandInputModule,
+    bindMarketProfileControls as bindMarketProfileControlsModule,
+    changeChart as changeChartView,
+    initChart as initChartView,
+    renderMarketProfileSelect as renderMarketProfileSelectView,
+    setCenterTab as setCenterTabView,
+    syncCommandSymbol,
+} from './terminal-chart.js';
 import { getTzParts, isMarketOpen } from './terminal-clocks.js';
 import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js';
 import {
@@ -217,12 +227,7 @@ function getCalendarCountryQuery() {
 }
 
 function renderMarketProfileSelect() {
-    const select = document.getElementById('market-profile');
-    if (!select) return;
-
-    select.innerHTML = Object.values(MARKET_PROFILES).map((profile) => `
-        <option value="${profile.id}" ${profile.id === currentMarketProfile ? 'selected' : ''}>${profile.label}</option>
-    `).join('');
+    renderMarketProfileSelectView(MARKET_PROFILES, currentMarketProfile);
 }
 
 function setMarketProfile(profileId) {
@@ -231,8 +236,7 @@ function setMarketProfile(profileId) {
     currentSymbol = profile.symbol;
     suppressNextNewsFresh = true;
 
-    const cmdInput = document.getElementById('cmd');
-    if (cmdInput) cmdInput.value = currentSymbol;
+    syncCommandSymbol(currentSymbol);
 
     changeChart(currentSymbol, { save: false });
     savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol });
@@ -364,12 +368,9 @@ function bindAccountControls() {
 }
 
 function bindMarketProfileControls() {
-    const select = document.getElementById('market-profile');
-    if (!select) return;
-
-    renderMarketProfileSelect();
-    select.addEventListener('change', () => {
-        setMarketProfile(select.value);
+    bindMarketProfileControlsModule({
+        renderSelect: renderMarketProfileSelect,
+        onChange: setMarketProfile,
     });
 }
 
@@ -393,68 +394,27 @@ function bindResizers() {
 function setCenterTab(tab) {
     currentCenterTab = tab;
     savePrefs({ centerTab: tab });
-
-    document.querySelectorAll('[data-center-tab]').forEach((button) => {
-        button.classList.toggle('active', button.dataset.centerTab === tab);
-    });
-
-    document.querySelectorAll('[data-panel]').forEach((panel) => {
-        panel.classList.toggle('active', panel.dataset.panel === tab);
-    });
+    setCenterTabView(tab);
 }
 
 function bindCenterTabs() {
-    const tabs = document.querySelectorAll('[data-center-tab]');
-    if (!tabs.length) return;
-
-    tabs.forEach((button) => {
-        button.addEventListener('click', () => {
-            const { centerTab } = button.dataset;
-            if (!centerTab) return;
-            setCenterTab(centerTab);
-        });
+    bindCenterTabsModule({
+        getCurrentTab: () => currentCenterTab,
+        onChange: setCenterTab,
     });
-
-    setCenterTab(currentCenterTab);
 }
 
 function initChart(symbol) {
     currentSymbol = symbol;
-
-    const wrap = document.getElementById('tv_main_wrap');
-    if (!wrap) return;
-
-    wrap.innerHTML = '<div id="tv_main" style="height:100%;"></div>';
-
-    const symbolLabel = document.getElementById('chart-symbol');
-    if (symbolLabel) {
-        symbolLabel.textContent = symbol;
-    }
-
-    new TradingView.widget({
-        autosize: true,
-        symbol,
-        interval: '1',
-        theme: 'dark',
-        style: '1',
-        locale: 'fr',
-        container_id: 'tv_main',
-        hide_side_toolbar: false,
-        allow_symbol_change: true,
-        details: true,
-        studies: ['Volume@tv-basicstudies'],
-    });
+    initChartView(symbol);
 }
 
 function changeChart(symbol, options = {}) {
-    initChart(symbol);
+    currentSymbol = symbol;
+    changeChartView(symbol);
     if (options.save !== false) {
         savePrefs({ symbol, marketProfile: currentMarketProfile });
     }
-
-    document.querySelectorAll('.qcard').forEach((card) => {
-        card.classList.toggle('active', card.dataset.symbol === symbol);
-    });
 }
 
 function updateClocks() {
@@ -610,16 +570,9 @@ async function getNews() {
 }
 
 function bindCommandInput() {
-    const input = document.getElementById('cmd');
-    if (!input) return;
-
-    input.value = currentSymbol;
-    input.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter') return;
-
-        const value = input.value.trim().toUpperCase();
-        if (!value) return;
-        changeChart(value);
+    bindCommandInputModule({
+        getCurrentSymbol: () => currentSymbol,
+        onChange: changeChart,
     });
 }
 
