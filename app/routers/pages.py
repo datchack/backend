@@ -1,3 +1,4 @@
+import json
 from html import escape
 
 from fastapi import APIRouter, Request
@@ -38,6 +39,231 @@ LEGAL_PAGE_META = {
         "description": "Avertissement sur les risques liés au trading, aux données de marché et à l'utilisation des outils XAUTERMINAL.",
     },
 }
+
+SEO_CONTENT_PAGES = {
+    "terminal_xauusd": {
+        "path": "/terminal-xauusd",
+        "title": "Terminal XAU/USD pour suivre l'or, le dollar et les taux",
+        "description": "Comprendre comment XAUTERMINAL aide à suivre XAU/USD avec charting, news macro, calendrier économique, DXY, taux US et drivers de marché.",
+        "kicker": "XAU/USD",
+        "h1": "Terminal XAU/USD: suivre l'or avec une lecture macro claire",
+        "intro": "XAU/USD réagit souvent à plusieurs forces en même temps: dollar américain, taux US, inflation, discours de la Fed, stress géopolitique et momentum court terme. XAUTERMINAL rassemble ces informations dans une interface pensée pour préparer une décision, pas pour remplacer une stratégie.",
+        "sections": [
+            (
+                "Pourquoi XAU/USD demande une lecture multi-facteurs",
+                "L'or peut monter parce que le dollar baisse, parce que les rendements réels se détendent, parce qu'un risque géopolitique soutient la demande refuge ou simplement parce que le momentum technique domine la séance. Regarder uniquement le graphique peut donc laisser une partie importante du contexte de côté.",
+            ),
+            (
+                "Ce que le terminal centralise pour l'or",
+                "Le profil XAU/USD regroupe le charting TradingView, les news liées à la Fed, au dollar, aux taux, à l'inflation et à la géopolitique, le calendrier économique US, une watchlist orientée or et un Bias Desk qui synthétise les drivers principaux.",
+            ),
+            (
+                "Comment utiliser cette page dans une routine",
+                "Avant une session, vérifie les événements US à venir, lis les news prioritaires, observe DXY et US10Y, puis compare ce contexte avec le mouvement de XAU/USD. L'objectif est d'éviter d'entrer sans savoir quel facteur domine le marché.",
+            ),
+            (
+                "Limite importante",
+                "Le terminal ne fournit pas de conseil financier ni de signal garanti. Il sert à structurer l'information et à gagner du temps dans l'analyse. La décision, le risque et la gestion de position restent sous ta responsabilité.",
+            ),
+        ],
+        "links": [
+            ("/terminal", "Ouvrir le terminal"),
+            ("/calendrier-economique-or", "Lire le calendrier économique pour l'or"),
+            ("/guide/trading-or-macro", "Comprendre la lecture macro de l'or"),
+        ],
+    },
+    "calendrier_or": {
+        "path": "/calendrier-economique-or",
+        "title": "Calendrier économique pour trader l'or: CPI, NFP, Fed et taux US",
+        "description": "Guide pratique pour lire le calendrier économique quand on suit l'or et XAU/USD: inflation, NFP, Fed, taux US, dollar et volatilité.",
+        "kicker": "CALENDRIER ÉCONOMIQUE",
+        "h1": "Calendrier économique pour l'or: les événements à surveiller sur XAU/USD",
+        "intro": "Sur XAU/USD, certaines statistiques peuvent changer brutalement la lecture du marché. L'inflation, l'emploi américain, les décisions de la Fed et les publications liées à la croissance influencent le dollar, les taux et donc l'or.",
+        "sections": [
+            (
+                "Les publications qui comptent le plus",
+                "Les traders sur l'or surveillent notamment le CPI, le PCE, les NFP, le chômage, les ventes au détail, les PMI, les décisions FOMC et les discours de membres de la Fed. Ces événements peuvent modifier les anticipations de taux et déclencher une forte volatilité.",
+            ),
+            (
+                "Actual, forecast, previous: quoi comparer ?",
+                "Une publication se lit rarement seule. Il faut comparer le chiffre publié au consensus et au chiffre précédent. Un résultat supérieur aux attentes peut soutenir le dollar ou les taux selon le contexte, ce qui peut peser sur l'or. L'inverse peut soutenir XAU/USD.",
+            ),
+            (
+                "Pourquoi le timing est important",
+                "Les minutes avant et après une publication importante sont souvent instables. Le terminal met en avant les événements à fort impact et les blocs de release pour éviter de découvrir trop tard qu'une statistique majeure arrive.",
+            ),
+            (
+                "Utiliser le calendrier avec le reste du contexte",
+                "Un calendrier seul ne suffit pas. Il faut le croiser avec les news, DXY, US10Y, le niveau de volatilité et le comportement du prix. C'est cette combinaison que XAUTERMINAL cherche à rendre plus lisible.",
+            ),
+        ],
+        "links": [
+            ("/terminal", "Voir le calendrier dans le terminal"),
+            ("/terminal-xauusd", "Suivre XAU/USD dans le terminal"),
+            ("/news-forex-or", "Comprendre les news macro pour l'or"),
+        ],
+    },
+    "news_forex_or": {
+        "path": "/news-forex-or",
+        "title": "News Forex et or: filtrer les informations utiles pour XAU/USD",
+        "description": "Comment filtrer les news forex, dollar, Fed, inflation, géopolitique et taux US pour mieux comprendre les mouvements de l'or et de XAU/USD.",
+        "kicker": "NEWS MACRO",
+        "h1": "News Forex et or: filtrer le bruit pour comprendre XAU/USD",
+        "intro": "Les news de marché arrivent vite et dans tous les sens. Pour l'or, l'enjeu n'est pas de tout lire, mais d'identifier ce qui peut réellement changer le dollar, les taux, l'appétit pour le risque ou la demande refuge.",
+        "sections": [
+            (
+                "Les familles de news à prioriser",
+                "Pour XAU/USD, les catégories les plus utiles sont souvent la Fed, l'inflation, l'emploi américain, les rendements obligataires, le dollar, la géopolitique, les banques centrales et les surprises de données macro.",
+            ),
+            (
+                "Pourquoi une news peut être importante sans bouger le marché",
+                "Une information peut être vraie mais déjà intégrée par les prix. Le terminal aide à distinguer les news récentes, les sujets officiels, les informations répétées par plusieurs sources et les éléments potentiellement market moving.",
+            ),
+            (
+                "Croiser les news avec DXY et US10Y",
+                "Une news hawkish sur la Fed peut soutenir le dollar et les rendements, ce qui met souvent l'or sous pression. Une news dovish ou un stress géopolitique peut produire l'effet inverse. La watchlist permet de vérifier rapidement cette cohérence.",
+            ),
+            (
+                "Créer une routine plus calme",
+                "L'objectif n'est pas de réagir à chaque headline. Une bonne routine consiste à lire les priorités, repérer le thème dominant, vérifier si le prix confirme, puis attendre un setup compatible avec son propre plan.",
+            ),
+        ],
+        "links": [
+            ("/terminal", "Voir le flux news du terminal"),
+            ("/calendrier-economique-or", "Comparer avec le calendrier économique"),
+            ("/guide/trading-or-macro", "Construire une lecture macro"),
+        ],
+    },
+    "guide_trading_or_macro": {
+        "path": "/guide/trading-or-macro",
+        "title": "Guide macro pour trader l'or: dollar, taux, inflation et Fed",
+        "description": "Guide pédagogique pour comprendre les principaux drivers macro de l'or: DXY, taux US, inflation, Fed, stress de marché et momentum.",
+        "kicker": "GUIDE MACRO",
+        "h1": "Guide macro pour trader l'or: dollar, taux, inflation et Fed",
+        "intro": "Trader l'or sans contexte macro peut devenir confus: le même mouvement de prix peut venir d'un dollar faible, d'une baisse des rendements, d'une surprise d'inflation ou d'un stress de marché. Ce guide résume les drivers à suivre avant d'utiliser le terminal.",
+        "sections": [
+            (
+                "Dollar américain et or",
+                "XAU/USD est coté en dollars. Quand le dollar se renforce fortement, l'or peut devenir plus difficile à acheter pour les autres devises, ce qui pèse souvent sur le prix. Quand le dollar se détend, XAU/USD peut respirer davantage.",
+            ),
+            (
+                "Taux US et rendement réel",
+                "L'or ne verse pas de rendement. Quand les taux et les rendements réels montent, les actifs rémunérés deviennent plus attractifs. Quand ils baissent, l'or peut redevenir plus compétitif, surtout si l'inflation ou le risque restent présents.",
+            ),
+            (
+                "Fed, inflation et emploi",
+                "La Fed influence les anticipations de taux. Les chiffres d'inflation et d'emploi modifient ces anticipations. C'est pour cela que CPI, PCE, NFP et FOMC sont souvent des moments clés pour XAU/USD.",
+            ),
+            (
+                "Momentum et confirmation",
+                "Le contexte macro donne une direction probable, mais le prix doit confirmer. Le Bias Desk et les drivers du terminal servent à organiser cette lecture: macro, momentum, risque événementiel et watchlist.",
+            ),
+        ],
+        "links": [
+            ("/terminal", "Tester le terminal"),
+            ("/terminal-xauusd", "Voir l'approche XAU/USD"),
+            ("/news-forex-or", "Lire les news macro utiles"),
+        ],
+    },
+}
+
+
+def content_page(page_key: str) -> str:
+    page = SEO_CONTENT_PAGES[page_key]
+    canonical = absolute_url(page["path"])
+    escaped_title = escape(page["title"], quote=True)
+    escaped_description = escape(page["description"], quote=True)
+    escaped_h1 = escape(page["h1"])
+    escaped_intro = escape(page["intro"])
+    sections = "\n".join(
+        f"""        <section>
+            <h2>{escape(title)}</h2>
+            <p>{escape(copy)}</p>
+        </section>"""
+        for title, copy in page["sections"]
+    )
+    links = "\n".join(
+        f'<a class="landing-secondary" href="{escape(href, quote=True)}">{escape(label)}</a>'
+        for href, label in page["links"]
+    )
+    related_links = ", ".join(label for _, label in page["links"])
+    structured_data = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "Article",
+            "headline": page["h1"],
+            "description": page["description"],
+            "url": canonical,
+            "author": {
+                "@type": "Person",
+                "name": LEGAL_PUBLISHER_NAME,
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": LEGAL_BUSINESS_NAME,
+                "url": APP_BASE_URL,
+            },
+            "mainEntityOfPage": canonical,
+            "inLanguage": "fr-FR",
+            "about": related_links,
+        },
+        ensure_ascii=False,
+    )
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{escaped_title}</title>
+    <meta name="description" content="{escaped_description}">
+    <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="XAUTERMINAL">
+    <meta property="og:title" content="{escaped_title}">
+    <meta property="og:description" content="{escaped_description}">
+    <meta property="og:url" content="{canonical}">
+    <meta name="twitter:card" content="summary">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            <span class="brand-mark"></span>
+            <span>XAUTERMINAL</span>
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/#features">Outils</a>
+            <a href="/#pricing">Formules</a>
+            <a href="/terminal">Ouvrir le terminal</a>
+        </nav>
+    </header>
+    <main class="legal-page">
+        <div class="landing-kicker">{escape(page["kicker"])}</div>
+        <h1>{escaped_h1}</h1>
+        <p>{escaped_intro}</p>
+{sections}
+        <section class="legal-contact">
+            <h2>Continuer avec XAUTERMINAL</h2>
+            <p>Ces ressources sont pensées pour être utilisées ensemble: contexte macro, calendrier économique, news filtrées et charting. Elles complètent le terminal sans constituer un conseil financier.</p>
+            <div class="landing-actions">{links}</div>
+        </section>
+    </main>
+    <footer class="landing-footer">
+        <div>
+            <strong>XAUTERMINAL</strong>
+            <span>Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+        </div>
+        <nav aria-label="Ressources">
+            <a href="/terminal-xauusd">XAU/USD</a>
+            <a href="/calendrier-economique-or">Calendrier or</a>
+            <a href="/news-forex-or">News forex</a>
+            <a href="/guide/trading-or-macro">Guide macro</a>
+        </nav>
+    </footer>
+</body>
+</html>"""
 
 
 def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]]) -> str:
@@ -132,6 +358,26 @@ async def terminal():
     return FileResponse("templates/index.html")
 
 
+@router.get("/terminal-xauusd", response_class=HTMLResponse)
+async def terminal_xauusd_page():
+    return HTMLResponse(content_page("terminal_xauusd"))
+
+
+@router.get("/calendrier-economique-or", response_class=HTMLResponse)
+async def calendrier_economique_or_page():
+    return HTMLResponse(content_page("calendrier_or"))
+
+
+@router.get("/news-forex-or", response_class=HTMLResponse)
+async def news_forex_or_page():
+    return HTMLResponse(content_page("news_forex_or"))
+
+
+@router.get("/guide/trading-or-macro", response_class=HTMLResponse)
+async def guide_trading_or_macro_page():
+    return HTMLResponse(content_page("guide_trading_or_macro"))
+
+
 @router.get("/terms", response_class=HTMLResponse)
 async def terms_page():
     return HTMLResponse(legal_page("terms_title", "terms_kicker", [
@@ -191,6 +437,10 @@ async def sitemap_xml():
     urls = [
         ("/", "daily", "1.0"),
         ("/terminal", "daily", "0.8"),
+        ("/terminal-xauusd", "weekly", "0.8"),
+        ("/calendrier-economique-or", "weekly", "0.8"),
+        ("/news-forex-or", "weekly", "0.8"),
+        ("/guide/trading-or-macro", "weekly", "0.8"),
         ("/terms", "monthly", "0.5"),
         ("/privacy", "monthly", "0.5"),
         ("/risk-disclaimer", "monthly", "0.5"),
