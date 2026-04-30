@@ -72,7 +72,7 @@ let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKe
 let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
 let layoutState = loadLayoutPrefs();
 let accountMode = DEFAULT_ACCOUNT_MODE;
-let accountState = { authenticated: false, account: null };
+let accountState = { authenticated: false, account: null, loading: true };
 let prefsSyncTimer = null;
 let appBooted = false;
 let accessFormMode = 'intro';
@@ -217,6 +217,12 @@ function renderAccessGate() {
     const intro = document.getElementById('access-intro');
     const auth = document.getElementById('access-auth');
     if (!gate || !title || !copy || !intro || !auth) return;
+
+    if (accountState.loading) {
+        document.body.classList.remove('gated');
+        gate.classList.add('hidden');
+        return;
+    }
 
     const authenticated = !!accountState.authenticated;
     const role = accountState.account?.role || 'guest';
@@ -500,7 +506,7 @@ async function fetchAccountState() {
     try {
         const response = await fetch('/api/account/me', { cache: 'no-store' });
         const payload = await response.json();
-        accountState = payload;
+        accountState = { ...payload, loading: false };
         if (accountState.authenticated && accountState.account?.prefs) {
             applyLoadedPrefs(accountState.account.prefs);
         }
@@ -510,6 +516,8 @@ async function fetchAccountState() {
         }
     } catch (error) {
         console.error(error);
+        accountState = { authenticated: false, account: null, loading: false };
+        renderAccountState();
     }
 }
 
@@ -536,7 +544,7 @@ async function submitAccountForm(event) {
             throw new Error(payload.detail || 'Action impossible');
         }
 
-        accountState = payload;
+        accountState = { ...payload, loading: false };
         renderAccountState();
         setAccountMessage(accountMode === 'login' ? 'Connexion reussie.' : 'Compte cree. Essai 7 jours active.', 'ok');
         await syncPreferences();
@@ -576,7 +584,7 @@ async function submitAccessAuthForm(event) {
             throw new Error(payload.detail || 'Action impossible');
         }
 
-        accountState = payload;
+        accountState = { ...payload, loading: false };
         renderAccountState();
         setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion reussie.' : 'Compte cree. Essai active.', 'ok');
         await syncPreferences();
