@@ -3,7 +3,6 @@ import {
     CALENDAR_REFRESH_MS,
     CONTEXT_REFRESH_MS,
     DEFAULT_ACCOUNT_MODE,
-    DEFAULT_LAYOUT,
     DEFAULT_MARKET_PROFILE,
     DEFAULT_WIDGETS,
     IMPACT_LEVELS,
@@ -14,20 +13,16 @@ import {
     QUOTES_REFRESH_MS,
     WIDGET_OPTIONS,
 } from './terminal-config.js';
+import { clamp, defaultLayoutState, loadLayoutPrefs } from './terminal-layout.js';
+import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
 
 function loadPrefs() {
-    try {
-        return JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
-    } catch {
-        return {};
-    }
+    return loadStoredPrefs(PREFS_KEY);
 }
 
 function savePrefs(patch) {
     try {
-        const current = loadPrefs();
-        const next = { ...current, ...patch };
-        localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+        const next = mergeStoredPrefs(PREFS_KEY, patch);
         schedulePrefsSync(next);
     } catch {}
 }
@@ -41,7 +36,7 @@ let currentCenterTab = PREFS.centerTab || 'bias';
 let customCalendarCountries = Array.isArray(PREFS.calendarCountries) ? PREFS.calendarCountries : null;
 let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKeys : null;
 let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
-let layoutState = loadLayoutPrefs();
+let layoutState = loadLayoutPrefs(PREFS.layout);
 let accountMode = DEFAULT_ACCOUNT_MODE;
 let accountState = { authenticated: false, account: null, loading: true };
 let prefsSyncTimer = null;
@@ -64,25 +59,6 @@ let quoteSocketReconnectTimer = null;
 const calFilters = {
     impact: new Set(PREFS.impactFilters || IMPACT_LEVELS),
 };
-
-function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
-}
-
-function loadLayoutPrefs(source = null) {
-    const raw = source || PREFS.layout || {};
-    return {
-        leftWidth: clamp(Number(raw.leftWidth) || DEFAULT_LAYOUT.leftWidth, 260, 520),
-        rightWidth: clamp(Number(raw.rightWidth) || DEFAULT_LAYOUT.rightWidth, 260, 520),
-        insightWidth: clamp(Number(raw.insightWidth) || DEFAULT_LAYOUT.insightWidth, 260, 520),
-        collapsed: {
-            left: !!raw.collapsed?.left,
-            right: !!raw.collapsed?.right,
-            chart: !!raw.collapsed?.chart,
-            insight: !!raw.collapsed?.insight,
-        },
-    };
-}
 
 function persistLayout() {
     savePrefs({ layout: layoutState });
@@ -131,7 +107,7 @@ async function syncPreferences(prefs = null) {
 function applyLoadedPrefs(prefs = {}) {
     if (!prefs || typeof prefs !== 'object') return;
 
-    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    writeStoredPrefs(PREFS_KEY, prefs);
 
     currentMarketProfile = prefs.marketProfile || currentMarketProfile;
     currentSymbol = prefs.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || currentSymbol;
@@ -720,12 +696,7 @@ function togglePanel(panel) {
 }
 
 function resetLayout() {
-    layoutState = {
-        leftWidth: DEFAULT_LAYOUT.leftWidth,
-        rightWidth: DEFAULT_LAYOUT.rightWidth,
-        insightWidth: DEFAULT_LAYOUT.insightWidth,
-        collapsed: { ...DEFAULT_LAYOUT.collapsed },
-    };
+    layoutState = defaultLayoutState();
     applyLayoutState();
     persistLayout();
 }
