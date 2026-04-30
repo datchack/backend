@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - {{ business_name }}</title>
+    <meta name="description" content="{{ title }} de {{ business_name }}.">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="{{ business_name }}">
+            <span class="brand-mark"></span>
+            <span>{{ business_name }}</span>
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Terminal</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
+        </nav>
+    </header>
+
+    <main class="legal-page">
+        <div class="landing-kicker">{{ kicker }}</div>
+        <h1>{{ title }}</h1>
+        <p class="legal-updated">Dernière mise à jour : {{ updated }}</p>
+
+        <section>
+            <h2>Informations générales</h2>
+            <p>
+                Éditeur : {{ publisher }}<br>
+                Entreprise : {{ business_name }}<br>
+                Identifiant : {{ business_id }}<br>
+                Contact : <a href="mailto:{{ email }}">{{ email }}</a><br>
+                Adresse : {{ address }}<br>
+                Hébergement : {{ host }}
+            </p>
+        </section>
+
+        {% for section in sections %}
+        <section>
+            <h2>{{ section[0] }}</h2>
+            <p>{{ section[1] }}</p>
+        </section>
+        {% endfor %}
+
+        <section class="legal-contact">
+            <h2>Contact</h2>
+            <p>Pour toute question relative aux conditions d'utilisation, à la confidentialité ou aux risques liés au trading, vous pouvez nous contacter à <a href="mailto:{{ email }}">{{ email }}</a>.</p>
+        </section>
+    </main>
+
+    <footer class="landing-footer">
+        <div>
+            <strong>{{ business_name }}</strong>
+            <span>Terminal macro et trading professionnel.</span>
+        </div>
+        <nav aria-label="Documents légaux">
+            <a href="/terms">CGU</a>
+            <a href="/privacy">Confidentialité</a>
+            <a href="/risk-disclaimer">Disclaimer trading</a>
+        </nav>
+    </footer>
+
+    <script src="/static/landing.js"></script>
+</body>
+</html>
