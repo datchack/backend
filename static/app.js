@@ -1351,6 +1351,9 @@ function renderBiasCard(context) {
     const snapshotBias = document.getElementById('snapshot-bias');
     const snapshotSession = document.getElementById('snapshot-session');
     const snapshotVol = document.getElementById('snapshot-vol');
+    const titleEl = document.getElementById('bias-card-title');
+    const driverTitleEl = document.getElementById('driver-card-title');
+    const watchTitleEl = document.getElementById('watch-card-title');
 
     if (!card || !scoreEl || !labelEl || !actionEl || !toneEl || !layersEl || !reasonsEl || !confidenceEl || !volEl || !sessionEl) return;
 
@@ -1364,7 +1367,13 @@ function renderBiasCard(context) {
     labelEl.className = `bias-label ${toneClass}`;
     actionEl.textContent = context.action || 'WAIT';
     actionEl.className = `bias-action ${context.action === 'NO TRADE' ? 'neutral' : toneClass}`;
-    toneEl.textContent = `${(context.action_reason || context.tone).toUpperCase()} - ${context.summary || (context.gold ? `Gold ${formatSignedPercent(context.gold.change_pct)}` : 'Gold feed live')}`;
+    if (titleEl) titleEl.textContent = `${context.bias_name || context.title || 'MARKET'} BIAS`;
+    if (driverTitleEl) driverTitleEl.textContent = `${context.bias_name || context.title || 'MARKET'} DRIVERS`;
+    if (watchTitleEl) watchTitleEl.textContent = `${context.bias_name || context.title || 'MARKET'} WATCH`;
+
+    const target = context.target || context.gold;
+    const targetLabel = context.target_label || context.bias_name || 'Market';
+    toneEl.textContent = `${(context.action_reason || context.tone).toUpperCase()} - ${context.summary || (target ? `${targetLabel} ${formatSignedPercent(target.change_pct)}` : 'Market feed live')}`;
     const layers = context.layers || {};
     const eventRisk = layers.event_risk || {};
     const eventMinutes = ['High', 'Elevated'].includes(eventRisk.level) && eventRisk.minutes !== null && eventRisk.minutes !== undefined
@@ -1393,7 +1402,7 @@ function renderBiasCard(context) {
     }
 
     if (statusContext) {
-        statusContext.textContent = `Bias: ${context.action || context.bias} (${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}) - ${context.confidence || 0}%`;
+        statusContext.textContent = `${context.bias_name || 'Bias'}: ${context.action || context.bias} (${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}) - ${context.confidence || 0}%`;
     }
 }
 
@@ -1440,6 +1449,11 @@ function renderWatchlist(context) {
                 'CL=F': 'NYMEX:CL1!',
                 'SPY': 'AMEX:SPY',
                 'QQQ': 'NASDAQ:QQQ',
+                'TLT': 'NASDAQ:TLT',
+                'EURUSD=X': 'FX:EURUSD',
+                'GBPUSD=X': 'FX:GBPUSD',
+                'JPY=X': 'FX:USDJPY',
+                'BTC-USD': 'BITSTAMP:BTCUSD',
             };
             changeChart(tvMap[symbol] || symbol);
         });
