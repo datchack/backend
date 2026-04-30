@@ -1,36 +1,19 @@
-const PREFS_KEY = 'tt_prefs_v1';
-const CALENDAR_REFRESH_MS = 60000;
-const NEWS_REFRESH_MS = 8000;
-const CONTEXT_REFRESH_MS = 15000;
-const QUOTES_REFRESH_MS = 5000;
-const IMPACT_LEVELS = ['High', 'Medium', 'Low'];
-const DEFAULT_ACCOUNT_MODE = 'register';
-const DEFAULT_MARKET_PROFILE = 'xauusd';
-const MARKET_PROFILES = {
-    xauusd: { id: 'xauusd', label: 'XAU/USD', symbol: 'OANDA:XAUUSD', countries: ['US'] },
-    usdjpy: { id: 'usdjpy', label: 'USD/JPY', symbol: 'FX:USDJPY', countries: ['US', 'JP'] },
-    eurusd: { id: 'eurusd', label: 'EUR/USD', symbol: 'FX:EURUSD', countries: ['US', 'EU'] },
-    gbpusd: { id: 'gbpusd', label: 'GBP/USD', symbol: 'FX:GBPUSD', countries: ['US', 'GB'] },
-    nasdaq: { id: 'nasdaq', label: 'NASDAQ', symbol: 'NASDAQ:QQQ', countries: ['US'] },
-    btcusd: { id: 'btcusd', label: 'BTC/USD', symbol: 'BITSTAMP:BTCUSD', countries: ['US'] },
-};
-const CALENDAR_COUNTRY_OPTIONS = ['US', 'EU', 'JP', 'GB', 'CN', 'CA', 'AU', 'DE', 'FR'];
-const WIDGET_OPTIONS = [
-    { key: 'ticker', label: 'Ticker' },
-    { key: 'quotes', label: 'Quotes' },
-    { key: 'calendar', label: 'Calendar' },
-    { key: 'chart', label: 'Chart' },
-    { key: 'bias', label: 'Bias' },
-    { key: 'news', label: 'News' },
-];
-const DEFAULT_WIDGETS = {
-    ticker: true,
-    quotes: true,
-    calendar: true,
-    chart: true,
-    bias: true,
-    news: true,
-};
+import {
+    CALENDAR_COUNTRY_OPTIONS,
+    CALENDAR_REFRESH_MS,
+    CONTEXT_REFRESH_MS,
+    DEFAULT_ACCOUNT_MODE,
+    DEFAULT_LAYOUT,
+    DEFAULT_MARKET_PROFILE,
+    DEFAULT_WIDGETS,
+    IMPACT_LEVELS,
+    MARKETS,
+    MARKET_PROFILES,
+    NEWS_REFRESH_MS,
+    PREFS_KEY,
+    QUOTES_REFRESH_MS,
+    WIDGET_OPTIONS,
+} from './terminal-config.js';
 
 function loadPrefs() {
     try {
@@ -50,18 +33,6 @@ function savePrefs(patch) {
 }
 
 const PREFS = loadPrefs();
-const DEFAULT_LAYOUT = {
-    leftWidth: 340,
-    rightWidth: 340,
-    insightWidth: 320,
-    collapsed: {
-        left: false,
-        right: false,
-        chart: false,
-        insight: false,
-    },
-};
-
 let currentMarketProfile = PREFS.marketProfile || DEFAULT_MARKET_PROFILE;
 let currentSymbol = PREFS.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || MARKET_PROFILES[DEFAULT_MARKET_PROFILE].symbol;
 let soundEnabled = !!PREFS.soundEnabled;
@@ -92,13 +63,6 @@ let quoteSocketReconnectTimer = null;
 
 const calFilters = {
     impact: new Set(PREFS.impactFilters || IMPACT_LEVELS),
-};
-
-const MARKETS = {
-    NY: { tz: 'America/New_York', label: 'NEW YORK', open: [9, 30], close: [16, 0] },
-    LDN: { tz: 'Europe/London', label: 'LONDON', open: [8, 0], close: [16, 30] },
-    TKY: { tz: 'Asia/Tokyo', label: 'TOKYO', open: [9, 0], close: [15, 0] },
-    SYD: { tz: 'Australia/Sydney', label: 'SYDNEY', open: [10, 0], close: [16, 0] },
 };
 
 function clamp(value, min, max) {
