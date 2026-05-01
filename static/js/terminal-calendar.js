@@ -150,7 +150,7 @@ export function renderCalendar(events, meta, filters) {
                 : '';
 
             html += `
-            <div class="${rowClasses}" data-ts="${event.ts}">
+            <div class="${rowClasses}">
                 <div class="cal-event-main">
                     <div class="cal-event-top">
                         <span class="cal-time">${time}</span>
