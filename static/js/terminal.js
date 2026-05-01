@@ -382,6 +382,59 @@ function renderCalendarFilters() {
 
 function renderCalendar() {
     calendarController.render();
+    // --- Auto-scroll calendrier économique ---
+    if (!window._calendarAutoScrollSetup) {
+        window._calendarAutoScrollSetup = true;
+        let calendarAutoScroll = true;
+        let calendarAutoScrollTimer = null;
+        function scrollToNextCalendarEvent() {
+            const root = document.getElementById('calendar-content');
+            if (!root) return;
+            const now = Date.now() / 1000;
+            const rows = root.querySelectorAll('.cal-row[data-ts]');
+            let found = false;
+            for (const row of rows) {
+                const eventTs = row.dataset.ts ? parseInt(row.dataset.ts, 10) : null;
+                if (eventTs && eventTs >= now) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    found = true;
+                    break;
+                }
+            }
+            if (!found && rows.length) {
+                rows[rows.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        function enableCalendarAutoScroll() {
+            calendarAutoScroll = true;
+            scrollToNextCalendarEvent();
+        }
+        function disableCalendarAutoScroll() {
+            calendarAutoScroll = false;
+            if (calendarAutoScrollTimer) clearTimeout(calendarAutoScrollTimer);
+            calendarAutoScrollTimer = setTimeout(enableCalendarAutoScroll, 60000); // 1 min
+        }
+        const root = document.getElementById('calendar-content');
+        if (root) {
+            root.addEventListener('wheel', () => {
+                if (calendarAutoScroll) disableCalendarAutoScroll();
+            });
+            root.addEventListener('touchmove', () => {
+                if (calendarAutoScroll) disableCalendarAutoScroll();
+            });
+        }
+        // Hook sur le render pour auto-scroll
+        document.addEventListener('calendar:rendered', () => {
+            if (calendarAutoScroll) {
+                setTimeout(scrollToNextCalendarEvent, 200);
+            }
+        });
+    }
+    // Déclenche un event pour hooker l'auto-scroll
+    setTimeout(() => {
+        const evt = new Event('calendar:rendered');
+        document.dispatchEvent(evt);
+    }, 0);
 }
 
 async function fetchCalendar(scheduleNext = true) {
