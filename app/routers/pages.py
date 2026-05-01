@@ -190,7 +190,7 @@ def content_page(page_key: str) -> str:
         for title, copy in page["sections"]
     )
     links = "\n".join(
-        f'<a class="landing-secondary" href="{escape(href, quote=True)}">{escape(label)}</a>'
+        f'<a class="resource-link-button" href="{escape(href, quote=True)}">{escape(label)}</a>'
         for href, label in page["links"]
     )
     related_links = ", ".join(label for _, label in page["links"])

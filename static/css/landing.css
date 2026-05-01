@@ -206,6 +206,28 @@
     color: #eef3fb;
 }
 
+.resource-link-button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(0, 242, 173, 0.26);
+    border-radius: 4px;
+    background: rgba(0, 242, 173, 0.06);
+    color: var(--buy);
+    font-family: "Courier New", monospace;
+    font-size: 13px;
+    font-weight: 900;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.resource-link-button:hover {
+    border-color: rgba(0, 242, 173, 0.52);
+    background: rgba(0, 242, 173, 0.11);
+    color: #eef3fb;
+}
+
 .landing-proof {
     gap: 8px;
     flex-wrap: wrap;
