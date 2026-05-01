@@ -177,6 +177,7 @@ RESOURCE_PAGE_ORDER = [
 
 def content_page(page_key: str) -> str:
     page = SEO_CONTENT_PAGES[page_key]
+    prefix = f"seo_{page_key}"
     canonical = absolute_url(page["path"])
     escaped_title = escape(page["title"], quote=True)
     escaped_description = escape(page["description"], quote=True)
@@ -184,14 +185,14 @@ def content_page(page_key: str) -> str:
     escaped_intro = escape(page["intro"])
     sections = "\n".join(
         f"""        <section>
-            <h2>{escape(title)}</h2>
-            <p>{escape(copy)}</p>
+            <h2 data-i18n="{prefix}_section{index}_title">{escape(title)}</h2>
+            <p data-i18n="{prefix}_section{index}_copy">{escape(copy)}</p>
         </section>"""
-        for title, copy in page["sections"]
+        for index, (title, copy) in enumerate(page["sections"], start=1)
     )
     links = "\n".join(
-        f'<a class="resource-link-button" href="{escape(href, quote=True)}">{escape(label)}</a>'
-        for href, label in page["links"]
+        f'<a class="resource-link-button" href="{escape(href, quote=True)}" data-i18n="{prefix}_link{index}">{escape(label)}</a>'
+        for index, (href, label) in enumerate(page["links"], start=1)
     )
     related_links = ", ".join(label for _, label in page["links"])
     structured_data = json.dumps(
@@ -221,14 +222,14 @@ def content_page(page_key: str) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{escaped_title}</title>
-    <meta name="description" content="{escaped_description}">
+    <title data-i18n="{prefix}_title">{escaped_title}</title>
+    <meta name="description" content="{escaped_description}" data-i18n-content="{prefix}_description">
     <link rel="canonical" href="{canonical}">
     <meta name="robots" content="index,follow">
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="XAUTERMINAL">
-    <meta property="og:title" content="{escaped_title}">
-    <meta property="og:description" content="{escaped_description}">
+    <meta property="og:title" content="{escaped_title}" data-i18n-content="{prefix}_title">
+    <meta property="og:description" content="{escaped_description}" data-i18n-content="{prefix}_description">
     <meta property="og:url" content="{canonical}">
     <meta name="twitter:card" content="summary">
     <link rel="stylesheet" href="/static/styles.css">
@@ -241,34 +242,36 @@ def content_page(page_key: str) -> str:
             <span>XAUTERMINAL</span>
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
-            <a href="/#features">Outils</a>
-            <a href="/#pricing">Formules</a>
-            <a href="/terminal">Ouvrir le terminal</a>
+            <a href="/#features" data-i18n="nav_tools">Outils</a>
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
     </header>
     <main class="legal-page">
-        <div class="landing-kicker">{escape(page["kicker"])}</div>
-        <h1>{escaped_h1}</h1>
-        <p>{escaped_intro}</p>
+        <div class="landing-kicker" data-i18n="{prefix}_kicker">{escape(page["kicker"])}</div>
+        <h1 data-i18n="{prefix}_h1">{escaped_h1}</h1>
+        <p data-i18n="{prefix}_intro">{escaped_intro}</p>
 {sections}
         <section class="legal-contact">
-            <h2>Continuer avec XAUTERMINAL</h2>
-            <p>Ces ressources sont pensées pour être utilisées ensemble: contexte macro, calendrier économique, news filtrées et charting. Elles complètent le terminal sans constituer un conseil financier.</p>
+            <h2 data-i18n="seo_continue_title">Continuer avec XAUTERMINAL</h2>
+            <p data-i18n="seo_continue_copy">Ces ressources sont pensées pour être utilisées ensemble: contexte macro, calendrier économique, news filtrées et charting. Elles complètent le terminal sans constituer un conseil financier.</p>
             <div class="landing-actions">{links}</div>
         </section>
     </main>
     <footer class="landing-footer">
         <div>
             <strong>XAUTERMINAL</strong>
-            <span>Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
         </div>
         <nav aria-label="Ressources">
-            <a href="/terminal-xauusd">XAU/USD</a>
-            <a href="/calendrier-economique-or">Calendrier or</a>
-            <a href="/news-forex-or">News forex</a>
-            <a href="/guide/trading-or-macro">Guide macro</a>
+            <a href="/terminal-xauusd" data-i18n="resource_terminal_short">XAU/USD</a>
+            <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
+            <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
+            <a href="/guide/trading-or-macro" data-i18n="resource_guide_short">Guide macro</a>
         </nav>
     </footer>
+    <script src="/static/landing.js"></script>
 </body>
 </html>"""
 
@@ -278,10 +281,10 @@ def resources_page() -> str:
     rows = "\n".join(
         f"""        <article class="resource-row">
             <div>
-                <h2><a href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}">{escape(SEO_CONTENT_PAGES[key]["h1"])}</a></h2>
-                <p>{escape(SEO_CONTENT_PAGES[key]["description"])}</p>
+                <h2><a href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}" data-i18n="seo_{key}_h1">{escape(SEO_CONTENT_PAGES[key]["h1"])}</a></h2>
+                <p data-i18n="seo_{key}_description">{escape(SEO_CONTENT_PAGES[key]["description"])}</p>
             </div>
-            <a class="resource-cta" href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}">Lire</a>
+            <a class="resource-cta" href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}" data-i18n="resources_page_read">Lire</a>
         </article>"""
         for key in RESOURCE_PAGE_ORDER
     )
@@ -308,14 +311,14 @@ def resources_page() -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ressources trading macro, XAU/USD et calendrier économique - XAUTERMINAL</title>
-    <meta name="description" content="Guides XAUTERMINAL pour comprendre XAU/USD, le calendrier économique de l'or, les news Forex et les principaux drivers macro.">
+    <title data-i18n="resources_page_title">Ressources trading macro, XAU/USD et calendrier économique - XAUTERMINAL</title>
+    <meta name="description" content="Guides XAUTERMINAL pour comprendre XAU/USD, le calendrier économique de l'or, les news Forex et les principaux drivers macro." data-i18n-content="resources_page_description">
     <link rel="canonical" href="{canonical}">
     <meta name="robots" content="index,follow">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="XAUTERMINAL">
-    <meta property="og:title" content="Ressources trading macro, XAU/USD et calendrier économique">
-    <meta property="og:description" content="Guides publics pour mieux lire l'or, les news macro, le calendrier économique et les drivers de marché.">
+    <meta property="og:title" content="Ressources trading macro, XAU/USD et calendrier économique" data-i18n-content="resources_page_title">
+    <meta property="og:description" content="Guides publics pour mieux lire l'or, les news macro, le calendrier économique et les drivers de marché." data-i18n-content="resources_page_description">
     <meta property="og:url" content="{canonical}">
     <meta name="twitter:card" content="summary">
     <link rel="stylesheet" href="/static/styles.css">
@@ -328,15 +331,16 @@ def resources_page() -> str:
             <span>XAUTERMINAL</span>
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
-            <a href="/#features">Outils</a>
-            <a href="/#pricing">Formules</a>
-            <a href="/terminal">Ouvrir le terminal</a>
+            <a href="/#features" data-i18n="nav_tools">Outils</a>
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
     </header>
     <main class="legal-page">
-        <div class="landing-kicker">RESSOURCES</div>
-        <h1>Ressources trading macro, XAU/USD et calendrier économique</h1>
-        <p>Ces pages expliquent les concepts réellement liés à XAUTERMINAL: lecture macro de l'or, événements économiques, news Forex et organisation d'une routine de marché. Elles servent à comprendre le produit avant de l'utiliser dans le terminal.</p>
+        <div class="landing-kicker" data-i18n="resources_kicker">RESSOURCES</div>
+        <h1 data-i18n="resources_page_h1">Ressources trading macro, XAU/USD et calendrier économique</h1>
+        <p data-i18n="resources_page_intro">Ces pages expliquent les concepts réellement liés à XAUTERMINAL: lecture macro de l'or, événements économiques, news Forex et organisation d'une routine de marché. Elles servent à comprendre le produit avant de l'utiliser dans le terminal.</p>
         <section class="resource-list">
 {rows}
         </section>
@@ -344,14 +348,15 @@ def resources_page() -> str:
     <footer class="landing-footer">
         <div>
             <strong>XAUTERMINAL</strong>
-            <span>Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
         </div>
         <nav aria-label="Documents légaux">
-            <a href="/terms">CGU</a>
-            <a href="/privacy">Confidentialité</a>
-            <a href="/risk-disclaimer">Disclaimer trading</a>
+            <a href="/terms" data-i18n="terms_kicker">CGU</a>
+            <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
+            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
         </nav>
     </footer>
+    <script src="/static/landing.js"></script>
 </body>
 </html>"""
 
@@ -425,12 +430,12 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     <footer class="landing-footer">
         <div>
             <strong>{business_name}</strong>
-            <span>Terminal macro et trading professionnel.</span>
+            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
         </div>
         <nav aria-label="Documents légaux">
-            <a href="/terms">CGU</a>
-            <a href="/privacy">Confidentialité</a>
-            <a href="/risk-disclaimer">Disclaimer trading</a>
+            <a href="/terms" data-i18n="terms_kicker">CGU</a>
+            <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
+            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
         </nav>
     </footer>
     <script src="/static/landing.js"></script>
