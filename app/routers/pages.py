@@ -167,6 +167,13 @@ SEO_CONTENT_PAGES = {
     },
 }
 
+RESOURCE_PAGE_ORDER = [
+    "terminal_xauusd",
+    "calendrier_or",
+    "news_forex_or",
+    "guide_trading_or_macro",
+]
+
 
 def content_page(page_key: str) -> str:
     page = SEO_CONTENT_PAGES[page_key]
@@ -266,6 +273,89 @@ def content_page(page_key: str) -> str:
 </html>"""
 
 
+def resources_page() -> str:
+    canonical = absolute_url("/ressources")
+    rows = "\n".join(
+        f"""        <article class="resource-row">
+            <div>
+                <h2><a href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}">{escape(SEO_CONTENT_PAGES[key]["h1"])}</a></h2>
+                <p>{escape(SEO_CONTENT_PAGES[key]["description"])}</p>
+            </div>
+            <a class="landing-secondary" href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}">Lire</a>
+        </article>"""
+        for key in RESOURCE_PAGE_ORDER
+    )
+    structured_data = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": "Ressources XAUTERMINAL",
+            "description": "Guides publics pour comprendre XAU/USD, les news macro, le calendrier économique et les drivers de l'or.",
+            "url": canonical,
+            "hasPart": [
+                {
+                    "@type": "Article",
+                    "headline": SEO_CONTENT_PAGES[key]["h1"],
+                    "url": absolute_url(SEO_CONTENT_PAGES[key]["path"]),
+                }
+                for key in RESOURCE_PAGE_ORDER
+            ],
+        },
+        ensure_ascii=False,
+    )
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ressources trading macro, XAU/USD et calendrier économique - XAUTERMINAL</title>
+    <meta name="description" content="Guides XAUTERMINAL pour comprendre XAU/USD, le calendrier économique de l'or, les news Forex et les principaux drivers macro.">
+    <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="XAUTERMINAL">
+    <meta property="og:title" content="Ressources trading macro, XAU/USD et calendrier économique">
+    <meta property="og:description" content="Guides publics pour mieux lire l'or, les news macro, le calendrier économique et les drivers de marché.">
+    <meta property="og:url" content="{canonical}">
+    <meta name="twitter:card" content="summary">
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            <span class="brand-mark"></span>
+            <span>XAUTERMINAL</span>
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/#features">Outils</a>
+            <a href="/#pricing">Formules</a>
+            <a href="/terminal">Ouvrir le terminal</a>
+        </nav>
+    </header>
+    <main class="legal-page">
+        <div class="landing-kicker">RESSOURCES</div>
+        <h1>Ressources trading macro, XAU/USD et calendrier économique</h1>
+        <p>Ces pages expliquent les concepts réellement liés à XAUTERMINAL: lecture macro de l'or, événements économiques, news Forex et organisation d'une routine de marché. Elles servent à comprendre le produit avant de l'utiliser dans le terminal.</p>
+        <section class="resource-list">
+{rows}
+        </section>
+    </main>
+    <footer class="landing-footer">
+        <div>
+            <strong>XAUTERMINAL</strong>
+            <span>Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+        </div>
+        <nav aria-label="Documents légaux">
+            <a href="/terms">CGU</a>
+            <a href="/privacy">Confidentialité</a>
+            <a href="/risk-disclaimer">Disclaimer trading</a>
+        </nav>
+    </footer>
+</body>
+</html>"""
+
+
 def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]]) -> str:
     meta = LEGAL_PAGE_META[title_key]
     business_name = LEGAL_BUSINESS_NAME
@@ -358,6 +448,11 @@ async def terminal():
     return FileResponse("templates/index.html")
 
 
+@router.get("/ressources", response_class=HTMLResponse)
+async def resources_index_page():
+    return HTMLResponse(resources_page())
+
+
 @router.get("/terminal-xauusd", response_class=HTMLResponse)
 async def terminal_xauusd_page():
     return HTMLResponse(content_page("terminal_xauusd"))
@@ -437,6 +532,7 @@ async def sitemap_xml():
     urls = [
         ("/", "daily", "1.0"),
         ("/terminal", "daily", "0.8"),
+        ("/ressources", "weekly", "0.8"),
         ("/terminal-xauusd", "weekly", "0.8"),
         ("/calendrier-economique-or", "weekly", "0.8"),
         ("/news-forex-or", "weekly", "0.8"),

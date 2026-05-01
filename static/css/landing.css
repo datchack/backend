@@ -369,6 +369,55 @@
     font-size: 18px;
 }
 
+.feature-card h3 a {
+    color: #eef3fb;
+    text-decoration: none;
+}
+
+.feature-card h3 a:hover {
+    color: var(--accent);
+}
+
+.resource-list {
+    display: grid;
+    gap: 10px;
+}
+
+.resource-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    padding: 18px;
+}
+
+.resource-row h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+}
+
+.resource-row h2 a {
+    color: #eef3fb;
+    text-decoration: none;
+}
+
+.resource-row h2 a:hover {
+    color: var(--accent);
+}
+
+.resource-row p {
+    margin: 0;
+    color: #c7ceda;
+    line-height: 1.6;
+}
+
+.resource-row .landing-secondary {
+    white-space: nowrap;
+}
+
 .landing-band.compact {
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
@@ -573,6 +622,7 @@
 
 .legal-page a {
     color: var(--buy);
+    text-decoration-color: rgba(0, 242, 173, 0.45);
 }
 
 .legal-contact {
@@ -683,3 +733,12 @@
 .landing-auth-message.ok { color: var(--buy); }
 .landing-auth-message.err { color: var(--sell); }
 
+@media (max-width: 700px) {
+    .resource-row {
+        grid-template-columns: 1fr;
+    }
+
+    .resource-row .landing-secondary {
+        width: fit-content;
+    }
+}
