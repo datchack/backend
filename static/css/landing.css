@@ -451,7 +451,9 @@
     line-height: 1.6;
 }
 
-.resource-row .landing-secondary {
+.resource-row .resource-cta {
+    justify-self: end;
+    margin-top: 0;
     white-space: nowrap;
 }
 
@@ -775,7 +777,8 @@
         grid-template-columns: 1fr;
     }
 
-    .resource-row .landing-secondary {
+    .resource-row .resource-cta {
         width: fit-content;
+        justify-self: start;
     }
 }

@@ -281,7 +281,7 @@ def resources_page() -> str:
                 <h2><a href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}">{escape(SEO_CONTENT_PAGES[key]["h1"])}</a></h2>
                 <p>{escape(SEO_CONTENT_PAGES[key]["description"])}</p>
             </div>
-            <a class="landing-secondary" href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}">Lire</a>
+            <a class="resource-cta" href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}">Lire</a>
         </article>"""
         for key in RESOURCE_PAGE_ORDER
     )
