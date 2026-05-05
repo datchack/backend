@@ -641,7 +641,17 @@ async function submitLandingAuth(event) {
         }
 
         setLandingMessage(t('auth_success'), 'ok');
-        window.location.href = '/terminal';
+        const terminalLink = document.getElementById('landing-terminal-link');
+        const loginBtn = document.querySelector('.landing-login');
+        if (terminalLink) terminalLink.classList.remove('hidden');
+        if (loginBtn) {
+            loginBtn.textContent = t('nav_account');
+            loginBtn.dataset.authMode = 'account';
+        }
+        window.setTimeout(() => {
+            closeLandingAuth();
+            setLandingMessage('');
+        }, 500);
     } catch (error) {
         setLandingMessage(error.message || t('auth_error'), 'err');
     }
