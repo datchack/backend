@@ -144,6 +144,47 @@ def stripe_object_id(value: Any) -> str | None:
     return getattr(value, "id", None)
 
 
+def stripe_object_metadata(value: Any) -> dict:
+    if not value:
+        return {}
+    if isinstance(value, dict):
+        return value.get("metadata") or {}
+    return getattr(value, "metadata", None) or {}
+
+
+def stripe_invoice_price_id(invoice: Any) -> str | None:
+    line_items = ((invoice.get("lines") or {}).get("data") or [])
+    if not line_items:
+        return None
+    price = line_items[0].get("price") or {}
+    return stripe_object_id(price)
+
+
+def retrieve_subscription(subscription_id: str | None) -> Any | None:
+    if not subscription_id:
+        return None
+    return stripe.Subscription.retrieve(subscription_id)
+
+
+def subscription_sync_data(subscription_id: str | None) -> dict:
+    subscription = retrieve_subscription(subscription_id)
+    if not subscription:
+        return {}
+
+    items = ((subscription.get("items") or {}).get("data") or [])
+    price_id = None
+    if items:
+        price_id = stripe_object_id(items[0].get("price"))
+
+    return {
+        "user_id": parse_metadata_user_id(stripe_object_metadata(subscription)),
+        "customer_id": stripe_object_id(subscription.get("customer")),
+        "subscription_id": stripe_object_id(subscription),
+        "price_id": price_id,
+        "current_period_end": iso_from_stripe_timestamp(subscription.get("current_period_end")),
+    }
+
+
 def sync_checkout_session_for_user(user_id: int, session_id: str) -> None:
     require_stripe_ready()
     checkout_session = stripe.checkout.Session.retrieve(session_id)
