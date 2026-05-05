@@ -206,7 +206,7 @@ async def account_confirm_email(payload: AccountConfirmEmailPayload, response: R
     trial_ends_at = now + timedelta(days=TRIAL_DAYS)
     execute_write(
         "UPDATE users SET email_confirmed = ?, status = ?, trial_started_at = ?, trial_ends_at = ?, email_confirmation_code = ?, email_confirmation_expires_at = ? WHERE id = ?",
-        (True, "confirmed", now.isoformat(), now.isoformat(), None, None, int(row["id"])),
+        (True, "confirmed", now.isoformat(), trial_ends_at.isoformat(), None, None, int(row["id"])),
     )
 
     token, expires_at = create_session(int(row["id"]))
