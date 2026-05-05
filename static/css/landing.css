@@ -809,7 +809,155 @@
 .landing-auth-message.ok { color: var(--buy); }
 .landing-auth-message.err { color: var(--sell); }
 
+.account-page {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: clamp(28px, 5vw, 64px) 0;
+}
+
+.account-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+}
+
+.account-head h1 {
+    margin: 8px 0 8px;
+    font-size: clamp(30px, 5vw, 54px);
+    line-height: 1;
+}
+
+.account-head p,
+.account-panel p {
+    color: #aeb6c5;
+    line-height: 1.55;
+}
+
+.account-grid {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+    gap: 12px;
+}
+
+.account-panel {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    padding: 20px;
+}
+
+.account-panel h2 {
+    margin: 8px 0 10px;
+    font-size: clamp(22px, 3vw, 32px);
+    line-height: 1.08;
+}
+
+.account-wide {
+    grid-column: 1 / -1;
+}
+
+.account-facts {
+    display: grid;
+    gap: 8px;
+    margin: 18px 0 0;
+}
+
+.account-facts div {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.account-facts dt {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.account-facts dd {
+    margin: 0;
+    color: #eef3fb;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.account-actions,
+.account-plan-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.account-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.account-form label {
+    display: grid;
+    gap: 7px;
+}
+
+.account-form label span {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.account-form input {
+    min-height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #06090d;
+    color: var(--text);
+    padding: 0 12px;
+    font: inherit;
+}
+
+.account-form input:focus {
+    outline: 1px solid var(--buy);
+    border-color: rgba(0, 242, 173, 0.5);
+}
+
+.account-form-wide,
+.account-submit {
+    grid-column: 1 / -1;
+}
+
+.account-message {
+    min-height: 20px;
+    margin-top: 12px;
+    color: var(--muted);
+    font-weight: 800;
+}
+
+.account-message.ok { color: var(--buy); }
+.account-message.err { color: var(--sell); }
+
 @media (max-width: 700px) {
+    .account-head,
+    .account-grid,
+    .account-form {
+        grid-template-columns: 1fr;
+    }
+
+    .account-head {
+        display: grid;
+        align-items: start;
+    }
+
     .resource-row {
         grid-template-columns: 1fr;
     }

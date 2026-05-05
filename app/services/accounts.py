@@ -88,6 +88,12 @@ def init_account_db() -> None:
                     "email_confirmed BOOLEAN NOT NULL DEFAULT FALSE",
                     "email_confirmation_code TEXT",
                     "email_confirmation_expires_at TEXT",
+                    "first_name TEXT NOT NULL DEFAULT ''",
+                    "last_name TEXT NOT NULL DEFAULT ''",
+                    "address_line TEXT NOT NULL DEFAULT ''",
+                    "postal_code TEXT NOT NULL DEFAULT ''",
+                    "city TEXT NOT NULL DEFAULT ''",
+                    "country TEXT NOT NULL DEFAULT ''",
                 ):
                     cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_def}")
                 cursor.execute(
@@ -136,6 +142,12 @@ def init_account_db() -> None:
             "email_confirmed INTEGER NOT NULL DEFAULT 0",
             "email_confirmation_code TEXT",
             "email_confirmation_expires_at TEXT",
+            "first_name TEXT NOT NULL DEFAULT ''",
+            "last_name TEXT NOT NULL DEFAULT ''",
+            "address_line TEXT NOT NULL DEFAULT ''",
+            "postal_code TEXT NOT NULL DEFAULT ''",
+            "city TEXT NOT NULL DEFAULT ''",
+            "country TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 conn.execute(f"ALTER TABLE users ADD COLUMN {column_def}")
@@ -294,6 +306,14 @@ def normalize_account_row(row) -> dict | None:
         "stripe_subscription_id": row["stripe_subscription_id"] if "stripe_subscription_id" in row.keys() else None,
         "stripe_price_id": row["stripe_price_id"] if "stripe_price_id" in row.keys() else None,
         "stripe_current_period_end": row["stripe_current_period_end"] if "stripe_current_period_end" in row.keys() else None,
+        "profile": {
+            "first_name": row["first_name"] if "first_name" in row.keys() else "",
+            "last_name": row["last_name"] if "last_name" in row.keys() else "",
+            "address_line": row["address_line"] if "address_line" in row.keys() else "",
+            "postal_code": row["postal_code"] if "postal_code" in row.keys() else "",
+            "city": row["city"] if "city" in row.keys() else "",
+            "country": row["country"] if "country" in row.keys() else "",
+        },
         "prefs": prefs,
     }
 

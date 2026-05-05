@@ -453,6 +453,11 @@ async def terminal():
     return FileResponse("templates/index.html")
 
 
+@router.get("/account", response_class=HTMLResponse)
+async def account_page():
+    return FileResponse("templates/account.html")
+
+
 @router.get("/ressources", response_class=HTMLResponse)
 async def resources_index_page():
     return HTMLResponse(resources_page())

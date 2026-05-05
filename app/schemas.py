@@ -17,6 +17,15 @@ class AccountResendConfirmationPayload(BaseModel):
     email: str
 
 
+class AccountProfilePayload(BaseModel):
+    first_name: str = ""
+    last_name: str = ""
+    address_line: str = ""
+    postal_code: str = ""
+    city: str = ""
+    country: str = ""
+
+
 class PreferencesPayload(BaseModel):
     prefs: dict[str, Any]
 

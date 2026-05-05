@@ -96,7 +96,7 @@ const LANDING_COPY = {
         terms_section8_title: 'Modification du service',
         terms_section8: 'Les fonctionnalités, tarifs, offres, sources de données et conditions peuvent évoluer afin d\'améliorer le produit, corriger des erreurs ou tenir compte de contraintes techniques ou commerciales.',
         privacy_section1_title: 'Données collectées',
-        privacy_section1: 'XAUTERMINAL peut collecter l\'adresse email, le mot de passe chiffré, les préférences de terminal, l\'état d\'abonnement, les identifiants Stripe nécessaires au suivi du paiement et des données techniques liées à l\'utilisation du service.',
+        privacy_section1: 'XAUTERMINAL peut collecter l\'adresse email, le mot de passe chiffré, les informations de profil renseignées volontairement comme prénom, nom et adresse, les préférences de terminal, l\'état d\'abonnement, les identifiants Stripe nécessaires au suivi du paiement et des données techniques liées à l\'utilisation du service.',
         privacy_section2_title: 'Finalités',
         privacy_section2: 'Ces données servent à créer et sécuriser le compte, gérer l\'accès au terminal, synchroniser les préférences, traiter les abonnements, améliorer le produit et assurer le support utilisateur.',
         privacy_section3_title: 'Paiements',
@@ -217,7 +217,7 @@ const LANDING_COPY = {
         terms_section8_title: 'Service Modification',
         terms_section8: 'Features, pricing, offers, data sources and conditions may change to improve the product, fix errors or address technical or commercial constraints.',
         privacy_section1_title: 'Data Collected',
-        privacy_section1: 'XAUTERMINAL may collect email address, encrypted password, terminal preferences, subscription status, Stripe identifiers needed for payment tracking and technical data related to service usage.',
+        privacy_section1: 'XAUTERMINAL may collect email address, encrypted password, profile information voluntarily entered such as first name, last name and address, terminal preferences, subscription status, Stripe identifiers needed for payment tracking and technical data related to service usage.',
         privacy_section2_title: 'Purposes',
         privacy_section2: 'This data is used to create and secure accounts, manage terminal access, sync preferences, process subscriptions, improve the product and provide user support.',
         privacy_section3_title: 'Payments',
@@ -577,7 +577,9 @@ async function fetchLandingAccount() {
             if (terminalLink) terminalLink.classList.remove('hidden');
             if (loginBtn) {
                 loginBtn.textContent = t('nav_account');
+                loginBtn.dataset.i18n = 'nav_account';
                 loginBtn.dataset.authMode = 'account';
+                loginBtn.dataset.accountLink = 'true';
             }
         }
     } catch (error) {
@@ -651,7 +653,9 @@ async function submitLandingAuth(event) {
         if (terminalLink) terminalLink.classList.remove('hidden');
         if (loginBtn) {
             loginBtn.textContent = t('nav_account');
+            loginBtn.dataset.i18n = 'nav_account';
             loginBtn.dataset.authMode = 'account';
+            loginBtn.dataset.accountLink = 'true';
         }
         window.setTimeout(() => {
             closeLandingAuth();
@@ -711,6 +715,10 @@ function bindLanding() {
 
     document.querySelectorAll('[data-auth-mode]').forEach((button) => {
         button.addEventListener('click', () => {
+            if (button.dataset.accountLink === 'true' || button.dataset.authMode === 'account') {
+                window.location.href = '/account';
+                return;
+            }
             selectedBillingPlan = null;
             openLandingAuth(button.dataset.authMode);
         });

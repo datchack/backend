@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon compte - XAUTERMINAL</title>
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="canonical" href="https://xauterminal.com/account">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="landing-body account-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            <span class="brand-mark"></span>
+            <span>XAUTERMINAL</span>
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation compte">
+            <a href="/#pricing">Formules</a>
+            <a href="/terminal">Terminal</a>
+            <button type="button" class="landing-lang" id="account-logout">Logout</button>
+        </nav>
+    </header>
+
+    <main class="account-page">
+        <section class="account-head">
+            <div>
+                <div class="landing-kicker">ESPACE COMPTE</div>
+                <h1>Mon compte XAUTERMINAL</h1>
+                <p>Gere ton profil, ton acces au terminal et ton abonnement depuis un espace dedie.</p>
+            </div>
+            <a class="resource-cta" href="/terminal">Ouvrir le terminal</a>
+        </section>
+
+        <section class="account-panel account-auth-state hidden" id="account-login-state">
+            <div>
+                <div class="landing-kicker">CONNEXION REQUISE</div>
+                <h2>Connecte-toi pour acceder a ton espace compte.</h2>
+                <p>Reviens sur la landing pour ouvrir la connexion, puis le bouton Connexion deviendra Mon compte.</p>
+            </div>
+            <a class="resource-cta" href="/">Retour landing</a>
+        </section>
+
+        <section class="account-grid hidden" id="account-dashboard">
+            <article class="account-panel account-status-panel">
+                <div class="landing-kicker">STATUT</div>
+                <h2 id="account-status-title">Chargement...</h2>
+                <p id="account-status-copy">Verification de ton acces.</p>
+                <dl class="account-facts">
+                    <div><dt>Email</dt><dd id="account-email">-</dd></div>
+                    <div><dt>Plan</dt><dd id="account-plan">-</dd></div>
+                    <div><dt>Acces</dt><dd id="account-access">-</dd></div>
+                    <div><dt>Fin d'essai</dt><dd id="account-trial-end">-</dd></div>
+                </dl>
+                <div class="account-actions">
+                    <button type="button" class="resource-link-button" id="account-portal">Gerer Stripe</button>
+                    <a class="resource-link-button" href="/terminal">Terminal</a>
+                </div>
+            </article>
+
+            <article class="account-panel">
+                <div class="landing-kicker">PROFIL</div>
+                <h2>Informations personnelles</h2>
+                <form class="account-form" id="account-profile-form">
+                    <label>
+                        <span>Prenom</span>
+                        <input id="profile-first-name" name="first_name" type="text" autocomplete="given-name">
+                    </label>
+                    <label>
+                        <span>Nom</span>
+                        <input id="profile-last-name" name="last_name" type="text" autocomplete="family-name">
+                    </label>
+                    <label class="account-form-wide">
+                        <span>Adresse</span>
+                        <input id="profile-address-line" name="address_line" type="text" autocomplete="street-address">
+                    </label>
+                    <label>
+                        <span>Code postal</span>
+                        <input id="profile-postal-code" name="postal_code" type="text" autocomplete="postal-code">
+                    </label>
+                    <label>
+                        <span>Ville</span>
+                        <input id="profile-city" name="city" type="text" autocomplete="address-level2">
+                    </label>
+                    <label>
+                        <span>Pays</span>
+                        <input id="profile-country" name="country" type="text" autocomplete="country-name">
+                    </label>
+                    <button type="submit" class="resource-cta account-submit">Enregistrer</button>
+                </form>
+                <div class="account-message" id="account-message"></div>
+            </article>
+
+            <article class="account-panel account-wide">
+                <div class="landing-kicker">ABONNEMENT</div>
+                <h2>Choisir ou modifier une formule</h2>
+                <p>Si ton email est confirme, choisis une formule pour passer par Stripe. La gestion des moyens de paiement, factures et annulation se fait ensuite via le portail Stripe.</p>
+                <div class="account-plan-actions">
+                    <button type="button" class="resource-cta" data-account-plan="monthly">Mensuel</button>
+                    <button type="button" class="resource-cta" data-account-plan="yearly">Annuel</button>
+                    <button type="button" class="resource-cta" data-account-plan="lifetime">Lifetime</button>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <script src="/static/account.js"></script>
+</body>
+</html>

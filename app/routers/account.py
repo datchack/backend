@@ -9,6 +9,7 @@ from app.preferences import validate_preferences_payload
 from app.schemas import (
     AccountAuthPayload,
     AccountConfirmEmailPayload,
+    AccountProfilePayload,
     AccountResendConfirmationPayload,
     PreferencesPayload,
 )
@@ -254,6 +255,41 @@ async def account_logout(request: Request, response: Response):
 async def account_preferences(request: Request):
     user = require_user(request)
     return {"prefs": user["prefs"]}
+
+
+def clean_profile_value(value: str, limit: int = 120) -> str:
+    return value.strip()[:limit]
+
+
+@router.put("/api/account/profile")
+async def account_profile(payload: AccountProfilePayload, request: Request):
+    user = require_user(request)
+    profile = {
+        "first_name": clean_profile_value(payload.first_name, 80),
+        "last_name": clean_profile_value(payload.last_name, 80),
+        "address_line": clean_profile_value(payload.address_line, 180),
+        "postal_code": clean_profile_value(payload.postal_code, 32),
+        "city": clean_profile_value(payload.city, 80),
+        "country": clean_profile_value(payload.country, 80),
+    }
+    execute_write(
+        """
+        UPDATE users
+        SET first_name = ?, last_name = ?, address_line = ?, postal_code = ?, city = ?, country = ?
+        WHERE id = ?
+        """,
+        (
+            profile["first_name"],
+            profile["last_name"],
+            profile["address_line"],
+            profile["postal_code"],
+            profile["city"],
+            profile["country"],
+            int(user["id"]),
+        ),
+    )
+    updated = execute_one("SELECT * FROM users WHERE id = ?", (int(user["id"]),))
+    return {"account": normalize_account_row(updated)}
 
 
 @router.get("/api/test-email-config")
