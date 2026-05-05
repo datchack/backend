@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import os
+
 import resend
 
 from app.config import EMAIL_CONFIRMATION_REQUIRED, EMAIL_FROM_ADDRESS
 
-resend.api_key = os.getenv("re_i1pW2uyQ_CEdxGREP7eph5AeGGRAmvuuN")
+
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+resend.api_key = RESEND_API_KEY or None
 
 
 def is_email_confirmation_enabled() -> bool:
-    return EMAIL_CONFIRMATION_REQUIRED and bool(
-        resend.api_key and EMAIL_FROM_ADDRESS
-    )
+    return EMAIL_CONFIRMATION_REQUIRED and bool(resend.api_key and EMAIL_FROM_ADDRESS)
 
 
 def send_email(
@@ -20,26 +21,24 @@ def send_email(
     text_body: str,
     html_body: str | None = None,
 ) -> None:
-    if not is_email_confirmation_enabled():
-        print("EMAIL désactivé ou Resend mal configuré", flush=True)
+    if not EMAIL_CONFIRMATION_REQUIRED:
         return
+    if not resend.api_key or not EMAIL_FROM_ADDRESS:
+        raise RuntimeError(
+            "Email confirmation is enabled but RESEND_API_KEY or EMAIL_FROM_ADDRESS is missing."
+        )
 
-    try:
-        print("Envoi email via Resend...", flush=True)
-
-        resend.Emails.send({
+    print("Envoi email via Resend...", flush=True)
+    resend.Emails.send(
+        {
             "from": EMAIL_FROM_ADDRESS,
             "to": [to_email],
             "subject": subject,
             "html": html_body if html_body else f"<pre>{text_body}</pre>",
             "text": text_body,
-        })
-
-        print("✅ Email envoyé via Resend", flush=True)
-
-    except Exception as e:
-        print("❌ ERREUR RESEND:", repr(e), flush=True)
-        return
+        }
+    )
+    print("✅ Email envoyé via Resend", flush=True)
 
 
 def send_confirmation_email(email: str, code: str) -> None:

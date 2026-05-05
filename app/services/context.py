@@ -141,6 +141,7 @@ def evaluate_driver(
     bearish_note: str,
     neutral_note: str,
 ) -> dict:
+    """Score a market driver contribution toward directional bias."""
     magnitude = abs(change_pct)
     if magnitude >= strong_threshold:
         intensity = 1.0

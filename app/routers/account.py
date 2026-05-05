@@ -267,6 +267,7 @@ async def test_email_config():
         EMAIL_FROM_ADDRESS,
         EMAIL_CONFIRMATION_REQUIRED,
     )
+    from app.services.email import RESEND_API_KEY
     from app.services.email import is_email_confirmation_enabled
 
     return {
@@ -276,5 +277,6 @@ async def test_email_config():
         "EMAIL_SMTP_USER": bool(EMAIL_SMTP_USER),
         "EMAIL_SMTP_PASSWORD": bool(EMAIL_SMTP_PASSWORD),
         "EMAIL_FROM_ADDRESS": EMAIL_FROM_ADDRESS,
+        "RESEND_API_KEY": bool(RESEND_API_KEY),
         "is_email_enabled": is_email_confirmation_enabled(),
     }
