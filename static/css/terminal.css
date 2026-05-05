@@ -1717,3 +1717,148 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
         grid-template-columns: var(--rail-width) var(--splitter-size) minmax(0, 1fr) var(--splitter-size) var(--rail-width);
     }
 }
+
+
+@media (max-width: 768px) {
+    body {
+        height: auto;
+        min-height: 100dvh;
+        grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+        font-size: 12px;
+    }
+
+    .ticker-tape {
+        height: 38px;
+    }
+
+    .top-bar,
+    .header,
+    .main-layout {
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+
+    .cmd-bar {
+        height: 34px;
+        padding: 0 8px;
+    }
+
+    .cmd-bar .hint {
+        display: none;
+    }
+
+    .header {
+        grid-template-columns: 1fr;
+    }
+
+    .qcard {
+        height: auto;
+        min-height: 76px;
+        padding: 8px 10px;
+    }
+
+    .quote-price {
+        font-size: clamp(18px, 7vw, 22px);
+    }
+
+    .main-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 0;
+    }
+
+    .layout-splitter,
+    .panel-rail,
+    .inner-splitter {
+        display: none !important;
+    }
+
+    .col,
+    .col-left,
+    .col-center,
+    .col-right {
+        min-height: 0;
+        height: auto;
+    }
+
+    .scroll {
+        max-height: 42dvh;
+    }
+
+    .center-shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .chart-surface {
+        min-height: 280px;
+        height: 44dvh;
+    }
+
+    .insight-panel {
+        min-height: 280px;
+    }
+
+    .desk-grid {
+        display: block;
+    }
+
+    .status-bar {
+        position: sticky;
+        bottom: 0;
+        z-index: 50;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+        padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    }
+
+    .status-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .status-group-left .status-item:nth-child(n+2),
+    .status-group-right .status-select-wrap,
+    #layout-reset-status,
+    #customize-toggle {
+        display: none;
+    }
+
+    .account-panel,
+    .customize-panel {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: calc(52px + env(safe-area-inset-bottom));
+        max-height: 72dvh;
+        overflow: auto;
+        width: auto;
+        z-index: 70;
+    }
+
+    .account-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .access-gate {
+        padding: 12px;
+        align-items: flex-start;
+        overflow: auto;
+    }
+
+    .access-card {
+        margin-top: 8px;
+        padding: 16px;
+    }
+
+    .access-card h1 {
+        font-size: 22px;
+    }
+}
