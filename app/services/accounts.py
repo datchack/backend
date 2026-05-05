@@ -1,408 +1,352 @@
-from __future__ import annotations
+from datetime import datetime, timedelta
 
-from datetime import datetime, timedelta, timezone
-import hashlib
-import json
-import secrets
-import sqlite3
-import time
+from fastapi import APIRouter, Request, Response, HTTPException
 
-from fastapi import HTTPException, Request, Response
-
-from app.config import (
-    ACCOUNT_DB_BACKEND,
-    ACCOUNT_DB_PATH,
-    AUTH_RATE_LIMIT_MAX,
-    DATABASE_URL,
-    EMAIL_CONFIRMATION_EXPIRES_HOURS,
-    EMAIL_CONFIRMATION_REQUIRED,
-    IS_PRODUCTION,
-    OWNER_EMAILS,
-    OWNER_PASSWORD,
-    RATE_LIMIT_WINDOW_SECONDS,
-    SESSION_COOKIE,
+from app.config import ACCOUNT_DB_BACKEND, EMAIL_CONFIRMATION_REQUIRED, SESSION_COOKIE, TRIAL_DAYS
+from app.preferences import validate_preferences_payload
+from app.schemas import (
+    AccountAuthPayload,
+    AccountConfirmEmailPayload,
+    AccountResendConfirmationPayload,
+    PreferencesPayload,
 )
+from app.services.accounts import (
+    check_rate_limit,
+    clear_session,
+    client_ip,
+    create_session,
+    db_integrity_errors,
+    email_confirmation_expires_at,
+    execute_one,
+    execute_write,
+    generate_email_confirmation_code,
+    get_user_by_session,
+    hash_password,
+    normalize_account_row,
+    require_user,
+    set_session_cookie,
+    utc_now,
+    verify_password,
+)
+from app.services.email import send_confirmation_email, is_email_confirmation_enabled
 
-try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-except ImportError:
-    psycopg2 = None
-    RealDictCursor = None
-
-
-_rate_limits: dict[str, list[float]] = {}
-
-
-def get_db_connection():
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL n'est pas configurée")
-    if psycopg2 is None:
-        raise RuntimeError("psycopg2 n'est pas installe")
-
-    return psycopg2.connect(
-        DATABASE_URL,
-        sslmode="require",
-    )
-
-
-def db_connection():
-    if DATABASE_URL:
-        if psycopg2 is None:
-            raise RuntimeError("psycopg2 n'est pas installe")
-        return psycopg2.connect(
-            DATABASE_URL,
-            sslmode="require",
-            cursor_factory=RealDictCursor,
-        )
-
-    conn = sqlite3.connect(ACCOUNT_DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+router = APIRouter()
 
 
-def db_integrity_errors() -> tuple[type[Exception], ...]:
-    errors: tuple[type[Exception], ...] = (sqlite3.IntegrityError,)
-    if psycopg2 is not None:
-        errors = errors + (psycopg2.IntegrityError,)
-    return errors
+@router.get("/api/account/me")
+async def account_me(request: Request):
+    user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
+    return {"authenticated": bool(user), "account": user}
 
 
-def init_account_db() -> None:
-    if ACCOUNT_DB_BACKEND == "postgres":
-        with db_connection() as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS users (
-                        id SERIAL PRIMARY KEY,
-                        email TEXT NOT NULL UNIQUE,
-                        password_hash TEXT NOT NULL,
-                        created_at TEXT NOT NULL,
-                        trial_started_at TEXT NOT NULL,
-                        trial_ends_at TEXT NOT NULL,
-                        plan TEXT NOT NULL DEFAULT 'trial',
-                        status TEXT NOT NULL DEFAULT 'trialing',
-                        email_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
-                        email_confirmation_code TEXT,
-                        email_confirmation_expires_at TEXT,
-                        prefs_json TEXT NOT NULL DEFAULT '{}'
-                    )
-                    """
-                )
-                for column_def in (
-                    "stripe_customer_id TEXT",
-                    "stripe_subscription_id TEXT",
-                    "stripe_price_id TEXT",
-                    "stripe_checkout_session_id TEXT",
-                    "stripe_current_period_end TEXT",
-                    "email_confirmed BOOLEAN DEFAULT FALSE",
-                    "email_confirmation_code TEXT",
-                    "email_confirmation_expires_at TEXT",
-                ):
-                    cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_def}")
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS sessions (
-                        token TEXT PRIMARY KEY,
-                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                        created_at TEXT NOT NULL,
-                        expires_at TEXT NOT NULL
-                    )
-                    """
-                )
-        seed_owner_accounts()
-        return
+@router.post("/api/account/register")
+async def account_register(payload: AccountAuthPayload, response: Response, request: Request):
+    email = payload.email.strip().lower()
+    password = payload.password.strip()
+    check_rate_limit(f"register:{client_ip(request)}")
+    check_rate_limit(f"register-email:{email}", limit=4)
 
-    with db_connection() as conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                trial_started_at TEXT NOT NULL,
-                trial_ends_at TEXT NOT NULL,
-                plan TEXT NOT NULL DEFAULT 'trial',
-                status TEXT NOT NULL DEFAULT 'trialing',
-                email_confirmed INTEGER NOT NULL DEFAULT 0,
-                email_confirmation_code TEXT,
-                email_confirmation_expires_at TEXT,
-                prefs_json TEXT NOT NULL DEFAULT '{}'
-            );
-
-            CREATE TABLE IF NOT EXISTS sessions (
-                token TEXT PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
-            """
-        )
-        for column_def in (
-            "stripe_customer_id TEXT",
-            "stripe_subscription_id TEXT",
-            "stripe_price_id TEXT",
-            "stripe_checkout_session_id TEXT",
-            "stripe_current_period_end TEXT",
-            "email_confirmed INTEGER DEFAULT 0",
-            "email_confirmation_code TEXT",
-            "email_confirmation_expires_at TEXT",
-        ):
-            try:
-                conn.execute(f"ALTER TABLE users ADD COLUMN {column_def}")
-            except sqlite3.OperationalError as exc:
-                if "duplicate column" not in str(exc).lower():
-                    raise
-    seed_owner_accounts()
-
-
-def execute_one(query: str, params: tuple = ()) -> dict | sqlite3.Row | None:
-    with db_connection() as conn:
-        if ACCOUNT_DB_BACKEND == "postgres":
-            with conn.cursor() as cursor:
-                cursor.execute(query.replace("?", "%s"), params)
-                return cursor.fetchone()
-        return conn.execute(query, params).fetchone()
-
-
-def execute_all(query: str, params: tuple = ()) -> list[dict | sqlite3.Row]:
-    with db_connection() as conn:
-        if ACCOUNT_DB_BACKEND == "postgres":
-            with conn.cursor() as cursor:
-                cursor.execute(query.replace("?", "%s"), params)
-                return list(cursor.fetchall())
-        return list(conn.execute(query, params).fetchall())
-
-
-def execute_write(query: str, params: tuple = (), *, returning: bool = False):
-    with db_connection() as conn:
-        if ACCOUNT_DB_BACKEND == "postgres":
-            with conn.cursor() as cursor:
-                cursor.execute(query.replace("?", "%s"), params)
-                return cursor.fetchone() if returning else None
-        cursor = conn.execute(query, params)
-        return cursor.lastrowid if returning else None
-
-
-def seed_owner_accounts() -> None:
-    if not OWNER_EMAILS or not OWNER_PASSWORD:
-        return
+    if "@" not in email or "." not in email:
+        raise HTTPException(status_code=400, detail="Email invalide")
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Mot de passe trop court")
 
     created_at = utc_now()
-    trial_ends_at = created_at + timedelta(days=365 * 100)
-    for email in OWNER_EMAILS:
-        existing = execute_one("SELECT id FROM users WHERE email = ?", (email,))
-        if existing:
-            execute_write(
-                "UPDATE users SET password_hash = ?, plan = ?, status = ?, email_confirmed = ? WHERE email = ?",
-                (hash_password(OWNER_PASSWORD), "owner", "active", True, email),
+    trial_start = created_at
+    trial_end = created_at if EMAIL_CONFIRMATION_REQUIRED else created_at + timedelta(days=TRIAL_DAYS)
+    code = generate_email_confirmation_code() if EMAIL_CONFIRMATION_REQUIRED else None
+    expires_at = email_confirmation_expires_at() if EMAIL_CONFIRMATION_REQUIRED else None
+    status = "pending" if EMAIL_CONFIRMATION_REQUIRED else "trialing"
+
+    try:
+        if ACCOUNT_DB_BACKEND == "postgres":
+            inserted = execute_write(
+                """
+                INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, status, email_confirmed, email_confirmation_code, email_confirmation_expires_at, prefs_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                RETURNING id
+                """,
+                (
+                    email,
+                    hash_password(password),
+                    created_at.isoformat(),
+                    trial_start.isoformat(),
+                    trial_end.isoformat(),
+                    status,
+                    False,
+                    code,
+                    expires_at,
+                    "{}",
+                ),
+                returning=True,
             )
-            continue
+            user_id = int(inserted["id"])
+        else:
+            user_id = int(
+                execute_write(
+                    """
+                    INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, status, email_confirmed, email_confirmation_code, email_confirmation_expires_at, prefs_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        email,
+                        hash_password(password),
+                        created_at.isoformat(),
+                        trial_start.isoformat(),
+                        trial_end.isoformat(),
+                        status,
+                        False,
+                        code,
+                        expires_at,
+                        "{}",
+                    ),
+                    returning=True,
+                )
+            )
+    except db_integrity_errors() as exc:
+        existing = execute_one("SELECT * FROM users WHERE email = ?", (email,))
 
-        execute_write(
-            """
-            INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, plan, status, email_confirmed, prefs_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                email,
-                hash_password(OWNER_PASSWORD),
-                created_at.isoformat(),
-                created_at.isoformat(),
-                trial_ends_at.isoformat(),
-                "owner",
-                "active",
-                True,
-                "{}",
-            ),
-        )
+        if existing and verify_password(password, existing["password_hash"]):
+            if EMAIL_CONFIRMATION_REQUIRED and (
+                "email_confirmed" not in existing.keys() or not existing["email_confirmed"]
+            ):
+                code = generate_email_confirmation_code()
+                expires_at = email_confirmation_expires_at()
 
+                execute_write(
+                    "UPDATE users SET email_confirmation_code = ?, email_confirmation_expires_at = ? WHERE id = ?",
+                    (code, expires_at, int(existing["id"])),
+                )
 
-def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+                send_confirmation_email(email, code)
 
+                token, session_expires_at = create_session(int(existing["id"]))
+                set_session_cookie(response, token, session_expires_at)
 
-def generate_email_confirmation_code() -> str:
-    return ''.join(secrets.choice('0123456789') for _ in range(6))
+                updated = execute_one("SELECT * FROM users WHERE id = ?", (int(existing["id"]),))
+                return {
+                    "authenticated": True,
+                    "pending": True,
+                    "account": normalize_account_row(updated),
+                    "existing": True,
+                    "message": "Compte existant non confirme. Un nouveau code de confirmation a ete envoye par email.",
+                }
 
+            token, session_expires_at = create_session(int(existing["id"]))
+            set_session_cookie(response, token, session_expires_at)
+            return {
+                "authenticated": True,
+                "account": normalize_account_row(existing),
+                "existing": True,
+            }
 
-def email_confirmation_expires_at() -> str:
-    return (utc_now() + timedelta(hours=EMAIL_CONFIRMATION_EXPIRES_HOURS)).isoformat()
+        raise HTTPException(
+            status_code=409,
+            detail="Compte deja existant. Connecte-toi avec ce compte pour reprendre le paiement.",
+        ) from exc
 
+    if EMAIL_CONFIRMATION_REQUIRED:
+        send_confirmation_email(email, code)
 
-def is_owner_row(row) -> bool:
-    email = str(row["email"]).strip().lower()
-    return email in OWNER_EMAILS or row["plan"] == "owner" or (not OWNER_EMAILS and int(row["id"]) == 1)
+    token, session_expires_at = create_session(user_id)
+    set_session_cookie(response, token, session_expires_at)
 
-
-def derive_access_state(row) -> tuple[str, str, bool, bool, int]:
-    if is_owner_row(row):
-        return "owner", "owner", True, True, 999
-
-    if "email_confirmed" not in row.keys() or not row["email_confirmed"]:
-        return "pending", "pending", False, False, 0
-
-    if row.get("status") in {"confirmed", "pending_payment"}:
-        return "confirmed", "confirmed", False, False, 0
-
-    trial_ends_at = datetime.fromisoformat(row["trial_ends_at"])
-    now = utc_now()
-    trial_active = trial_ends_at > now
-    trial_days_left = max(0, int(((trial_ends_at - now).total_seconds() + 86399) // 86400))
-
-    if row["plan"] == "active" or row["status"] == "active":
-        return "member", "active", True, trial_active, trial_days_left
-    if trial_active:
-        return "trial", "trialing", True, True, trial_days_left
-    return "expired", "expired", False, False, 0
-
-
-def hash_password(password: str, salt: str | None = None) -> str:
-    actual_salt = salt or secrets.token_hex(16)
-    digest = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        actual_salt.encode("utf-8"),
-        200_000,
-    ).hex()
-    return f"{actual_salt}${digest}"
-
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    try:
-        salt, expected = stored_hash.split("$", 1)
-    except ValueError:
-        return False
-    candidate = hash_password(password, salt).split("$", 1)[1]
-    return secrets.compare_digest(candidate, expected)
-
-
-def normalize_account_row(row) -> dict | None:
-    if row is None:
-        return None
-
-    role, status, has_access, trial_active, days_left = derive_access_state(row)
-    prefs = {}
-    try:
-        prefs = json.loads(row["prefs_json"] or "{}")
-    except json.JSONDecodeError:
-        prefs = {}
+    row = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    account = normalize_account_row(row)
 
     return {
-        "id": row["id"],
-        "email": row["email"],
-        "created_at": row["created_at"],
-        "plan": row["plan"],
-        "status": status,
-        "role": role,
-        "has_access": has_access,
-        "trial_started_at": row["trial_started_at"],
-        "trial_ends_at": row["trial_ends_at"],
-        "trial_active": trial_active,
-        "trial_days_left": days_left,
-        "email_confirmed": bool(row["email_confirmed"]) if "email_confirmed" in row.keys() else False,
-        "stripe_customer_id": row["stripe_customer_id"] if "stripe_customer_id" in row.keys() else None,
-        "stripe_subscription_id": row["stripe_subscription_id"] if "stripe_subscription_id" in row.keys() else None,
-        "stripe_price_id": row["stripe_price_id"] if "stripe_price_id" in row.keys() else None,
-        "stripe_current_period_end": row["stripe_current_period_end"] if "stripe_current_period_end" in row.keys() else None,
-        "prefs": prefs,
+        "authenticated": True,
+        "pending": EMAIL_CONFIRMATION_REQUIRED,
+        "account": account,
+        "message": "Un code de confirmation a ete envoye par email." if EMAIL_CONFIRMATION_REQUIRED else "Compte cree avec essai actif.",
     }
 
 
-def create_session(user_id: int) -> tuple[str, str]:
-    token = secrets.token_urlsafe(32)
-    expires_at = utc_now() + timedelta(days=30)
+@router.post("/api/account/login")
+async def account_login(payload: AccountAuthPayload, response: Response, request: Request):
+    email = payload.email.strip().lower()
+    password = payload.password
+
+    check_rate_limit(f"login:{client_ip(request)}")
+    check_rate_limit(f"login-email:{email}", limit=8)
+
+    if "@" not in email or "." not in email:
+        raise HTTPException(status_code=400, detail="Email invalide")
+
+    row = execute_one("SELECT * FROM users WHERE email = ?", (email,))
+
+    if not row or not verify_password(password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Identifiants invalides")
+
+    if EMAIL_CONFIRMATION_REQUIRED and (
+        "email_confirmed" not in row.keys() or not row["email_confirmed"]
+    ):
+        code = generate_email_confirmation_code()
+        expires_at = email_confirmation_expires_at()
+
+        execute_write(
+            "UPDATE users SET email_confirmation_code = ?, email_confirmation_expires_at = ? WHERE id = ?",
+            (code, expires_at, int(row["id"])),
+        )
+
+        send_confirmation_email(email, code)
+
+        token, session_expires_at = create_session(int(row["id"]))
+        set_session_cookie(response, token, session_expires_at)
+
+        updated = execute_one("SELECT * FROM users WHERE id = ?", (int(row["id"]),))
+
+        return {
+            "authenticated": True,
+            "pending": True,
+            "account": normalize_account_row(updated),
+            "message": "Un nouveau code de confirmation a ete envoye par email.",
+        }
+
+    token, session_expires_at = create_session(int(row["id"]))
+    set_session_cookie(response, token, session_expires_at)
+
+    return {
+        "authenticated": True,
+        "account": normalize_account_row(row),
+    }
+
+
+@router.post("/api/account/confirm-email")
+async def account_confirm_email(payload: AccountConfirmEmailPayload, response: Response, request: Request):
+    email = payload.email.strip().lower()
+    code = payload.code.strip()
+
+    check_rate_limit(f"confirm-email:{client_ip(request)}")
+    check_rate_limit(f"confirm-email-email:{email}", limit=6)
+
+    if not email or not code:
+        raise HTTPException(status_code=400, detail="Email ou code manquant")
+
+    row = execute_one("SELECT * FROM users WHERE email = ?", (email,))
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Compte introuvable")
+
+    if "email_confirmed" in row.keys() and row["email_confirmed"]:
+        return {
+            "authenticated": True,
+            "account": normalize_account_row(row),
+            "message": "Email deja confirme.",
+        }
+
+    if str(row["email_confirmation_code"] or "").strip() != code:
+        raise HTTPException(status_code=400, detail="Code de confirmation invalide")
+
+    expires_at = row["email_confirmation_expires_at"]
+
+    if not expires_at or datetime.fromisoformat(expires_at) <= utc_now():
+        raise HTTPException(status_code=400, detail="Code de confirmation expire")
+
+    now = utc_now()
+    trial_ends_at = now + timedelta(days=TRIAL_DAYS)
+
     execute_write(
-        "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
-        (token, user_id, utc_now().isoformat(), expires_at.isoformat()),
-    )
-    return token, expires_at.isoformat()
-
-
-def get_user_by_session(token: str | None) -> dict | None:
-    if not token:
-        return None
-
-    row = execute_one(
         """
-        SELECT users.*
-        FROM sessions
-        JOIN users ON users.id = sessions.user_id
-        WHERE sessions.token = ?
+        UPDATE users
+        SET email_confirmed = ?,
+            status = ?,
+            trial_started_at = ?,
+            trial_ends_at = ?,
+            email_confirmation_code = ?,
+            email_confirmation_expires_at = ?
+        WHERE id = ?
         """,
-        (token,),
+        (
+            True,
+            "trialing",
+            now.isoformat(),
+            trial_ends_at.isoformat(),
+            None,
+            None,
+            int(row["id"]),
+        ),
     )
-    session_row = execute_one(
-        "SELECT expires_at FROM sessions WHERE token = ?",
-        (token,),
+
+    token, session_expires_at = create_session(int(row["id"]))
+    set_session_cookie(response, token, session_expires_at)
+
+    updated = execute_one("SELECT * FROM users WHERE id = ?", (int(row["id"]),))
+    account = normalize_account_row(updated)
+
+    return {
+        "authenticated": True,
+        "account": account,
+        "message": "Email confirme. Ton essai commence.",
+    }
+
+
+@router.post("/api/account/resend-confirmation")
+async def account_resend_confirmation(payload: AccountResendConfirmationPayload, request: Request):
+    email = payload.email.strip().lower()
+
+    check_rate_limit(f"resend-confirmation:{client_ip(request)}")
+    check_rate_limit(f"resend-confirmation-email:{email}", limit=6)
+
+    row = execute_one("SELECT * FROM users WHERE email = ?", (email,))
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Compte introuvable")
+
+    if "email_confirmed" in row.keys() and row["email_confirmed"]:
+        return {
+            "ok": True,
+            "message": "Email deja confirme.",
+        }
+
+    code = generate_email_confirmation_code()
+    expires_at = email_confirmation_expires_at()
+
+    execute_write(
+        "UPDATE users SET email_confirmation_code = ?, email_confirmation_expires_at = ? WHERE id = ?",
+        (code, expires_at, int(row["id"])),
     )
 
-    if not session_row:
-        return None
+    send_confirmation_email(email, code)
 
-    expires_at = datetime.fromisoformat(session_row["expires_at"])
-    if expires_at <= utc_now():
-        execute_write("DELETE FROM sessions WHERE token = ?", (token,))
-        return None
-
-    return normalize_account_row(row)
+    return {
+        "ok": True,
+        "message": "Un nouveau code de confirmation a ete envoye.",
+    }
 
 
-def require_user(request: Request) -> dict:
-    user = get_user_by_session(request.cookies.get(SESSION_COOKIE))
-    if not user:
-        raise HTTPException(status_code=401, detail="Authentification requise")
-    return user
+@router.post("/api/account/logout")
+async def account_logout(request: Request, response: Response):
+    clear_session(response, request.cookies.get(SESSION_COOKIE))
+    return {"ok": True}
 
 
-def require_terminal_access(request: Request) -> dict:
+@router.get("/api/account/preferences")
+async def account_preferences(request: Request):
     user = require_user(request)
-    if not user.get("has_access"):
-        raise HTTPException(status_code=403, detail="Acces reserve aux membres en essai ou abonnes")
-    return user
+    return {"prefs": user["prefs"]}
 
 
-def require_owner(request: Request) -> dict:
+@router.post("/api/account/preferences")
+async def account_update_preferences(payload: PreferencesPayload, request: Request):
     user = require_user(request)
-    if user.get("role") != "owner":
-        raise HTTPException(status_code=403, detail="Acces owner requis")
-    return user
+    prefs = validate_preferences_payload(payload.model_dump())
 
-
-def client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded:
-        return forwarded.split(",", 1)[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
-def check_rate_limit(key: str, *, limit: int = AUTH_RATE_LIMIT_MAX, window: int = RATE_LIMIT_WINDOW_SECONDS) -> None:
-    now = time.time()
-    hits = [hit for hit in _rate_limits.get(key, []) if now - hit < window]
-    if len(hits) >= limit:
-        raise HTTPException(status_code=429, detail="Trop de tentatives. Reessaie dans quelques minutes.")
-    hits.append(now)
-    _rate_limits[key] = hits
-
-
-def clear_session(response: Response, token: str | None) -> None:
-    if token:
-        execute_write("DELETE FROM sessions WHERE token = ?", (token,))
-    response.delete_cookie(SESSION_COOKIE, path="/")
-
-
-def set_session_cookie(response: Response, token: str, expires_at: str) -> None:
-    expires_dt = datetime.fromisoformat(expires_at)
-    max_age = int((expires_dt - utc_now()).total_seconds())
-    response.set_cookie(
-        SESSION_COOKIE,
-        token,
-        max_age=max_age,
-        httponly=True,
-        samesite="lax",
-        secure=IS_PRODUCTION,
-        path="/",
+    execute_write(
+        "UPDATE users SET prefs_json = ? WHERE id = ?",
+        (json.dumps(prefs), int(user["id"])),
     )
+
+    return {"ok": True, "prefs": prefs}
+
+
+@router.get("/api/test-email-config")
+async def test_email_config():
+    import os
+
+    return {
+        "EMAIL_CONFIRMATION_REQUIRED": EMAIL_CONFIRMATION_REQUIRED,
+        "RESEND_API_KEY": bool(os.getenv("RESEND_API_KEY")),
+        "EMAIL_FROM_ADDRESS": EMAIL_FROM_ADDRESS,
+        "is_email_enabled": is_email_confirmation_enabled(),
+    }
