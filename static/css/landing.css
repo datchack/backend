@@ -842,9 +842,15 @@
 
 .account-hero-actions {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 10px;
+}
+
+.account-hero-actions .resource-cta,
+.account-hero-actions .resource-link-button {
+    margin-top: 0;
 }
 
 .account-dashboard {
