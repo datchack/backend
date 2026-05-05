@@ -256,10 +256,25 @@ async def account_preferences(request: Request):
     return {"prefs": user["prefs"]}
 
 
-@router.post("/api/account/preferences")
-async def account_preferences_save(payload: PreferencesPayload, request: Request):
-    user = require_user(request)
-    prefs = validate_preferences_payload(payload.prefs)
-    prefs_json = json.dumps(prefs)
-    execute_write("UPDATE users SET prefs_json = ? WHERE id = ?", (prefs_json, user["id"]))
-    return {"ok": True}
+@router.get("/api/test-email-config")
+async def test_email_config():
+    """Debug endpoint to check email configuration"""
+    from app.config import (
+        EMAIL_SMTP_HOST,
+        EMAIL_SMTP_PORT,
+        EMAIL_SMTP_USER,
+        EMAIL_SMTP_PASSWORD,
+        EMAIL_FROM_ADDRESS,
+        EMAIL_CONFIRMATION_REQUIRED,
+    )
+    from app.services.email import is_email_confirmation_enabled
+
+    return {
+        "EMAIL_CONFIRMATION_REQUIRED": EMAIL_CONFIRMATION_REQUIRED,
+        "EMAIL_SMTP_HOST": bool(EMAIL_SMTP_HOST),
+        "EMAIL_SMTP_PORT": EMAIL_SMTP_PORT,
+        "EMAIL_SMTP_USER": bool(EMAIL_SMTP_USER),
+        "EMAIL_SMTP_PASSWORD": bool(EMAIL_SMTP_PASSWORD),
+        "EMAIL_FROM_ADDRESS": EMAIL_FROM_ADDRESS,
+        "is_email_enabled": is_email_confirmation_enabled(),
+    }
