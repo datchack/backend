@@ -84,6 +84,7 @@
 
 .landing-terminal-link {
 <<<<<<< ours
+<<<<<<< ours
     color: #03140d !important;
     background: var(--buy);
     border: 1px solid rgba(0, 242, 173, 0.6);
@@ -111,6 +112,26 @@
 .landing-terminal-link:hover {
     color: #0b0f15 !important;
     background: #1effba !important;
+>>>>>>> theirs
+=======
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 242, 173, 0.45);
+    background: var(--buy) !important;
+    color: #02120d !important;
+    font: inherit;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.landing-terminal-link:hover {
+    color: #02120d !important;
+    background: var(--buy) !important;
+    border-color: rgba(0, 242, 173, 0.45);
 >>>>>>> theirs
 }
 
