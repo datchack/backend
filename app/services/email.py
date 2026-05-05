@@ -2,17 +2,21 @@ from __future__ import annotations
 
 import os
 
-import resend
+try:
+    import resend
+except ImportError:  # pragma: no cover
+    resend = None
 
 from app.config import EMAIL_CONFIRMATION_REQUIRED, EMAIL_FROM_ADDRESS
 
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
-resend.api_key = RESEND_API_KEY or None
+if resend is not None:
+    resend.api_key = RESEND_API_KEY or None
 
 
 def is_email_confirmation_enabled() -> bool:
-    return EMAIL_CONFIRMATION_REQUIRED and bool(resend.api_key and EMAIL_FROM_ADDRESS)
+    return EMAIL_CONFIRMATION_REQUIRED and bool(resend and resend.api_key and EMAIL_FROM_ADDRESS)
 
 
 def send_email(
@@ -23,7 +27,7 @@ def send_email(
 ) -> None:
     if not EMAIL_CONFIRMATION_REQUIRED:
         return
-    if not resend.api_key or not EMAIL_FROM_ADDRESS:
+    if resend is None or not resend.api_key or not EMAIL_FROM_ADDRESS:
         raise RuntimeError(
             "Email confirmation is enabled but RESEND_API_KEY or EMAIL_FROM_ADDRESS is missing."
         )

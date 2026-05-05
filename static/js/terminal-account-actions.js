@@ -13,6 +13,16 @@ function readCredentials(emailId, passwordId) {
     return { email, password, emailEl, passwordEl };
 }
 
+function readEmail(emailId) {
+    const emailEl = document.getElementById(emailId);
+    if (!emailEl) return null;
+
+    const email = emailEl.value.trim().toLowerCase();
+    if (!email) return null;
+
+    return { email, emailEl };
+}
+
 export async function fetchAccountState({
     setAccountState,
     getAccountState,
@@ -88,12 +98,16 @@ export async function submitAccessAuthForm(event, {
 }) {
     event.preventDefault();
 
-    const credentials = readCredentials('access-auth-email', 'access-auth-password');
-    if (!credentials) return;
-    const { email, password, emailEl, passwordEl } = credentials;
+    const accessFormMode = getAccessFormMode();
+    const identity = accessFormMode === 'confirm'
+        ? readEmail('access-auth-email')
+        : readCredentials('access-auth-email', 'access-auth-password');
+    if (!identity) return;
+    const { email, emailEl } = identity;
+    const password = 'password' in identity ? identity.password : '';
+    const passwordEl = 'passwordEl' in identity ? identity.passwordEl : null;
     const codeEl = document.getElementById('access-auth-code');
     const code = codeEl ? codeEl.value.trim() : '';
-    const accessFormMode = getAccessFormMode();
 
     try {
         let payload;
@@ -118,7 +132,7 @@ export async function submitAccessAuthForm(event, {
         );
         await syncPreferences();
         emailEl.value = '';
-        passwordEl.value = '';
+        if (passwordEl) passwordEl.value = '';
         if (codeEl) codeEl.value = '';
 
         if (payload?.pending) {

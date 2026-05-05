@@ -25,6 +25,7 @@ from app.services.accounts import (
     get_user_by_session,
     hash_password,
     normalize_account_row,
+    require_owner,
     require_user,
     set_session_cookie,
     utc_now,
@@ -257,13 +258,10 @@ async def account_preferences(request: Request):
 
 
 @router.get("/api/test-email-config")
-async def test_email_config():
+async def test_email_config(request: Request):
     """Debug endpoint to check email configuration"""
+    require_owner(request)
     from app.config import (
-        EMAIL_SMTP_HOST,
-        EMAIL_SMTP_PORT,
-        EMAIL_SMTP_USER,
-        EMAIL_SMTP_PASSWORD,
         EMAIL_FROM_ADDRESS,
         EMAIL_CONFIRMATION_REQUIRED,
     )
@@ -272,10 +270,6 @@ async def test_email_config():
 
     return {
         "EMAIL_CONFIRMATION_REQUIRED": EMAIL_CONFIRMATION_REQUIRED,
-        "EMAIL_SMTP_HOST": bool(EMAIL_SMTP_HOST),
-        "EMAIL_SMTP_PORT": EMAIL_SMTP_PORT,
-        "EMAIL_SMTP_USER": bool(EMAIL_SMTP_USER),
-        "EMAIL_SMTP_PASSWORD": bool(EMAIL_SMTP_PASSWORD),
         "EMAIL_FROM_ADDRESS": EMAIL_FROM_ADDRESS,
         "RESEND_API_KEY": bool(RESEND_API_KEY),
         "is_email_enabled": is_email_confirmation_enabled(),

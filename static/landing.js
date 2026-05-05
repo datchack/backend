@@ -515,6 +515,11 @@ function setLandingMessage(message = '', tone = '') {
     el.className = `landing-auth-message${tone ? ` ${tone}` : ''}`;
 }
 
+function setLandingEmail(email = '') {
+    const emailEl = document.getElementById('landing-auth-email');
+    if (emailEl) emailEl.value = email;
+}
+
 function setLandingAuthMode(mode) {
     landingAuthMode = mode === 'login' ? 'login' : mode === 'confirm' ? 'confirm' : 'register';
 
@@ -589,7 +594,7 @@ async function submitLandingAuth(event) {
 
     const email = emailEl.value.trim().toLowerCase();
     const password = passwordEl.value;
-    if (!email || !password) return;
+    if (!email || (landingAuthMode !== 'confirm' && !password)) return;
 
     try {
         setLandingMessage(landingAuthMode === 'login' ? t('auth_loading_login') : landingAuthMode === 'confirm' ? 'Confirmation du code...' : t('auth_loading_register'));
@@ -681,6 +686,12 @@ async function handleBillingPlan(plan) {
         const response = await fetch('/api/account/me', { cache: 'no-store' });
         const payload = await response.json();
         if (payload.authenticated) {
+            if (payload.account && !payload.account.email_confirmed) {
+                openLandingAuth('confirm');
+                setLandingEmail(payload.account.email || '');
+                setLandingMessage('Confirme ton email avec le code recu avant de choisir une formule.', 'err');
+                return;
+            }
             await startBillingCheckout(plan);
             return;
         }
