@@ -147,15 +147,15 @@ async def billing_webhook(request: Request):
         if event_type == "checkout.session.completed":
             metadata = stripe_get(obj, "metadata", {}) or {}
             user_id = parse_metadata_user_id(metadata)
-            plan = metadata.get("plan") or stripe_plan_from_price(metadata.get("price_id"))
-            price_id = metadata.get("price_id")
+            price_id = stripe_get(metadata, "price_id")
+            plan = stripe_get(metadata, "plan") or stripe_plan_from_price(price_id)
             customer_id = stripe_object_id(stripe_get(obj, "customer"))
             subscription_id = stripe_object_id(stripe_get(obj, "subscription"))
             mode = stripe_get(obj, "mode")
             payment_status = stripe_get(obj, "payment_status")
 
             if not stripe_price_allowed(price_id):
-                return {"received": True, "ignored": True}
+                return {"received": True, "ignored": True, "reason": "price_not_allowed", "price_id": price_id}
 
             if mode == "subscription" or payment_status == "paid":
                 mark_user_paid(
@@ -178,7 +178,7 @@ async def billing_webhook(request: Request):
             subscription_id = subscription_id or sync_data.get("subscription_id")
             price_id = price_id or sync_data.get("price_id")
             if not stripe_price_allowed(price_id):
-                return {"received": True, "ignored": True}
+                return {"received": True, "ignored": True, "reason": "price_not_allowed", "price_id": price_id}
             plan = stripe_plan_from_price(price_id, "active")
             mark_user_paid(
                 user_id=user_id,
@@ -205,7 +205,7 @@ async def billing_webhook(request: Request):
 
             if status in {"active", "trialing"}:
                 if not stripe_price_allowed(price_id):
-                    return {"received": True, "ignored": True}
+                    return {"received": True, "ignored": True, "reason": "price_not_allowed", "price_id": price_id}
                 mark_user_paid(
                     user_id=parse_metadata_user_id(stripe_get(obj, "metadata", {}) or {}),
                     customer_id=customer_id,
@@ -220,6 +220,10 @@ async def billing_webhook(request: Request):
     except Exception as exc:
         print(f"Stripe webhook processing failed for {event_type}: {exc}", flush=True)
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Erreur traitement webhook Stripe: {type(exc).__name__}") from exc
+        message = str(exc) or type(exc).__name__
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur traitement webhook Stripe: {type(exc).__name__}: {message}",
+        ) from exc
 
     return {"received": True}

@@ -56,16 +56,6 @@ def stripe_price_allowed(price_id: str | None) -> bool:
     return price_id in {STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY, STRIPE_PRICE_LIFETIME}
 
 
-def parse_metadata_user_id(metadata: dict) -> int | None:
-    raw_user_id = metadata.get("user_id")
-    if not raw_user_id:
-        return None
-    try:
-        return int(raw_user_id)
-    except (TypeError, ValueError):
-        return None
-
-
 def stripe_get(value: Any, key: str, default: Any = None) -> Any:
     if not value:
         return default
@@ -75,6 +65,16 @@ def stripe_get(value: Any, key: str, default: Any = None) -> Any:
     if callable(getter):
         return getter(key, default)
     return getattr(value, key, default)
+
+
+def parse_metadata_user_id(metadata: Any) -> int | None:
+    raw_user_id = stripe_get(metadata, "user_id")
+    if not raw_user_id:
+        return None
+    try:
+        return int(raw_user_id)
+    except (TypeError, ValueError):
+        return None
 
 
 def iso_from_stripe_timestamp(value: Any) -> str | None:
@@ -159,12 +159,32 @@ def stripe_object_metadata(value: Any) -> dict:
     return stripe_get(value, "metadata", {}) or {}
 
 
+def stripe_line_price_id(line_item: Any) -> str | None:
+    price_id = stripe_object_id(stripe_get(line_item, "price"))
+    if price_id:
+        return price_id
+
+    pricing = stripe_get(line_item, "pricing", {})
+    price_details = stripe_get(pricing, "price_details", {})
+    price_id = stripe_object_id(stripe_get(price_details, "price"))
+    if price_id:
+        return price_id
+
+    parent = stripe_get(line_item, "parent", {})
+    subscription_item_details = stripe_get(parent, "subscription_item_details", {})
+    return stripe_object_id(stripe_get(subscription_item_details, "price"))
+
+
 def stripe_invoice_price_id(invoice: Any) -> str | None:
     line_items = stripe_get(stripe_get(invoice, "lines", {}), "data", [])
-    if not line_items:
-        return None
-    price = stripe_get(line_items[0], "price", {})
-    return stripe_object_id(price)
+    first_price_id = None
+    for line_item in line_items or []:
+        price_id = stripe_line_price_id(line_item)
+        if not first_price_id:
+            first_price_id = price_id
+        if stripe_price_allowed(price_id):
+            return price_id
+    return first_price_id
 
 
 def retrieve_subscription(subscription_id: str | None) -> Any | None:
@@ -184,7 +204,7 @@ def subscription_sync_data(subscription_id: str | None) -> dict:
     items = stripe_get(stripe_get(subscription, "items", {}), "data", [])
     price_id = None
     if items:
-        price_id = stripe_object_id(stripe_get(items[0], "price"))
+        price_id = stripe_line_price_id(items[0])
 
     return {
         "user_id": parse_metadata_user_id(stripe_object_metadata(subscription)),
@@ -207,7 +227,7 @@ def sync_checkout_session_for_user(user_id: int, session_id: str) -> None:
     if stripe_get(checkout_session, "status") != "complete":
         raise HTTPException(status_code=400, detail="Session Stripe incomplete")
 
-    price_id = metadata.get("price_id")
+    price_id = stripe_get(metadata, "price_id")
     if not stripe_price_allowed(price_id):
         raise HTTPException(status_code=400, detail="Prix Stripe non reconnu")
 
@@ -222,6 +242,6 @@ def sync_checkout_session_for_user(user_id: int, session_id: str) -> None:
         subscription_id=stripe_object_id(stripe_get(checkout_session, "subscription")),
         checkout_session_id=stripe_get(checkout_session, "id"),
         price_id=price_id,
-        plan=metadata.get("plan") or stripe_plan_from_price(price_id),
+        plan=stripe_get(metadata, "plan") or stripe_plan_from_price(price_id),
         status="active",
     )
