@@ -75,6 +75,22 @@
     color: var(--text);
 }
 
+
+.landing-nav-actions .landing-terminal-link {
+    min-height: 42px;
+    padding: 0 16px;
+    border: 1px solid rgba(0, 242, 173, 0.45);
+    border-radius: 4px;
+    background: var(--buy);
+    color: #02120d;
+    font-weight: 900;
+}
+
+.landing-nav-actions .landing-terminal-link:hover {
+    background: var(--buy);
+    color: #02120d;
+}
+
 .landing-lang {
     min-height: 26px;
     padding: 0 8px;
