@@ -1,4 +1,4 @@
-import { confirmAccountEmail, fetchAccount, logoutAccountSession, submitAccountAuth } from './terminal-account-api.js';
+import { confirmAccountEmail, createBillingPortalSession, fetchAccount, logoutAccountSession, submitAccountAuth } from './terminal-account-api.js';
 import { setAccessAuthMessage, setAccountMessage } from './terminal-account-ui.js';
 
 function readCredentials(emailId, passwordId) {
@@ -143,5 +143,19 @@ export async function logoutAccount() {
         window.location.href = '/';
     } catch (error) {
         setAccountMessage('Impossible de fermer la session.', 'err');
+    }
+}
+
+
+export async function openBillingPortal() {
+    try {
+        const payload = await createBillingPortalSession();
+        if (payload?.url) {
+            window.location.href = payload.url;
+            return;
+        }
+        setAccountMessage("Impossible d'ouvrir le portail Stripe.", 'err');
+    } catch (error) {
+        setAccountMessage(error.message || 'Portail Stripe indisponible.', 'err');
     }
 }

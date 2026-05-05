@@ -193,6 +193,7 @@ export function bindAccountControls({
     submitAccountForm,
     submitAccessAuthForm,
     logoutAccount,
+    openBillingPortal,
     syncPreferences,
 }) {
     const toggle = document.getElementById('account-toggle');
@@ -200,6 +201,7 @@ export function bindAccountControls({
     const switchBtn = document.getElementById('account-switch');
     const logoutBtn = document.getElementById('account-logout');
     const syncBtn = document.getElementById('account-sync');
+    const billingBtn = document.getElementById('account-billing-portal');
     const adminToggle = document.getElementById('account-admin-toggle');
     const panel = document.getElementById('account-panel');
     const startTrialBtn = document.getElementById('access-start-trial');
@@ -222,6 +224,7 @@ export function bindAccountControls({
         });
     }
     if (logoutBtn) logoutBtn.addEventListener('click', logoutAccount);
+    if (billingBtn) billingBtn.addEventListener('click', openBillingPortal);
     if (syncBtn) {
         syncBtn.addEventListener('click', async () => {
             await syncPreferences();

@@ -85,6 +85,21 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
     return {"url": checkout_session.url}
 
 
+@router.post("/api/billing/portal")
+async def billing_portal(request: Request):
+    require_stripe_ready()
+    user = require_user(request)
+
+    if not user.get("stripe_customer_id"):
+        raise HTTPException(status_code=400, detail="Aucun compte Stripe lie a ce profil.")
+
+    session = stripe.billing_portal.Session.create(
+        customer=user["stripe_customer_id"],
+        return_url=f"{APP_BASE_URL}/terminal",
+    )
+    return {"url": session.url}
+
+
 @router.post("/api/billing/webhook")
 async def billing_webhook(request: Request):
     require_stripe_ready()

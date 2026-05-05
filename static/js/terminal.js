@@ -12,6 +12,7 @@ import { saveAccountPreferences } from './terminal-account-api.js';
 import {
     fetchAccountState as fetchAccountStateAction,
     logoutAccount as logoutAccountAction,
+    openBillingPortal as openBillingPortalAction,
     submitAccessAuthForm as submitAccessAuthFormAction,
     submitAccountForm as submitAccountFormAction,
 } from './terminal-account-actions.js';
@@ -318,6 +319,7 @@ function bindAccountControls() {
         submitAccountForm,
         submitAccessAuthForm,
         logoutAccount,
+        openBillingPortal: openBillingPortalAction,
         syncPreferences,
     });
 }

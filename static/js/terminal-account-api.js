@@ -51,3 +51,9 @@ export async function logoutAccountSession() {
     const response = await fetch('/api/account/logout', { method: 'POST' });
     return readJsonResponse(response);
 }
+
+
+export async function createBillingPortalSession() {
+    const response = await fetch('/api/billing/portal', { method: 'POST' });
+    return readJsonResponse(response);
+}
