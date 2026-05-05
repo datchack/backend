@@ -66,6 +66,17 @@ def parse_metadata_user_id(metadata: dict) -> int | None:
         return None
 
 
+def stripe_get(value: Any, key: str, default: Any = None) -> Any:
+    if not value:
+        return default
+    if isinstance(value, dict):
+        return value.get(key, default)
+    getter = getattr(value, "get", None)
+    if callable(getter):
+        return getter(key, default)
+    return getattr(value, key, default)
+
+
 def iso_from_stripe_timestamp(value: Any) -> str | None:
     if not value:
         return None
@@ -139,31 +150,30 @@ def stripe_object_id(value: Any) -> str | None:
         return None
     if isinstance(value, str):
         return value
-    if isinstance(value, dict):
-        return value.get("id")
-    return getattr(value, "id", None)
+    return stripe_get(value, "id")
 
 
 def stripe_object_metadata(value: Any) -> dict:
     if not value:
         return {}
-    if isinstance(value, dict):
-        return value.get("metadata") or {}
-    return getattr(value, "metadata", None) or {}
+    return stripe_get(value, "metadata", {}) or {}
 
 
 def stripe_invoice_price_id(invoice: Any) -> str | None:
-    line_items = ((invoice.get("lines") or {}).get("data") or [])
+    line_items = stripe_get(stripe_get(invoice, "lines", {}), "data", [])
     if not line_items:
         return None
-    price = line_items[0].get("price") or {}
+    price = stripe_get(line_items[0], "price", {})
     return stripe_object_id(price)
 
 
 def retrieve_subscription(subscription_id: str | None) -> Any | None:
     if not subscription_id:
         return None
-    return stripe.Subscription.retrieve(subscription_id)
+    subscription_api = getattr(stripe, "Subscription", None)
+    if subscription_api is None:
+        raise RuntimeError("Stripe Subscription API unavailable")
+    return subscription_api.retrieve(subscription_id)
 
 
 def subscription_sync_data(subscription_id: str | None) -> dict:
@@ -171,46 +181,46 @@ def subscription_sync_data(subscription_id: str | None) -> dict:
     if not subscription:
         return {}
 
-    items = ((subscription.get("items") or {}).get("data") or [])
+    items = stripe_get(stripe_get(subscription, "items", {}), "data", [])
     price_id = None
     if items:
-        price_id = stripe_object_id(items[0].get("price"))
+        price_id = stripe_object_id(stripe_get(items[0], "price"))
 
     return {
         "user_id": parse_metadata_user_id(stripe_object_metadata(subscription)),
-        "customer_id": stripe_object_id(subscription.get("customer")),
+        "customer_id": stripe_object_id(stripe_get(subscription, "customer")),
         "subscription_id": stripe_object_id(subscription),
         "price_id": price_id,
-        "current_period_end": iso_from_stripe_timestamp(subscription.get("current_period_end")),
+        "current_period_end": iso_from_stripe_timestamp(stripe_get(subscription, "current_period_end")),
     }
 
 
 def sync_checkout_session_for_user(user_id: int, session_id: str) -> None:
     require_stripe_ready()
     checkout_session = stripe.checkout.Session.retrieve(session_id)
-    metadata = checkout_session.get("metadata") or {}
+    metadata = stripe_get(checkout_session, "metadata", {}) or {}
     metadata_user_id = parse_metadata_user_id(metadata)
-    client_reference_id = checkout_session.get("client_reference_id")
+    client_reference_id = stripe_get(checkout_session, "client_reference_id")
 
     if metadata_user_id != user_id and client_reference_id != str(user_id):
         raise HTTPException(status_code=403, detail="Session Stripe non liee a ce compte")
-    if checkout_session.get("status") != "complete":
+    if stripe_get(checkout_session, "status") != "complete":
         raise HTTPException(status_code=400, detail="Session Stripe incomplete")
 
     price_id = metadata.get("price_id")
     if not stripe_price_allowed(price_id):
         raise HTTPException(status_code=400, detail="Prix Stripe non reconnu")
 
-    mode = checkout_session.get("mode")
-    payment_status = checkout_session.get("payment_status")
+    mode = stripe_get(checkout_session, "mode")
+    payment_status = stripe_get(checkout_session, "payment_status")
     if mode != "subscription" and payment_status != "paid":
         raise HTTPException(status_code=400, detail="Paiement Stripe non valide")
 
     mark_user_paid(
         user_id=user_id,
-        customer_id=stripe_object_id(checkout_session.get("customer")),
-        subscription_id=stripe_object_id(checkout_session.get("subscription")),
-        checkout_session_id=checkout_session.get("id"),
+        customer_id=stripe_object_id(stripe_get(checkout_session, "customer")),
+        subscription_id=stripe_object_id(stripe_get(checkout_session, "subscription")),
+        checkout_session_id=stripe_get(checkout_session, "id"),
         price_id=price_id,
         plan=metadata.get("plan") or stripe_plan_from_price(price_id),
         status="active",

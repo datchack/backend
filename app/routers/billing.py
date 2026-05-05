@@ -20,6 +20,7 @@ from app.services.billing import (
     require_stripe_ready,
     stripe,
     stripe_checkout_plans,
+    stripe_get,
     stripe_invoice_price_id,
     stripe_object_id,
     stripe_plan_from_price,
@@ -141,17 +142,17 @@ async def billing_webhook(request: Request):
         return {"received": True, "ignored": True}
 
     try:
-        obj = event["data"]["object"]
+        obj = stripe_get(stripe_get(event, "data", {}), "object")
 
         if event_type == "checkout.session.completed":
-            metadata = obj.get("metadata") or {}
+            metadata = stripe_get(obj, "metadata", {}) or {}
             user_id = parse_metadata_user_id(metadata)
             plan = metadata.get("plan") or stripe_plan_from_price(metadata.get("price_id"))
             price_id = metadata.get("price_id")
-            customer_id = stripe_object_id(obj.get("customer"))
-            subscription_id = stripe_object_id(obj.get("subscription"))
-            mode = obj.get("mode")
-            payment_status = obj.get("payment_status")
+            customer_id = stripe_object_id(stripe_get(obj, "customer"))
+            subscription_id = stripe_object_id(stripe_get(obj, "subscription"))
+            mode = stripe_get(obj, "mode")
+            payment_status = stripe_get(obj, "payment_status")
 
             if not stripe_price_allowed(price_id):
                 return {"received": True, "ignored": True}
@@ -161,15 +162,15 @@ async def billing_webhook(request: Request):
                     user_id=user_id,
                     customer_id=customer_id,
                     subscription_id=subscription_id,
-                    checkout_session_id=obj.get("id"),
+                    checkout_session_id=stripe_get(obj, "id"),
                     price_id=price_id,
                     plan=plan,
                     status="active",
                 )
 
         elif event_type == "invoice.paid":
-            subscription_id = stripe_object_id(obj.get("subscription"))
-            customer_id = stripe_object_id(obj.get("customer"))
+            subscription_id = stripe_object_id(stripe_get(obj, "subscription"))
+            customer_id = stripe_object_id(stripe_get(obj, "customer"))
             price_id = stripe_invoice_price_id(obj)
             sync_data = subscription_sync_data(subscription_id)
             user_id = sync_data.get("user_id")
@@ -190,23 +191,23 @@ async def billing_webhook(request: Request):
             )
 
         elif event_type == "invoice.payment_failed":
-            update_user_billing_status(stripe_object_id(obj.get("customer")), stripe_object_id(obj.get("subscription")), "past_due")
+            update_user_billing_status(stripe_object_id(stripe_get(obj, "customer")), stripe_object_id(stripe_get(obj, "subscription")), "past_due")
 
         elif event_type in {"customer.subscription.updated", "customer.subscription.deleted"}:
             subscription_id = stripe_object_id(obj)
-            customer_id = stripe_object_id(obj.get("customer"))
-            status = "canceled" if event_type.endswith("deleted") else obj.get("status", "inactive")
-            current_period_end = iso_from_stripe_timestamp(obj.get("current_period_end"))
+            customer_id = stripe_object_id(stripe_get(obj, "customer"))
+            status = "canceled" if event_type.endswith("deleted") else stripe_get(obj, "status", "inactive")
+            current_period_end = iso_from_stripe_timestamp(stripe_get(obj, "current_period_end"))
             price_id = None
-            items = ((obj.get("items") or {}).get("data") or [])
+            items = stripe_get(stripe_get(obj, "items", {}), "data", [])
             if items:
-                price_id = stripe_object_id(items[0].get("price"))
+                price_id = stripe_object_id(stripe_get(items[0], "price"))
 
             if status in {"active", "trialing"}:
                 if not stripe_price_allowed(price_id):
                     return {"received": True, "ignored": True}
                 mark_user_paid(
-                    user_id=parse_metadata_user_id(obj.get("metadata") or {}),
+                    user_id=parse_metadata_user_id(stripe_get(obj, "metadata", {}) or {}),
                     customer_id=customer_id,
                     subscription_id=subscription_id,
                     price_id=price_id,
