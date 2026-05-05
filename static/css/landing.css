@@ -37,6 +37,7 @@
     font-weight: 900;
     letter-spacing: 0.7px;
     text-decoration: none;
+    transition: none !important;
 }
 
 .brand-mark {
@@ -85,6 +86,7 @@
 .landing-terminal-link {
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
     color: #03140d !important;
     background: var(--buy);
     border: 1px solid rgba(0, 242, 173, 0.6);
@@ -114,6 +116,8 @@
     background: #1effba !important;
 >>>>>>> theirs
 =======
+=======
+>>>>>>> theirs
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -126,12 +130,28 @@
     font: inherit;
     font-weight: 900;
     text-decoration: none;
+<<<<<<< ours
 }
 
 .landing-terminal-link:hover {
     color: #02120d !important;
     background: var(--buy) !important;
     border-color: rgba(0, 242, 173, 0.45);
+>>>>>>> theirs
+=======
+    transition: none !important;
+}
+
+.landing-terminal-link:hover,
+.landing-terminal-link:focus,
+.landing-terminal-link:active,
+.landing-nav-actions a.landing-terminal-link:hover {
+    color: #02120d !important;
+    background: var(--buy) !important;
+    border-color: rgba(0, 242, 173, 0.45) !important;
+    transform: none !important;
+    filter: none !important;
+    box-shadow: none !important;
 >>>>>>> theirs
 }
 
@@ -480,6 +500,7 @@
 .feature-card h3 a {
     color: #eef3fb;
     text-decoration: none;
+    transition: none !important;
 }
 
 .feature-card h3 a:hover {
@@ -510,6 +531,7 @@
 .resource-row h2 a {
     color: #eef3fb;
     text-decoration: none;
+    transition: none !important;
 }
 
 .resource-row h2 a:hover {
