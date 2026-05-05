@@ -29,6 +29,24 @@ export async function saveAccountPreferences(prefs) {
     return readJsonResponse(response);
 }
 
+export async function confirmAccountEmail(email, code) {
+    const response = await fetch('/api/account/confirm-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+    });
+    return readJsonResponse(response);
+}
+
+export async function resendAccountConfirmation(email) {
+    const response = await fetch('/api/account/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+    });
+    return readJsonResponse(response);
+}
+
 export async function logoutAccountSession() {
     const response = await fetch('/api/account/logout', { method: 'POST' });
     return readJsonResponse(response);

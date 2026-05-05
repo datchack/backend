@@ -31,6 +31,9 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
     require_stripe_ready()
     user = require_user(request)
 
+    if not user.get("email_confirmed"):
+        raise HTTPException(status_code=403, detail="Email non confirme. Confirme ton adresse email avant de payer.")
+
     plan_key = payload.plan.strip().lower()
     plan_cfg = stripe_checkout_plans().get(plan_key)
     if not plan_cfg:

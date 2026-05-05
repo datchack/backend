@@ -14,6 +14,8 @@ from app.config import (
     ACCOUNT_DB_PATH,
     AUTH_RATE_LIMIT_MAX,
     DATABASE_URL,
+    EMAIL_CONFIRMATION_EXPIRES_HOURS,
+    EMAIL_CONFIRMATION_REQUIRED,
     IS_PRODUCTION,
     OWNER_EMAILS,
     OWNER_PASSWORD,
@@ -81,6 +83,9 @@ def init_account_db() -> None:
                         trial_ends_at TEXT NOT NULL,
                         plan TEXT NOT NULL DEFAULT 'trial',
                         status TEXT NOT NULL DEFAULT 'trialing',
+                        email_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
+                        email_confirmation_code TEXT,
+                        email_confirmation_expires_at TEXT,
                         prefs_json TEXT NOT NULL DEFAULT '{}'
                     )
                     """
@@ -91,6 +96,9 @@ def init_account_db() -> None:
                     "stripe_price_id TEXT",
                     "stripe_checkout_session_id TEXT",
                     "stripe_current_period_end TEXT",
+                    "email_confirmed BOOLEAN DEFAULT FALSE",
+                    "email_confirmation_code TEXT",
+                    "email_confirmation_expires_at TEXT",
                 ):
                     cursor.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {column_def}")
                 cursor.execute(
@@ -118,6 +126,9 @@ def init_account_db() -> None:
                 trial_ends_at TEXT NOT NULL,
                 plan TEXT NOT NULL DEFAULT 'trial',
                 status TEXT NOT NULL DEFAULT 'trialing',
+                email_confirmed INTEGER NOT NULL DEFAULT 0,
+                email_confirmation_code TEXT,
+                email_confirmation_expires_at TEXT,
                 prefs_json TEXT NOT NULL DEFAULT '{}'
             );
 
@@ -136,6 +147,9 @@ def init_account_db() -> None:
             "stripe_price_id TEXT",
             "stripe_checkout_session_id TEXT",
             "stripe_current_period_end TEXT",
+            "email_confirmed INTEGER DEFAULT 0",
+            "email_confirmation_code TEXT",
+            "email_confirmation_expires_at TEXT",
         ):
             try:
                 conn.execute(f"ALTER TABLE users ADD COLUMN {column_def}")
@@ -183,15 +197,15 @@ def seed_owner_accounts() -> None:
         existing = execute_one("SELECT id FROM users WHERE email = ?", (email,))
         if existing:
             execute_write(
-                "UPDATE users SET password_hash = ?, plan = ?, status = ? WHERE email = ?",
-                (hash_password(OWNER_PASSWORD), "owner", "active", email),
+                "UPDATE users SET password_hash = ?, plan = ?, status = ?, email_confirmed = ? WHERE email = ?",
+                (hash_password(OWNER_PASSWORD), "owner", "active", True, email),
             )
             continue
 
         execute_write(
             """
-            INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, plan, status, prefs_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (email, password_hash, created_at, trial_started_at, trial_ends_at, plan, status, email_confirmed, prefs_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 email,
@@ -201,6 +215,7 @@ def seed_owner_accounts() -> None:
                 trial_ends_at.isoformat(),
                 "owner",
                 "active",
+                True,
                 "{}",
             ),
         )
@@ -208,6 +223,14 @@ def seed_owner_accounts() -> None:
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def generate_email_confirmation_code() -> str:
+    return ''.join(secrets.choice('0123456789') for _ in range(6))
+
+
+def email_confirmation_expires_at() -> str:
+    return (utc_now() + timedelta(hours=EMAIL_CONFIRMATION_EXPIRES_HOURS)).isoformat()
 
 
 def is_owner_row(row) -> bool:
@@ -218,6 +241,12 @@ def is_owner_row(row) -> bool:
 def derive_access_state(row) -> tuple[str, str, bool, bool, int]:
     if is_owner_row(row):
         return "owner", "owner", True, True, 999
+
+    if "email_confirmed" not in row.keys() or not row["email_confirmed"]:
+        return "pending", "pending", False, False, 0
+
+    if row.get("status") in {"confirmed", "pending_payment"}:
+        return "confirmed", "confirmed", False, False, 0
 
     trial_ends_at = datetime.fromisoformat(row["trial_ends_at"])
     now = utc_now()
@@ -274,6 +303,7 @@ def normalize_account_row(row) -> dict | None:
         "trial_ends_at": row["trial_ends_at"],
         "trial_active": trial_active,
         "trial_days_left": days_left,
+        "email_confirmed": bool(row["email_confirmed"]) if "email_confirmed" in row.keys() else False,
         "stripe_customer_id": row["stripe_customer_id"] if "stripe_customer_id" in row.keys() else None,
         "stripe_subscription_id": row["stripe_subscription_id"] if "stripe_subscription_id" in row.keys() else None,
         "stripe_price_id": row["stripe_price_id"] if "stripe_price_id" in row.keys() else None,

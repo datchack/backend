@@ -1,4 +1,4 @@
-import { fetchAccount, logoutAccountSession, submitAccountAuth } from './terminal-account-api.js';
+import { confirmAccountEmail, fetchAccount, logoutAccountSession, submitAccountAuth } from './terminal-account-api.js';
 import { setAccessAuthMessage, setAccountMessage } from './terminal-account-ui.js';
 
 function readCredentials(emailId, passwordId) {
@@ -91,19 +91,42 @@ export async function submitAccessAuthForm(event, {
     const credentials = readCredentials('access-auth-email', 'access-auth-password');
     if (!credentials) return;
     const { email, password, emailEl, passwordEl } = credentials;
+    const codeEl = document.getElementById('access-auth-code');
+    const code = codeEl ? codeEl.value.trim() : '';
     const accessFormMode = getAccessFormMode();
 
     try {
-        setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion en cours...' : 'Creation du compte...');
-        const endpoint = accessFormMode === 'login' ? 'login' : 'register';
-        const payload = await submitAccountAuth(endpoint, email, password);
+        let payload;
+        if (accessFormMode === 'confirm') {
+            setAccessAuthMessage('Confirmation du code en cours...');
+            payload = await confirmAccountEmail(email, code);
+        } else {
+            setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion en cours...' : 'Creation du compte...');
+            const endpoint = accessFormMode === 'login' ? 'login' : 'register';
+            payload = await submitAccountAuth(endpoint, email, password);
+        }
 
         setAccountState({ ...payload, loading: false });
         renderAccountState();
-        setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion reussie.' : 'Compte cree. Essai active.', 'ok');
+        setAccessAuthMessage(
+            accessFormMode === 'login'
+                ? 'Connexion reussie.'
+                : accessFormMode === 'confirm'
+                ? 'Email confirme. Ton essai est actif.'
+                : 'Compte cree. Un code de confirmation a ete envoye.',
+            'ok',
+        );
         await syncPreferences();
         emailEl.value = '';
         passwordEl.value = '';
+        if (codeEl) codeEl.value = '';
+
+        if (payload?.pending) {
+            setAccessFormMode('confirm');
+            renderAccessGate();
+            return;
+        }
+
         if (hasTerminalAccess()) {
             bootTerminalApp();
             setAccessFormMode('intro');

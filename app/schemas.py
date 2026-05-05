@@ -8,6 +8,15 @@ class AccountAuthPayload(BaseModel):
     password: str
 
 
+class AccountConfirmEmailPayload(BaseModel):
+    email: str
+    code: str
+
+
+class AccountResendConfirmationPayload(BaseModel):
+    email: str
+
+
 class PreferencesPayload(BaseModel):
     prefs: dict[str, Any]
 

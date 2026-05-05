@@ -514,7 +514,7 @@ function setLandingMessage(message = '', tone = '') {
 }
 
 function setLandingAuthMode(mode) {
-    landingAuthMode = mode === 'login' ? 'login' : 'register';
+    landingAuthMode = mode === 'login' ? 'login' : mode === 'confirm' ? 'confirm' : 'register';
 
     const kicker = document.getElementById('landing-auth-kicker');
     const title = document.getElementById('landing-auth-title');
@@ -522,15 +522,26 @@ function setLandingAuthMode(mode) {
     const submit = document.getElementById('landing-auth-submit');
     const switchBtn = document.getElementById('landing-auth-switch');
     const password = document.getElementById('landing-auth-password');
+    const codeInput = document.getElementById('landing-auth-code');
 
-    if (kicker) kicker.textContent = landingAuthMode === 'login' ? t('auth_login_kicker') : t('auth_register_kicker');
-    if (title) title.textContent = landingAuthMode === 'login' ? t('auth_login_title') : t('auth_register_title');
+    if (kicker) kicker.textContent = landingAuthMode === 'login' ? t('auth_login_kicker') : landingAuthMode === 'confirm' ? 'Confirmation email' : t('auth_register_kicker');
+    if (title) title.textContent = landingAuthMode === 'login' ? t('auth_login_title') : landingAuthMode === 'confirm' ? 'Confirme ton adresse email' : t('auth_register_title');
     if (copy) copy.textContent = landingAuthMode === 'login'
         ? t('auth_login_copy')
+        : landingAuthMode === 'confirm'
+        ? 'Saisis le code de confirmation recu par email pour activer ton essai.'
         : t('auth_register_copy');
-    if (submit) submit.textContent = landingAuthMode === 'login' ? t('auth_login_submit') : t('auth_register_submit');
+    if (submit) submit.textContent = landingAuthMode === 'login' ? t('auth_login_submit') : landingAuthMode === 'confirm' ? 'Valider le code' : t('auth_register_submit');
     if (switchBtn) switchBtn.textContent = landingAuthMode === 'login' ? t('auth_login_switch') : t('auth_register_switch');
-    if (password) password.autocomplete = landingAuthMode === 'login' ? 'current-password' : 'new-password';
+    if (password) {
+        password.style.display = landingAuthMode === 'confirm' ? 'none' : '';
+        password.required = landingAuthMode !== 'confirm';
+        password.autocomplete = landingAuthMode === 'login' ? 'current-password' : 'new-password';
+    }
+    if (codeInput) {
+        codeInput.style.display = landingAuthMode === 'confirm' ? '' : 'none';
+        codeInput.required = landingAuthMode === 'confirm';
+    }
 }
 
 function openLandingAuth(mode = 'register') {
@@ -574,11 +585,17 @@ async function submitLandingAuth(event) {
     if (!email || !password) return;
 
     try {
-        setLandingMessage(landingAuthMode === 'login' ? t('auth_loading_login') : t('auth_loading_register'));
-        const response = await fetch(`/api/account/${landingAuthMode}`, {
+        setLandingMessage(landingAuthMode === 'login' ? t('auth_loading_login') : landingAuthMode === 'confirm' ? 'Confirmation du code...' : t('auth_loading_register'));
+        const body = { email, password };
+        const endpoint = landingAuthMode === 'confirm' ? 'confirm-email' : landingAuthMode;
+        if (landingAuthMode === 'confirm') {
+            const codeEl = document.getElementById('landing-auth-code');
+            body.code = codeEl ? codeEl.value.trim() : '';
+        }
+        const response = await fetch(`/api/account/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify(body),
         });
         const payload = await response.json();
         if (!response.ok) {
@@ -590,12 +607,22 @@ async function submitLandingAuth(event) {
             throw new Error(payload.detail || 'Action impossible');
         }
 
+        if (landingAuthMode === 'register' && payload.pending) {
+            setLandingAuthMode('confirm');
+            setLandingMessage('Code envoye. Saisis le code depuis ton email.', 'ok');
+            return;
+        }
+
         if (selectedBillingPlan) {
             await startBillingCheckout(selectedBillingPlan);
             return;
         }
 
         if (!payload.account?.has_access) {
+            if (payload.account?.email_confirmed) {
+                setLandingMessage('Ton email est confirme. Choisis une formule Stripe pour demarrer ton essai.', 'ok');
+                return;
+            }
             setLandingMessage(t('auth_no_access'), 'err');
             return;
         }

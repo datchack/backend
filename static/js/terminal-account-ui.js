@@ -51,7 +51,7 @@ export function setAccessAuthMessage(message = '', tone = '') {
 }
 
 export function setAccessFormMode(mode, accountState) {
-    const accessFormMode = mode === 'login' ? 'login' : mode === 'register' ? 'register' : 'intro';
+    const accessFormMode = mode === 'login' ? 'login' : mode === 'confirm' ? 'confirm' : mode === 'register' ? 'register' : 'intro';
 
     const kicker = document.getElementById('access-auth-kicker');
     const title = document.getElementById('access-auth-title');
@@ -59,20 +59,31 @@ export function setAccessFormMode(mode, accountState) {
     const submit = document.getElementById('access-auth-submit');
     const switchBtn = document.getElementById('access-auth-switch');
     const password = document.getElementById('access-auth-password');
+    const codeInput = document.getElementById('access-auth-code');
 
     if (accessFormMode === 'intro') {
         renderAccessGate(accountState, accessFormMode);
         return accessFormMode;
     }
 
-    if (kicker) kicker.textContent = accessFormMode === 'login' ? 'CONNEXION' : 'CREATION DE COMPTE';
-    if (title) title.textContent = accessFormMode === 'login' ? 'Reconnecte-toi au terminal' : 'Active ton essai maintenant';
+    if (kicker) kicker.textContent = accessFormMode === 'login' ? 'CONNEXION' : accessFormMode === 'confirm' ? 'CONFIRMATION EMAIL' : 'CREATION DE COMPTE';
+    if (title) title.textContent = accessFormMode === 'login' ? 'Reconnecte-toi au terminal' : accessFormMode === 'confirm' ? 'Confirme ton adresse email' : 'Active ton essai maintenant';
     if (copy) copy.textContent = accessFormMode === 'login'
         ? 'Connecte-toi pour retrouver ton workspace et tes preferences.'
+        : accessFormMode === 'confirm'
+        ? 'Saisis le code recu par email pour activer ton essai gratuit.'
         : 'Cree ton compte pour ouvrir le terminal complet pendant 7 jours.';
-    if (submit) submit.textContent = accessFormMode === 'login' ? 'SE CONNECTER' : 'CREER MON COMPTE';
+    if (submit) submit.textContent = accessFormMode === 'login' ? 'SE CONNECTER' : accessFormMode === 'confirm' ? 'VALIDER LE CODE' : 'CREER MON COMPTE';
     if (switchBtn) switchBtn.textContent = accessFormMode === 'login' ? 'CREER UN COMPTE' : "J'AI DEJA UN COMPTE";
-    if (password) password.autocomplete = accessFormMode === 'login' ? 'current-password' : 'new-password';
+    if (password) {
+        password.style.display = accessFormMode === 'confirm' ? 'none' : '';
+        password.required = accessFormMode !== 'confirm';
+        password.autocomplete = accessFormMode === 'login' ? 'current-password' : 'new-password';
+    }
+    if (codeInput) {
+        codeInput.style.display = accessFormMode === 'confirm' ? '' : 'none';
+        codeInput.required = accessFormMode === 'confirm';
+    }
 
     renderAccessGate(accountState, accessFormMode);
 
