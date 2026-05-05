@@ -10,6 +10,7 @@ const LANDING_COPY = {
         nav_pricing: 'Formules',
         nav_login: 'Connexion',
         nav_terminal: 'Ouvrir le terminal',
+        nav_account: 'Mon compte',
         hero_kicker: 'TRADING TERMINAL',
         hero_copy: 'Un poste de travail macro pour suivre les news, le calendrier économique, les drivers de marché et tes charts dans une interface rapide, personnalisable et orientée décision.',
         hero_trial: "Démarrer l'essai 7 jours",
@@ -130,6 +131,7 @@ const LANDING_COPY = {
         nav_pricing: 'Plans',
         nav_login: 'Login',
         nav_terminal: 'Open terminal',
+        nav_account: 'My account',
         hero_kicker: 'TRADING TERMINAL',
         hero_copy: 'A macro workstation to track news, the economic calendar, market drivers and your charts in a fast, customizable, decision-focused interface.',
         hero_trial: 'Start 7-day trial',
@@ -565,8 +567,13 @@ async function fetchLandingAccount() {
         const response = await fetch('/api/account/me', { cache: 'no-store' });
         const payload = await response.json();
         const terminalLink = document.getElementById('landing-terminal-link');
-        if (terminalLink && payload.authenticated && payload.account?.has_access) {
-            terminalLink.classList.remove('hidden');
+        const loginBtn = document.querySelector('.landing-login');
+        if (payload.authenticated) {
+            if (terminalLink) terminalLink.classList.remove('hidden');
+            if (loginBtn) {
+                loginBtn.textContent = t('nav_account');
+                loginBtn.dataset.authMode = 'account';
+            }
         }
     } catch (error) {
         console.error(error);

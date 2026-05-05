@@ -144,7 +144,7 @@ export function renderAccountState(accountState, accountMode, accessFormMode) {
     }
 
     const { account } = accountState;
-    toggle.textContent = 'MY ACCOUNT';
+    toggle.textContent = 'MON COMPTE';
     trial.textContent = account.role === 'owner'
         ? 'OWNER'
         : account.role === 'trial' ? `TRIAL ${account.trial_days_left}J` : (account.plan || 'PLAN').toUpperCase();

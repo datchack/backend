@@ -83,7 +83,16 @@
 }
 
 .landing-terminal-link {
-    color: var(--buy) !important;
+    color: #03140d !important;
+    background: var(--buy);
+    border: 1px solid rgba(0, 242, 173, 0.6);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-weight: 900;
+}
+
+.landing-terminal-link:hover {
+    filter: brightness(1.08);
 }
 
 .landing-hero {
