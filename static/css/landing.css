@@ -77,7 +77,6 @@
 
 
 .landing-nav-actions .landing-terminal-link {
-<<<<<<< ours
     min-height: 42px;
     padding: 0 16px;
     border: 1px solid rgba(0, 242, 173, 0.45);
@@ -85,19 +84,6 @@
     background: var(--buy);
     color: #02120d;
     font-weight: 900;
-=======
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 36px;
-    padding: 0 12px;
-    border: 1px solid rgba(0, 242, 173, 0.45);
-    border-radius: 4px;
-    background: var(--buy);
-    color: #02120d !important;
-    font-weight: 900;
-    line-height: 1;
->>>>>>> theirs
 }
 
 .landing-nav-actions .landing-terminal-link:hover {
@@ -113,7 +99,6 @@
     font-weight: 900;
 }
 
-<<<<<<< ours
 .landing-terminal-link {
 <<<<<<< ours
 <<<<<<< ours
@@ -185,8 +170,6 @@
     box-shadow: none !important;
 >>>>>>> theirs
 }
-=======
->>>>>>> theirs
 
 .landing-hero {
     min-height: calc(100vh - 62px);
