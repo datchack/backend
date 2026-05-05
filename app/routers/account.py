@@ -149,6 +149,30 @@ async def account_login(payload: AccountAuthPayload, response: Response, request
     if not row or not verify_password(password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
 
+    # Si le compte n'est pas confirme, envoyer un code de confirmation
+    if "email_confirmed" not in row.keys() or not row["email_confirmed"]:
+        code = generate_email_confirmation_code()
+        expires_at = email_confirmation_expires_at()
+        execute_write(
+            "UPDATE users SET email_confirmation_code = ?, email_confirmation_expires_at = ? WHERE id = ?",
+            (code, expires_at, int(row["id"])),
+        )
+        try:
+            send_confirmation_email(email, code)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Impossible d'envoyer le code de confirmation par email") from exc
+
+        token, expires_at = create_session(int(row["id"]))
+        set_session_cookie(response, token, expires_at)
+
+        account = normalize_account_row(row)
+        return {
+            "authenticated": True,
+            "pending": True,
+            "account": account,
+            "message": "Un code de confirmation a ete envoye par email.",
+        }
+
     token, expires_at = create_session(int(row["id"]))
     set_session_cookie(response, token, expires_at)
     return {"authenticated": True, "account": normalize_account_row(row)}

@@ -58,13 +58,11 @@ async def admin_update_user_access(user_id: int, payload: AdminAccessPayload, re
             "UPDATE users SET plan = ?, status = ?, trial_started_at = ?, trial_ends_at = ? WHERE id = ?",
             ("trial", "trialing", now.isoformat(), (now + timedelta(days=TRIAL_DAYS)).isoformat(), user_id),
         )
-    elif action == "expire":
+    elif action == "confirm":
         execute_write(
-            "UPDATE users SET plan = ?, status = ?, trial_ends_at = ? WHERE id = ?",
-            ("trial", "expired", (now - timedelta(seconds=1)).isoformat(), user_id),
+            "UPDATE users SET email_confirmed = ?, status = ?, trial_started_at = ?, trial_ends_at = ? WHERE id = ?",
+            (True, "confirmed", now.isoformat(), now.isoformat(), user_id),
         )
-    else:
-        raise HTTPException(status_code=400, detail="Action admin inconnue")
 
     updated = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
     return {"user": normalize_account_row(updated)}

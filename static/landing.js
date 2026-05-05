@@ -613,6 +613,12 @@ async function submitLandingAuth(event) {
             return;
         }
 
+        if (landingAuthMode === 'login' && payload.pending) {
+            setLandingAuthMode('confirm');
+            setLandingMessage('Code envoye. Saisis le code depuis ton email.', 'ok');
+            return;
+        }
+
         if (selectedBillingPlan) {
             await startBillingCheckout(selectedBillingPlan);
             return;

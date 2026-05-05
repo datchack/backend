@@ -51,11 +51,13 @@ function renderMetrics() {
     const total = adminUsers.length;
     const active = adminUsers.filter((user) => user.has_access && user.role !== 'trial').length;
     const trial = adminUsers.filter((user) => user.role === 'trial').length;
+    const pending = adminUsers.filter((user) => user.status === 'pending').length;
     const expired = adminUsers.filter((user) => !user.has_access).length;
 
     document.getElementById('metric-total').textContent = total;
     document.getElementById('metric-active').textContent = active;
     document.getElementById('metric-trial').textContent = trial;
+    document.getElementById('metric-pending').textContent = pending;
     document.getElementById('metric-expired').textContent = expired;
 }
 
@@ -76,6 +78,8 @@ function renderUsers() {
         const ownerLocked = user.role === 'owner';
         const actions = ownerLocked
             ? '<button type="button" class="panel-btn" disabled>OWNER</button>'
+            : user.status === 'pending'
+            ? '<button type="button" class="panel-btn" data-admin-action="confirm">CONFIRM</button>'
             : `
                 <button type="button" class="panel-btn" data-admin-action="active">ACTIVE</button>
                 <button type="button" class="panel-btn" data-admin-action="trial">TRIAL</button>
