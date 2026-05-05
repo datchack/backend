@@ -1,21 +1,16 @@
 from __future__ import annotations
 
-import smtplib
-from email.message import EmailMessage
+import os
+import resend
 
-from app.config import (
-    EMAIL_CONFIRMATION_REQUIRED,
-    EMAIL_FROM_ADDRESS,
-    EMAIL_SMTP_HOST,
-    EMAIL_SMTP_PASSWORD,
-    EMAIL_SMTP_PORT,
-    EMAIL_SMTP_USER,
-)
+from app.config import EMAIL_CONFIRMATION_REQUIRED, EMAIL_FROM_ADDRESS
+
+resend.api_key = os.getenv("re_i1pW2uyQ_CEdxGREP7eph5AeGGRAmvuuN")
 
 
 def is_email_confirmation_enabled() -> bool:
     return EMAIL_CONFIRMATION_REQUIRED and bool(
-        EMAIL_SMTP_HOST and EMAIL_SMTP_PORT and EMAIL_FROM_ADDRESS
+        resend.api_key and EMAIL_FROM_ADDRESS
     )
 
 
@@ -25,33 +20,25 @@ def send_email(
     text_body: str,
     html_body: str | None = None,
 ) -> None:
-
     if not is_email_confirmation_enabled():
-        print("EMAIL désactivé ou mal configuré", flush=True)
-        return  # ⚠️ IMPORTANT : ne bloque pas le login
-
-    message = EmailMessage()
-    message["From"] = EMAIL_FROM_ADDRESS
-    message["To"] = to_email
-    message["Subject"] = subject
-    message.set_content(text_body)
-
-    if html_body:
-        message.add_alternative(html_body, subtype="html")
+        print("EMAIL désactivé ou Resend mal configuré", flush=True)
+        return
 
     try:
-        print("Connexion SMTP...", flush=True)
+        print("Envoi email via Resend...", flush=True)
 
-        with smtplib.SMTP_SSL(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20) as smtp:
-            smtp.set_debuglevel(1)
-            smtp.login(EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD)
-            smtp.send_message(message)
+        resend.Emails.send({
+            "from": EMAIL_FROM_ADDRESS,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_body if html_body else f"<pre>{text_body}</pre>",
+            "text": text_body,
+        })
 
-        print("Email envoyé avec succès", flush=True)
+        print("✅ Email envoyé via Resend", flush=True)
 
     except Exception as e:
-        # ⚠️ NE JAMAIS CRASH LE LOGIN
-        print("❌ ERREUR SMTP:", repr(e), flush=True)
+        print("❌ ERREUR RESEND:", repr(e), flush=True)
         return
 
 

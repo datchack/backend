@@ -7,3 +7,4 @@ feedparser
 beautifulsoup4
 psycopg2-binary
 stripe
+resend
