@@ -57,3 +57,12 @@ export async function createBillingPortalSession() {
     const response = await fetch('/api/billing/portal', { method: 'POST' });
     return readJsonResponse(response);
 }
+
+export async function syncBillingCheckoutSession(sessionId) {
+    const response = await fetch('/api/billing/sync-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+    });
+    return readJsonResponse(response);
+}

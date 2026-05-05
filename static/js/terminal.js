@@ -8,7 +8,7 @@ import {
     NEWS_REFRESH_MS,
     PREFS_KEY,
 } from './terminal-config.js';
-import { saveAccountPreferences } from './terminal-account-api.js';
+import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js';
 import {
     fetchAccountState as fetchAccountStateAction,
     logoutAccount as logoutAccountAction,
@@ -21,6 +21,7 @@ import {
     hasTerminalAccess as accountHasTerminalAccess,
     renderAccessGate as renderAccessGateView,
     renderAccountState as renderAccountStateView,
+    setAccessAuthMessage,
     toggleAccountPanel as toggleAccountPanelView,
 } from './terminal-account-ui.js';
 import { createCalendarController } from './terminal-calendar.js';
@@ -268,6 +269,20 @@ async function fetchAccountState() {
     });
 }
 
+async function syncBillingReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (params.get('billing') !== 'success' || !sessionId) return;
+
+    try {
+        await syncBillingCheckoutSession(sessionId);
+        window.history.replaceState({}, '', window.location.pathname);
+    } catch (error) {
+        console.error(error);
+        setAccessAuthMessage(error.message || 'Validation Stripe en attente. Recharge la page dans quelques instants.', 'err');
+    }
+}
+
 async function submitAccountForm(event) {
     await submitAccountFormAction(event, {
         getAccountMode: () => accountMode,
@@ -510,7 +525,7 @@ function init() {
     bindSoundToggle();
     bindCustomizeControls();
 
-    fetchAccountState();
+    syncBillingReturn().finally(fetchAccountState);
     updateClocks();
 
     window.setInterval(updateClocks, 1000);

@@ -36,3 +36,7 @@ class AdminAccessPayload(BaseModel):
 
 class BillingCheckoutPayload(BaseModel):
     plan: str
+
+
+class BillingCheckoutSyncPayload(BaseModel):
+    session_id: str

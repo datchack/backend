@@ -10,7 +10,7 @@ from app.config import (
     STRIPE_WEBHOOK_SECRET,
     TRIAL_DAYS,
 )
-from app.schemas import BillingCheckoutPayload
+from app.schemas import BillingCheckoutPayload, BillingCheckoutSyncPayload
 from app.services.accounts import require_user
 from app.services.billing import (
     iso_from_stripe_timestamp,
@@ -21,6 +21,7 @@ from app.services.billing import (
     stripe_checkout_plans,
     stripe_plan_from_price,
     stripe_price_allowed,
+    sync_checkout_session_for_user,
     update_user_billing_status,
 )
 
@@ -44,7 +45,7 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
     session_payload: dict[str, Any] = {
         "mode": plan_cfg["mode"],
         "line_items": [{"price": plan_cfg["price"], "quantity": 1}],
-        "success_url": f"{APP_BASE_URL}/terminal?billing=success",
+        "success_url": f"{APP_BASE_URL}/terminal?billing=success&session_id={{CHECKOUT_SESSION_ID}}",
         "cancel_url": f"{APP_BASE_URL}/#pricing",
         "client_reference_id": str(user["id"]),
         "metadata": {
@@ -83,6 +84,17 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
 
     checkout_session = stripe.checkout.Session.create(**session_payload)
     return {"url": checkout_session.url}
+
+
+@router.post("/api/billing/sync-checkout")
+async def billing_sync_checkout(payload: BillingCheckoutSyncPayload, request: Request):
+    user = require_user(request)
+    session_id = payload.session_id.strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Session Stripe manquante")
+
+    sync_checkout_session_for_user(int(user["id"]), session_id)
+    return {"ok": True}
 
 
 @router.post("/api/billing/portal")

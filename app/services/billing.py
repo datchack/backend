@@ -132,3 +132,45 @@ def update_user_billing_status(customer_id: str | None, subscription_id: str | N
             "UPDATE users SET status = ? WHERE stripe_customer_id = ?",
             (local_status, customer_id),
         )
+
+
+def stripe_object_id(value: Any) -> str | None:
+    if not value:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return value.get("id")
+    return getattr(value, "id", None)
+
+
+def sync_checkout_session_for_user(user_id: int, session_id: str) -> None:
+    require_stripe_ready()
+    checkout_session = stripe.checkout.Session.retrieve(session_id)
+    metadata = checkout_session.get("metadata") or {}
+    metadata_user_id = parse_metadata_user_id(metadata)
+    client_reference_id = checkout_session.get("client_reference_id")
+
+    if metadata_user_id != user_id and client_reference_id != str(user_id):
+        raise HTTPException(status_code=403, detail="Session Stripe non liee a ce compte")
+    if checkout_session.get("status") != "complete":
+        raise HTTPException(status_code=400, detail="Session Stripe incomplete")
+
+    price_id = metadata.get("price_id")
+    if not stripe_price_allowed(price_id):
+        raise HTTPException(status_code=400, detail="Prix Stripe non reconnu")
+
+    mode = checkout_session.get("mode")
+    payment_status = checkout_session.get("payment_status")
+    if mode != "subscription" and payment_status != "paid":
+        raise HTTPException(status_code=400, detail="Paiement Stripe non valide")
+
+    mark_user_paid(
+        user_id=user_id,
+        customer_id=stripe_object_id(checkout_session.get("customer")),
+        subscription_id=stripe_object_id(checkout_session.get("subscription")),
+        checkout_session_id=checkout_session.get("id"),
+        price_id=price_id,
+        plan=metadata.get("plan") or stripe_plan_from_price(price_id),
+        status="active",
+    )
