@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from email.mime import message
 import smtplib
 from email.message import EmailMessage
 
@@ -39,27 +40,19 @@ def send_email(
     if html_body:
         message.add_alternative(html_body, subtype="html")
 
-    try:
-        print("Connexion SMTP...", flush=True)
+try:
+    print("Connexion SMTP SSL...", flush=True)
 
-        with smtplib.SMTP(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20) as smtp:
-            smtp.set_debuglevel(1)  # 🔥 logs visibles sur Render
+    with smtplib.SMTP_SSL(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, timeout=20) as smtp:
+        smtp.set_debuglevel(1)
+        smtp.login(EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD)
+        smtp.send_message(message)
 
-            smtp.ehlo()
-            smtp.starttls()
-            smtp.ehlo()
+    print("Email envoyé avec succès", flush=True)
 
-            if EMAIL_SMTP_USER and EMAIL_SMTP_PASSWORD:
-                smtp.login(EMAIL_SMTP_USER, EMAIL_SMTP_PASSWORD)
-
-            smtp.send_message(message)
-
-        print("Email envoyé avec succès", flush=True)
-
-    except Exception as e:
-        # ⚠️ NE JAMAIS CRASH LE LOGIN
-        print("❌ ERREUR SMTP:", repr(e), flush=True)
-        return
+except Exception as e:
+    print("❌ ERREUR SMTP:", repr(e), flush=True)
+    return
 
 
 def send_confirmation_email(email: str, code: str) -> None:
