@@ -228,15 +228,26 @@ def derive_access_state(row) -> tuple[str, str, bool, bool, int]:
     if is_owner_row(row):
         return "owner", "owner", True, True, 999
 
+    row_keys = row.keys()
     trial_ends_at = datetime.fromisoformat(row["trial_ends_at"])
     now = utc_now()
     trial_active = trial_ends_at > now
     trial_days_left = max(0, int(((trial_ends_at - now).total_seconds() + 86399) // 86400))
+    plan = row["plan"]
+    status = row["status"]
+    has_stripe_link = any(
+        column in row_keys and row[column]
+        for column in ("stripe_customer_id", "stripe_subscription_id", "stripe_checkout_session_id")
+    )
 
-    if row["plan"] == "active" or row["status"] == "active":
+    if plan in {"active", "monthly", "yearly", "lifetime"} or status == "active":
         return "member", "active", True, trial_active, trial_days_left
-    if trial_active:
+    if plan == "trial" and status == "trialing" and trial_active and has_stripe_link:
         return "trial", "trialing", True, True, trial_days_left
+    if status == "confirmed":
+        return "confirmed", "confirmed", False, False, 0
+    if status == "pending":
+        return "pending", "pending", False, False, 0
     return "expired", "expired", False, False, 0
 
 

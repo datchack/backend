@@ -126,7 +126,7 @@ export async function submitAccessAuthForm(event, {
             accessFormMode === 'login'
                 ? 'Connexion reussie.'
                 : accessFormMode === 'confirm'
-                ? 'Email confirme. Ton essai est actif.'
+                ? 'Email confirme. Choisis une formule Stripe pour demarrer ton essai.'
                 : 'Compte cree. Un code de confirmation a ete envoye.',
             'ok',
         );

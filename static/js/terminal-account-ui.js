@@ -33,6 +33,18 @@ export function renderAccessGate(accountState, accessFormMode) {
         return;
     }
 
+    if (role === 'pending') {
+        title.textContent = 'Confirme ton adresse email';
+        copy.textContent = 'Saisis le code recu par email, puis choisis une formule Stripe pour demarrer ton essai.';
+        return;
+    }
+
+    if (role === 'confirmed') {
+        title.textContent = 'Choisis une formule pour demarrer ton essai';
+        copy.textContent = 'Ton email est confirme. L’acces terminal s’ouvre apres le passage par Stripe.';
+        return;
+    }
+
     if (role === 'expired') {
         title.textContent = 'Ton essai est termine';
         copy.textContent = 'Reconnecte le terminal complet en passant a l’abonnement quand tu seras pret.';
@@ -152,6 +164,8 @@ export function renderAccountState(accountState, accountMode, accessFormMode) {
         ? 'Acces createur actif a vie. Le terminal complet reste ouvert sans limitation.'
         : account.role === 'trial'
         ? `Essai actif jusqu'au ${new Date(account.trial_ends_at).toLocaleDateString('fr-FR')}. Tes preferences sont synchronisees.`
+        : account.role === 'confirmed'
+        ? 'Email confirme. Choisis une formule Stripe pour demarrer ton essai.'
         : 'Compte actif. Structure abonnement prete a etre branchee.';
     form.classList.add('hidden');
     userBlock.classList.remove('hidden');
