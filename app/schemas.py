@@ -26,6 +26,11 @@ class AccountProfilePayload(BaseModel):
     country: str = ""
 
 
+class AccountPasswordPayload(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class PreferencesPayload(BaseModel):
     prefs: dict[str, Any]
 

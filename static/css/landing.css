@@ -815,37 +815,54 @@
     padding: clamp(28px, 5vw, 64px) 0;
 }
 
-.account-head {
+.account-page [hidden] {
+    display: none !important;
+}
+
+.account-hero {
     display: flex;
     align-items: end;
     justify-content: space-between;
     gap: 18px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 }
 
-.account-head h1 {
-    margin: 8px 0 8px;
-    font-size: clamp(30px, 5vw, 54px);
-    line-height: 1;
+.account-hero h1 {
+    margin: 8px 0;
+    font-size: clamp(34px, 5vw, 58px);
+    line-height: 0.98;
 }
 
-.account-head p,
+.account-hero p,
 .account-panel p {
+    max-width: 720px;
     color: #aeb6c5;
     line-height: 1.55;
 }
 
-.account-grid {
+.account-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.account-dashboard {
     display: grid;
-    grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+    grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1.05fr);
     gap: 12px;
 }
 
 .account-panel {
+    position: static;
+    right: auto;
+    bottom: auto;
+    width: auto;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: var(--card);
+    background: linear-gradient(180deg, rgba(18, 24, 34, 0.96), rgba(10, 13, 18, 0.96));
     padding: 20px;
+    box-shadow: none;
 }
 
 .account-panel h2 {
@@ -854,8 +871,32 @@
     line-height: 1.08;
 }
 
-.account-wide {
-    grid-column: 1 / -1;
+.account-status-panel,
+.account-profile-panel {
+    grid-row: span 2;
+}
+
+.account-status-top {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.account-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid rgba(0, 242, 173, 0.34);
+    border-radius: 4px;
+    color: var(--buy);
+    background: rgba(0, 242, 173, 0.08);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .account-facts {
@@ -864,9 +905,13 @@
     margin: 18px 0 0;
 }
 
+.account-facts.compact {
+    margin-top: 14px;
+}
+
 .account-facts div {
     display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-columns: 122px minmax(0, 1fr);
     gap: 12px;
     padding: 10px 0;
     border-bottom: 1px solid var(--border);
@@ -901,6 +946,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin-top: 16px;
+}
+
+.account-form.single {
+    grid-template-columns: 1fr;
 }
 
 .account-form label {
@@ -946,16 +995,36 @@
 .account-message.ok { color: var(--buy); }
 .account-message.err { color: var(--sell); }
 
+.account-page button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    filter: grayscale(0.4);
+}
+
 @media (max-width: 700px) {
-    .account-head,
-    .account-grid,
+    .account-hero,
+    .account-dashboard,
     .account-form {
         grid-template-columns: 1fr;
     }
 
-    .account-head {
+    .account-hero {
         display: grid;
         align-items: start;
+    }
+
+    .account-hero-actions {
+        justify-content: flex-start;
+    }
+
+    .account-status-panel,
+    .account-profile-panel {
+        grid-row: auto;
+    }
+
+    .account-facts div {
+        grid-template-columns: 1fr;
+        gap: 4px;
     }
 
     .resource-row {

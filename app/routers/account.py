@@ -9,6 +9,7 @@ from app.preferences import validate_preferences_payload
 from app.schemas import (
     AccountAuthPayload,
     AccountConfirmEmailPayload,
+    AccountPasswordPayload,
     AccountProfilePayload,
     AccountResendConfirmationPayload,
     PreferencesPayload,
@@ -290,6 +291,25 @@ async def account_profile(payload: AccountProfilePayload, request: Request):
     )
     updated = execute_one("SELECT * FROM users WHERE id = ?", (int(user["id"]),))
     return {"account": normalize_account_row(updated)}
+
+
+@router.put("/api/account/password")
+async def account_password(payload: AccountPasswordPayload, request: Request):
+    user = require_user(request)
+    check_rate_limit(f"password:{client_ip(request)}", limit=6)
+    check_rate_limit(f"password-user:{user['id']}", limit=6)
+
+    current_password = payload.current_password.strip()
+    new_password = payload.new_password.strip()
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 8 caracteres")
+
+    row = execute_one("SELECT * FROM users WHERE id = ?", (int(user["id"]),))
+    if not row or not verify_password(current_password, row["password_hash"]):
+        raise HTTPException(status_code=401, detail="Mot de passe actuel invalide")
+
+    execute_write("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(new_password), int(user["id"])))
+    return {"ok": True}
 
 
 @router.get("/api/test-email-config")

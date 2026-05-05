@@ -567,20 +567,24 @@ function closeLandingAuth() {
     if (modal) modal.classList.add('hidden');
 }
 
+function showLandingAccountState(showTerminal = false) {
+    const terminalLink = document.getElementById('landing-terminal-link');
+    const loginBtn = document.querySelector('.landing-login');
+    if (terminalLink && showTerminal) terminalLink.classList.remove('hidden');
+    if (loginBtn) {
+        loginBtn.textContent = t('nav_account');
+        loginBtn.dataset.i18n = 'nav_account';
+        loginBtn.dataset.authMode = 'account';
+        loginBtn.dataset.accountLink = 'true';
+    }
+}
+
 async function fetchLandingAccount() {
     try {
         const response = await fetch('/api/account/me', { cache: 'no-store' });
         const payload = await response.json();
-        const terminalLink = document.getElementById('landing-terminal-link');
-        const loginBtn = document.querySelector('.landing-login');
         if (payload.authenticated) {
-            if (terminalLink) terminalLink.classList.remove('hidden');
-            if (loginBtn) {
-                loginBtn.textContent = t('nav_account');
-                loginBtn.dataset.i18n = 'nav_account';
-                loginBtn.dataset.authMode = 'account';
-                loginBtn.dataset.accountLink = 'true';
-            }
+            showLandingAccountState(!!payload.account?.has_access);
         }
     } catch (error) {
         console.error(error);
@@ -638,6 +642,8 @@ async function submitLandingAuth(event) {
             return;
         }
 
+        showLandingAccountState(!!payload.account?.has_access);
+
         if (!payload.account?.has_access) {
             if (payload.account?.email_confirmed) {
                 setLandingMessage('Ton email est confirme. Choisis une formule Stripe pour demarrer ton essai.', 'ok');
@@ -648,15 +654,7 @@ async function submitLandingAuth(event) {
         }
 
         setLandingMessage(t('auth_success'), 'ok');
-        const terminalLink = document.getElementById('landing-terminal-link');
-        const loginBtn = document.querySelector('.landing-login');
-        if (terminalLink) terminalLink.classList.remove('hidden');
-        if (loginBtn) {
-            loginBtn.textContent = t('nav_account');
-            loginBtn.dataset.i18n = 'nav_account';
-            loginBtn.dataset.authMode = 'account';
-            loginBtn.dataset.accountLink = 'true';
-        }
+        showLandingAccountState(true);
         window.setTimeout(() => {
             closeLandingAuth();
             setLandingMessage('');
