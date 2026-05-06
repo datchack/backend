@@ -50,13 +50,21 @@ const LANDING_COPY = {
         auth_login_title: 'Connexion au terminal',
         auth_register_copy: 'Crée ton compte pour ouvrir le terminal complet et sauvegarder ton workspace.',
         auth_login_copy: 'Connecte-toi pour reprendre ton workspace.',
+        auth_reset_kicker: 'MOT DE PASSE',
+        auth_reset_title: 'Réinitialiser ton mot de passe',
+        auth_reset_copy: 'Entre ton email et nous t’enverrons un lien sécurisé pour choisir un nouveau mot de passe.',
         auth_register_submit: 'Créer mon compte',
         auth_login_submit: 'Se connecter',
+        auth_reset_submit: 'Envoyer le lien',
         auth_register_switch: "J'ai déjà un compte",
         auth_login_switch: 'Créer un compte',
+        auth_reset_switch: 'Retour à la connexion',
+        auth_forgot: 'Mot de passe oublié ?',
         password_placeholder: 'Mot de passe (8 caractères min.)',
         auth_loading_login: 'Connexion...',
         auth_loading_register: 'Création du compte...',
+        auth_loading_reset: 'Envoi du lien...',
+        auth_reset_sent: 'Si un compte existe, un lien de réinitialisation vient d’être envoyé.',
         auth_no_access: 'Compte connecté, mais accès terminal indisponible.',
         auth_success: 'Accès valide. Ouverture du terminal...',
         billing_redirect: 'Redirection vers le paiement...',
@@ -171,13 +179,21 @@ const LANDING_COPY = {
         auth_login_title: 'Login to the terminal',
         auth_register_copy: 'Create your account to open the full terminal and save your workspace.',
         auth_login_copy: 'Login to resume your workspace.',
+        auth_reset_kicker: 'PASSWORD',
+        auth_reset_title: 'Reset your password',
+        auth_reset_copy: 'Enter your email and we will send a secure link to choose a new password.',
         auth_register_submit: 'Create my account',
         auth_login_submit: 'Login',
+        auth_reset_submit: 'Send link',
         auth_register_switch: 'I already have an account',
         auth_login_switch: 'Create an account',
+        auth_reset_switch: 'Back to login',
+        auth_forgot: 'Forgot password?',
         password_placeholder: 'Password (8 characters min.)',
         auth_loading_login: 'Logging in...',
         auth_loading_register: 'Creating account...',
+        auth_loading_reset: 'Sending link...',
+        auth_reset_sent: 'If an account exists, a reset link has been sent.',
         auth_no_access: 'Account connected, but terminal access is unavailable.',
         auth_success: 'Access valid. Opening terminal...',
         billing_redirect: 'Redirecting to payment...',
@@ -521,28 +537,35 @@ function setLandingEmail(email = '') {
 }
 
 function setLandingAuthMode(mode) {
-    landingAuthMode = mode === 'login' ? 'login' : mode === 'confirm' ? 'confirm' : 'register';
+    landingAuthMode = mode === 'login' ? 'login' : mode === 'confirm' ? 'confirm' : mode === 'reset' ? 'reset' : 'register';
 
     const kicker = document.getElementById('landing-auth-kicker');
     const title = document.getElementById('landing-auth-title');
     const copy = document.getElementById('landing-auth-copy');
     const submit = document.getElementById('landing-auth-submit');
     const switchBtn = document.getElementById('landing-auth-switch');
+    const forgotBtn = document.getElementById('landing-auth-forgot');
     const password = document.getElementById('landing-auth-password');
     const codeInput = document.getElementById('landing-auth-code');
 
-    if (kicker) kicker.textContent = landingAuthMode === 'login' ? t('auth_login_kicker') : landingAuthMode === 'confirm' ? 'Confirmation email' : t('auth_register_kicker');
-    if (title) title.textContent = landingAuthMode === 'login' ? t('auth_login_title') : landingAuthMode === 'confirm' ? 'Confirme ton adresse email' : t('auth_register_title');
+    if (kicker) kicker.textContent = landingAuthMode === 'login' ? t('auth_login_kicker') : landingAuthMode === 'confirm' ? 'Confirmation email' : landingAuthMode === 'reset' ? t('auth_reset_kicker') : t('auth_register_kicker');
+    if (title) title.textContent = landingAuthMode === 'login' ? t('auth_login_title') : landingAuthMode === 'confirm' ? 'Confirme ton adresse email' : landingAuthMode === 'reset' ? t('auth_reset_title') : t('auth_register_title');
     if (copy) copy.textContent = landingAuthMode === 'login'
         ? t('auth_login_copy')
         : landingAuthMode === 'confirm'
         ? 'Saisis le code de confirmation recu par email pour activer ton essai.'
+        : landingAuthMode === 'reset'
+        ? t('auth_reset_copy')
         : t('auth_register_copy');
-    if (submit) submit.textContent = landingAuthMode === 'login' ? t('auth_login_submit') : landingAuthMode === 'confirm' ? 'Valider le code' : t('auth_register_submit');
-    if (switchBtn) switchBtn.textContent = landingAuthMode === 'login' ? t('auth_login_switch') : t('auth_register_switch');
+    if (submit) submit.textContent = landingAuthMode === 'login' ? t('auth_login_submit') : landingAuthMode === 'confirm' ? 'Valider le code' : landingAuthMode === 'reset' ? t('auth_reset_submit') : t('auth_register_submit');
+    if (switchBtn) switchBtn.textContent = landingAuthMode === 'login' ? t('auth_login_switch') : landingAuthMode === 'reset' ? t('auth_reset_switch') : t('auth_register_switch');
+    if (forgotBtn) {
+        forgotBtn.textContent = t('auth_forgot');
+        forgotBtn.hidden = landingAuthMode !== 'login';
+    }
     if (password) {
-        password.style.display = landingAuthMode === 'confirm' ? 'none' : '';
-        password.required = landingAuthMode !== 'confirm';
+        password.style.display = landingAuthMode === 'confirm' || landingAuthMode === 'reset' ? 'none' : '';
+        password.required = landingAuthMode !== 'confirm' && landingAuthMode !== 'reset';
         password.autocomplete = landingAuthMode === 'login' ? 'current-password' : 'new-password';
     }
     if (codeInput) {
@@ -600,10 +623,22 @@ async function submitLandingAuth(event) {
 
     const email = emailEl.value.trim().toLowerCase();
     const password = passwordEl.value;
-    if (!email || (landingAuthMode !== 'confirm' && !password)) return;
+    if (!email || (landingAuthMode !== 'confirm' && landingAuthMode !== 'reset' && !password)) return;
 
     try {
-        setLandingMessage(landingAuthMode === 'login' ? t('auth_loading_login') : landingAuthMode === 'confirm' ? 'Confirmation du code...' : t('auth_loading_register'));
+        setLandingMessage(landingAuthMode === 'login' ? t('auth_loading_login') : landingAuthMode === 'confirm' ? 'Confirmation du code...' : landingAuthMode === 'reset' ? t('auth_loading_reset') : t('auth_loading_register'));
+        if (landingAuthMode === 'reset') {
+            const response = await fetch('/api/account/password-reset/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.detail || t('auth_error'));
+            setLandingMessage(payload.message || t('auth_reset_sent'), 'ok');
+            return;
+        }
+
         const body = { email, password };
         const endpoint = landingAuthMode === 'confirm' ? 'confirm-email' : landingAuthMode;
         if (landingAuthMode === 'confirm') {
@@ -742,6 +777,14 @@ function bindLanding() {
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             setLandingAuthMode(landingAuthMode === 'login' ? 'register' : 'login');
+            setLandingMessage('');
+        });
+    }
+
+    const forgotBtn = document.getElementById('landing-auth-forgot');
+    if (forgotBtn) {
+        forgotBtn.addEventListener('click', () => {
+            setLandingAuthMode('reset');
             setLandingMessage('');
         });
     }

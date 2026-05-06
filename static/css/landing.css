@@ -881,6 +881,16 @@
     grid-row: span 2;
 }
 
+.account-confirm-panel,
+.reset-panel {
+    grid-column: 1 / -1;
+    border-color: rgba(0, 242, 173, 0.28);
+}
+
+.reset-page {
+    width: min(720px, calc(100% - 32px));
+}
+
 .account-status-top {
     display: flex;
     align-items: start;

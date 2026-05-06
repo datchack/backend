@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
+import hashlib
 import json
+import secrets
 
 from fastapi import APIRouter, Request, Response
 from fastapi import HTTPException
@@ -10,6 +12,8 @@ from app.schemas import (
     AccountAuthPayload,
     AccountConfirmEmailPayload,
     AccountPasswordPayload,
+    AccountPasswordResetConfirmPayload,
+    AccountPasswordResetRequestPayload,
     AccountProfilePayload,
     AccountResendConfirmationPayload,
     PreferencesPayload,
@@ -33,9 +37,15 @@ from app.services.accounts import (
     utc_now,
     verify_password,
 )
-from app.services.email import send_confirmation_email
+from app.services.email import send_confirmation_email, send_password_reset_email
 
 router = APIRouter()
+
+PASSWORD_RESET_EXPIRES_MINUTES = 60
+
+
+def password_reset_token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 @router.get("/api/account/me")
 async def account_me(request: Request):
@@ -244,6 +254,66 @@ async def account_resend_confirmation(payload: AccountResendConfirmationPayload,
         raise HTTPException(status_code=503, detail="Impossible de renvoyer le code de confirmation") from exc
 
     return {"ok": True, "message": "Un nouveau code de confirmation a ete envoye."}
+
+
+@router.post("/api/account/password-reset/request")
+async def account_password_reset_request(payload: AccountPasswordResetRequestPayload, request: Request):
+    email = payload.email.strip().lower()
+    check_rate_limit(f"password-reset:{client_ip(request)}", limit=4)
+    check_rate_limit(f"password-reset-email:{email}", limit=3)
+
+    generic_response = {"ok": True, "message": "Si un compte existe, un lien de réinitialisation vient d'être envoyé."}
+    if "@" not in email or "." not in email:
+        return generic_response
+
+    row = execute_one("SELECT * FROM users WHERE email = ?", (email,))
+    if not row:
+        return generic_response
+
+    token = secrets.token_urlsafe(32)
+    expires_at = utc_now() + timedelta(minutes=PASSWORD_RESET_EXPIRES_MINUTES)
+    execute_write(
+        "UPDATE users SET password_reset_token_hash = ?, password_reset_expires_at = ? WHERE id = ?",
+        (password_reset_token_hash(token), expires_at.isoformat(), int(row["id"])),
+    )
+
+    try:
+        send_password_reset_email(email, token)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Impossible d'envoyer l'email de réinitialisation") from exc
+
+    return generic_response
+
+
+@router.post("/api/account/password-reset/confirm")
+async def account_password_reset_confirm(payload: AccountPasswordResetConfirmPayload):
+    token = payload.token.strip()
+    new_password = payload.new_password.strip()
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 8 caracteres")
+    if not token:
+        raise HTTPException(status_code=400, detail="Lien de réinitialisation invalide")
+
+    row = execute_one("SELECT * FROM users WHERE password_reset_token_hash = ?", (password_reset_token_hash(token),))
+    if not row:
+        raise HTTPException(status_code=400, detail="Lien de réinitialisation invalide ou expiré")
+
+    expires_at = row["password_reset_expires_at"] if "password_reset_expires_at" in row.keys() else None
+    if not expires_at or datetime.fromisoformat(expires_at) <= utc_now():
+        raise HTTPException(status_code=400, detail="Lien de réinitialisation expiré")
+
+    execute_write(
+        """
+        UPDATE users
+        SET password_hash = ?,
+            password_reset_token_hash = ?,
+            password_reset_expires_at = ?
+        WHERE id = ?
+        """,
+        (hash_password(new_password), None, None, int(row["id"])),
+    )
+    execute_write("DELETE FROM sessions WHERE user_id = ?", (int(row["id"]),))
+    return {"ok": True, "message": "Mot de passe mis à jour. Tu peux maintenant te connecter."}
 
 
 @router.post("/api/account/logout")

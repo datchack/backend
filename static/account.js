@@ -75,6 +75,14 @@ const ACCOUNT_COPY = {
         status_active_copy: 'Ton compte peut ouvrir le terminal complet. La facturation reste gérable depuis Stripe.',
         status_payment_copy: 'Ton email est confirmé. Choisis une formule pour démarrer ton essai et lier Stripe au compte.',
         status_confirm_copy: 'Confirme ton adresse email avant de choisir une formule Stripe.',
+        confirm_kicker: 'VALIDATION EMAIL',
+        confirm_title: 'Valide ton compte XAUTERMINAL',
+        confirm_copy: 'Saisis le code reçu par email pour confirmer ton compte. Une fois validé, tu pourras choisir une formule Stripe et démarrer ton essai de 7 jours.',
+        confirm_code_label: 'Code de confirmation',
+        confirm_submit: 'Valider mon compte',
+        confirming_code: 'Validation du code...',
+        confirm_success: 'Email confirmé. Tu peux maintenant choisir ta formule Stripe.',
+        confirm_error: 'Code non validé.',
         billing_active_copy: 'Ton abonnement est lié à Stripe. Tu peux gérer tes factures, moyens de paiement, changements de formule et annulations depuis le portail Stripe.',
         billing_ready_copy: 'Ton email est confirmé. Choisis une formule pour démarrer ton essai et lier automatiquement Stripe à ton compte XAUTERMINAL.',
         billing_confirm_copy: 'Confirme ton email avant de choisir une formule. Stripe gérera ensuite les moyens de paiement, factures et annulations.',
@@ -171,6 +179,14 @@ const ACCOUNT_COPY = {
         status_active_copy: 'Your account can open the full terminal. Billing remains manageable through Stripe.',
         status_payment_copy: 'Your email is confirmed. Choose a plan to start your trial and link Stripe to the account.',
         status_confirm_copy: 'Confirm your email before choosing a Stripe plan.',
+        confirm_kicker: 'EMAIL VALIDATION',
+        confirm_title: 'Validate your XAUTERMINAL account',
+        confirm_copy: 'Enter the code received by email to confirm your account. Once validated, you can choose a Stripe plan and start your 7-day trial.',
+        confirm_code_label: 'Confirmation code',
+        confirm_submit: 'Validate my account',
+        confirming_code: 'Validating code...',
+        confirm_success: 'Email confirmed. You can now choose your Stripe plan.',
+        confirm_error: 'Code not validated.',
         billing_active_copy: 'Your subscription is linked to Stripe. You can manage invoices, payment methods, plan changes and cancellations from the Stripe portal.',
         billing_ready_copy: 'Your email is confirmed. Choose a plan to start your trial and automatically link Stripe to your XAUTERMINAL account.',
         billing_confirm_copy: 'Confirm your email before choosing a plan. Stripe will then manage payment methods, invoices and cancellations.',
@@ -312,6 +328,7 @@ function updateActionStates(account) {
     const portalButton = document.getElementById('account-portal');
     const resendButton = document.getElementById('account-resend-confirmation');
     const adminPanel = document.getElementById('account-admin-panel');
+    const confirmPanel = document.getElementById('account-confirm-panel');
     const planButtons = document.querySelectorAll('[data-account-plan]');
 
     if (portalButton) {
@@ -327,6 +344,10 @@ function updateActionStates(account) {
 
     if (adminPanel) {
         adminPanel.classList.toggle('hidden', account.role !== 'owner');
+    }
+
+    if (confirmPanel) {
+        confirmPanel.classList.toggle('hidden', !!account.email_confirmed);
     }
 
     planButtons.forEach((button) => {
@@ -476,6 +497,27 @@ async function resendConfirmation() {
     }
 }
 
+async function confirmAccountEmail(event) {
+    event.preventDefault();
+    if (!state.account?.email) return;
+    const code = document.getElementById('account-confirm-code')?.value.trim() || '';
+    try {
+        setMessage('account-confirm-message', t('confirming_code'));
+        const response = await fetch('/api/account/confirm-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: state.account.email, code }),
+        });
+        const payload = await readJson(response);
+        renderAccount(payload.account);
+        document.getElementById('account-confirm-form')?.reset();
+        setMessage('account-message', t('confirm_success'), 'ok');
+        setMessage('account-confirm-message', '');
+    } catch (error) {
+        setMessage('account-confirm-message', error.message || t('confirm_error'), 'err');
+    }
+}
+
 async function syncBillingReturn() {
     const params = new URLSearchParams(window.location.search);
     const status = params.get('billing');
@@ -511,6 +553,7 @@ async function logout() {
 function bindAccountPage() {
     document.getElementById('account-profile-form')?.addEventListener('submit', saveProfile);
     document.getElementById('account-password-form')?.addEventListener('submit', savePassword);
+    document.getElementById('account-confirm-form')?.addEventListener('submit', confirmAccountEmail);
     document.getElementById('account-portal')?.addEventListener('click', openPortal);
     document.getElementById('account-resend-confirmation')?.addEventListener('click', resendConfirmation);
     document.getElementById('account-logout')?.addEventListener('click', logout);

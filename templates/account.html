@@ -45,6 +45,20 @@
         </section>
 
         <section class="account-dashboard hidden" id="account-dashboard">
+            <article class="account-panel account-confirm-panel hidden" id="account-confirm-panel">
+                <div class="landing-kicker" data-i18n="confirm_kicker">VALIDATION EMAIL</div>
+                <h2 data-i18n="confirm_title">Valide ton compte XAUTERMINAL</h2>
+                <p data-i18n="confirm_copy">Saisis le code reçu par email pour confirmer ton compte. Une fois validé, tu pourras choisir une formule Stripe et démarrer ton essai de 7 jours.</p>
+                <form class="account-form single" id="account-confirm-form">
+                    <label>
+                        <span data-i18n="confirm_code_label">Code de confirmation</span>
+                        <input id="account-confirm-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="12">
+                    </label>
+                    <button type="submit" class="resource-cta account-submit" data-i18n="confirm_submit">Valider mon compte</button>
+                </form>
+                <div class="account-message" id="account-confirm-message"></div>
+            </article>
+
             <article class="account-panel account-status-panel">
                 <div class="account-status-top">
                     <div>

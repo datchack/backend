@@ -31,6 +31,15 @@ class AccountPasswordPayload(BaseModel):
     new_password: str
 
 
+class AccountPasswordResetRequestPayload(BaseModel):
+    email: str
+
+
+class AccountPasswordResetConfirmPayload(BaseModel):
+    token: str
+    new_password: str
+
+
 class PreferencesPayload(BaseModel):
     prefs: dict[str, Any]
 

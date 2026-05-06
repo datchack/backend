@@ -458,6 +458,11 @@ async def account_page():
     return FileResponse("templates/account.html")
 
 
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page():
+    return FileResponse("templates/reset_password.html")
+
+
 @router.get("/ressources", response_class=HTMLResponse)
 async def resources_index_page():
     return HTMLResponse(resources_page())
