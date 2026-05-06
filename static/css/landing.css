@@ -882,9 +882,62 @@
 }
 
 .account-confirm-panel,
+.account-next-panel,
 .reset-panel {
     grid-column: 1 / -1;
     border-color: rgba(0, 242, 173, 0.28);
+}
+
+.account-next-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.account-progress {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.account-progress-step {
+    min-height: 44px;
+    padding: 9px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.account-progress-step span {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--sell);
+}
+
+.account-progress-step.done {
+    border-color: rgba(0, 242, 173, 0.32);
+    background: rgba(0, 242, 173, 0.06);
+    color: #eef3fb;
+}
+
+.account-progress-step.done span {
+    color: var(--buy);
+}
+
+.account-next-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.account-next-actions .resource-cta,
+.account-next-actions .resource-link-button {
+    margin-top: 0;
 }
 
 .reset-page {
@@ -1035,6 +1088,10 @@
     .account-status-panel,
     .account-profile-panel {
         grid-row: auto;
+    }
+
+    .account-progress {
+        grid-template-columns: 1fr;
     }
 
     .account-facts div {

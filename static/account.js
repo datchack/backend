@@ -20,6 +20,26 @@ const ACCOUNT_COPY = {
         status_kicker: 'STATUT',
         loading: 'Chargement...',
         status_loading_copy: 'Vérification de ton accès.',
+        next_kicker: 'PROCHAINES ÉTAPES',
+        next_title: 'Ton parcours',
+        next_copy: 'Les actions utiles apparaissent ici selon l’état de ton compte.',
+        next_confirm_title: 'Valide ton email',
+        next_confirm_copy: 'Entre le code reçu par email pour confirmer définitivement ton compte.',
+        next_confirm_action: 'Saisir le code',
+        next_resend_action: 'Renvoyer le code',
+        next_plan_title: 'Choisis ta formule',
+        next_plan_copy: 'Ton email est confirmé. Choisis une formule Stripe pour démarrer ton essai de 7 jours.',
+        next_plan_action: 'Voir les formules',
+        next_sync_title: 'Paiement en synchronisation',
+        next_sync_copy: 'Stripe est lié au compte. Si l’accès n’est pas encore actif, tu peux gérer ton paiement ou contacter le support.',
+        next_portal_action: 'Gérer Stripe',
+        next_active_title: 'Accès terminal prêt',
+        next_active_copy: 'Ton compte est actif. Tu peux ouvrir le terminal et gérer ton abonnement depuis Stripe.',
+        next_terminal_action: 'Ouvrir le terminal',
+        next_profile_action: 'Compléter le profil',
+        progress_email: 'Email confirmé',
+        progress_stripe: 'Stripe lié',
+        progress_access: 'Accès terminal',
         terminal_access: 'Accès terminal',
         period_end: 'Échéance',
         resend_code: 'Renvoyer le code',
@@ -28,6 +48,10 @@ const ACCOUNT_COPY = {
         billing_title: 'Formule et facturation',
         billing_default_copy: 'Stripe gère les moyens de paiement, factures, changements de formule et annulations.',
         billing_status: 'Statut',
+        account_created: 'Création',
+        trial_days: 'Jours essai',
+        trial_days_value: 'jour(s)',
+        no_trial_days: '-',
         stripe_customer: 'Client Stripe',
         subscription: 'Abonnement',
         price: 'Prix',
@@ -124,6 +148,26 @@ const ACCOUNT_COPY = {
         status_kicker: 'STATUS',
         loading: 'Loading...',
         status_loading_copy: 'Checking your access.',
+        next_kicker: 'NEXT STEPS',
+        next_title: 'Your path',
+        next_copy: 'Useful actions appear here based on your account status.',
+        next_confirm_title: 'Validate your email',
+        next_confirm_copy: 'Enter the code received by email to permanently confirm your account.',
+        next_confirm_action: 'Enter code',
+        next_resend_action: 'Resend code',
+        next_plan_title: 'Choose your plan',
+        next_plan_copy: 'Your email is confirmed. Choose a Stripe plan to start your 7-day trial.',
+        next_plan_action: 'View plans',
+        next_sync_title: 'Payment syncing',
+        next_sync_copy: 'Stripe is linked to the account. If access is not active yet, you can manage payment or contact support.',
+        next_portal_action: 'Manage Stripe',
+        next_active_title: 'Terminal access ready',
+        next_active_copy: 'Your account is active. You can open the terminal and manage billing through Stripe.',
+        next_terminal_action: 'Open terminal',
+        next_profile_action: 'Complete profile',
+        progress_email: 'Email confirmed',
+        progress_stripe: 'Stripe linked',
+        progress_access: 'Terminal access',
         terminal_access: 'Terminal access',
         period_end: 'Period end',
         resend_code: 'Resend code',
@@ -132,6 +176,10 @@ const ACCOUNT_COPY = {
         billing_title: 'Plan and billing',
         billing_default_copy: 'Stripe manages payment methods, invoices, plan changes and cancellations.',
         billing_status: 'Status',
+        account_created: 'Created',
+        trial_days: 'Trial days',
+        trial_days_value: 'day(s)',
+        no_trial_days: '-',
         stripe_customer: 'Stripe customer',
         subscription: 'Subscription',
         price: 'Price',
@@ -272,6 +320,76 @@ function shortId(value) {
     return `${value.slice(0, 10)}...${value.slice(-6)}`;
 }
 
+function trialDaysLabel(account) {
+    if (account.role === 'owner') return 'LIFETIME';
+    const days = Number(account.trial_days_left || 0);
+    if (!days) return t('no_trial_days');
+    return `${days} ${t('trial_days_value')}`;
+}
+
+function renderNextSteps(account) {
+    const title = document.getElementById('account-next-title');
+    const copy = document.getElementById('account-next-copy');
+    const progress = document.getElementById('account-progress');
+    const actions = document.getElementById('account-next-actions');
+    if (!title || !copy || !progress || !actions) return;
+
+    const emailOk = !!account.email_confirmed;
+    const stripeOk = !!(account.stripe_customer_id || account.stripe_subscription_id);
+    const accessOk = !!account.has_access;
+    const steps = [
+        { label: t('progress_email'), done: emailOk },
+        { label: t('progress_stripe'), done: stripeOk },
+        { label: t('progress_access'), done: accessOk },
+    ];
+    progress.innerHTML = steps.map((step) => `
+        <span class="account-progress-step${step.done ? ' done' : ''}">
+            <span>${step.done ? 'OK' : '--'}</span>${step.label}
+        </span>
+    `).join('');
+
+    let stateTitle = t('next_active_title');
+    let stateCopy = t('next_active_copy');
+    let actionItems = [
+        { label: t('next_terminal_action'), type: 'link', href: '/terminal', primary: true },
+        { label: t('next_portal_action'), action: 'portal', disabled: !stripeOk },
+        { label: t('next_profile_action'), action: 'profile' },
+    ];
+
+    if (!emailOk) {
+        stateTitle = t('next_confirm_title');
+        stateCopy = t('next_confirm_copy');
+        actionItems = [
+            { label: t('next_confirm_action'), action: 'confirm', primary: true },
+            { label: t('next_resend_action'), action: 'resend' },
+        ];
+    } else if (!stripeOk) {
+        stateTitle = t('next_plan_title');
+        stateCopy = t('next_plan_copy');
+        actionItems = [
+            { label: t('next_plan_action'), action: 'plans', primary: true },
+            { label: t('next_profile_action'), action: 'profile' },
+        ];
+    } else if (!accessOk) {
+        stateTitle = t('next_sync_title');
+        stateCopy = t('next_sync_copy');
+        actionItems = [
+            { label: t('next_portal_action'), action: 'portal', primary: true },
+            { label: t('next_profile_action'), action: 'profile' },
+        ];
+    }
+
+    title.textContent = stateTitle;
+    copy.textContent = stateCopy;
+    actions.innerHTML = actionItems.map((item) => {
+        const cls = item.primary ? 'resource-cta' : 'resource-link-button';
+        if (item.type === 'link') {
+            return `<a class="${cls}" href="${item.href}">${item.label}</a>`;
+        }
+        return `<button type="button" class="${cls}" data-next-action="${item.action}"${item.disabled ? ' disabled' : ''}>${item.label}</button>`;
+    }).join('');
+}
+
 function planLabel(account) {
     const plan = account.plan || account.role || '-';
     const labels = {
@@ -386,11 +504,14 @@ function renderAccount(account) {
     setText('account-access', accessLabel(account));
     setText('account-period-end', formatDate(account.stripe_current_period_end || account.trial_ends_at));
     setText('account-billing-state', billingStateLabel(account));
+    setText('account-created', formatDate(account.created_at));
+    setText('account-trial-days', trialDaysLabel(account));
     setText('account-stripe-customer', shortId(account.stripe_customer_id));
     setText('account-stripe-subscription', shortId(account.stripe_subscription_id));
     setText('account-stripe-price', shortId(account.stripe_price_id));
 
     fillProfile(account);
+    renderNextSteps(account);
     updateActionStates(account);
 }
 
@@ -518,6 +639,24 @@ async function confirmAccountEmail(event) {
     }
 }
 
+function handleNextAction(event) {
+    const button = event.target.closest('[data-next-action]');
+    if (!button) return;
+    const action = button.dataset.nextAction;
+    if (action === 'confirm') {
+        document.getElementById('account-confirm-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.setTimeout(() => document.getElementById('account-confirm-code')?.focus(), 350);
+    } else if (action === 'resend') {
+        resendConfirmation();
+    } else if (action === 'plans') {
+        document.querySelector('.account-billing-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (action === 'portal') {
+        openPortal();
+    } else if (action === 'profile') {
+        document.querySelector('.account-profile-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
 async function syncBillingReturn() {
     const params = new URLSearchParams(window.location.search);
     const status = params.get('billing');
@@ -554,6 +693,7 @@ function bindAccountPage() {
     document.getElementById('account-profile-form')?.addEventListener('submit', saveProfile);
     document.getElementById('account-password-form')?.addEventListener('submit', savePassword);
     document.getElementById('account-confirm-form')?.addEventListener('submit', confirmAccountEmail);
+    document.getElementById('account-next-actions')?.addEventListener('click', handleNextAction);
     document.getElementById('account-portal')?.addEventListener('click', openPortal);
     document.getElementById('account-resend-confirmation')?.addEventListener('click', resendConfirmation);
     document.getElementById('account-logout')?.addEventListener('click', logout);
