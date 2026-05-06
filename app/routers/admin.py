@@ -17,12 +17,52 @@ from app.services.accounts import (
     require_owner,
     utc_now,
 )
+from app.services.billing import sync_user_stripe_billing
 from app.services.email import is_email_confirmation_enabled, send_activation_reminder_email
 
 router = APIRouter()
 
 REMINDER_COOLDOWN_HOURS = 24
 REMINDER_MIN_ACCOUNT_AGE_HOURS = 2
+
+
+def stripe_dashboard_url(kind: str, object_id: str | None) -> str | None:
+    if not object_id:
+        return None
+    if kind == "customer":
+        return f"https://dashboard.stripe.com/customers/{object_id}"
+    if kind == "subscription":
+        return f"https://dashboard.stripe.com/subscriptions/{object_id}"
+    if kind == "payment":
+        return f"https://dashboard.stripe.com/payments/{object_id}"
+    return None
+
+
+def admin_enrich_user(user: dict | None) -> dict | None:
+    if not user:
+        return None
+
+    has_stripe = bool(user.get("stripe_customer_id") or user.get("stripe_subscription_id") or user.get("stripe_checkout_session_id"))
+    issues = []
+    if user.get("email_confirmed") and not has_stripe and user.get("role") != "owner":
+        issues.append("confirmed_no_stripe")
+    if has_stripe and user.get("email_confirmed") and not user.get("has_access"):
+        issues.append("stripe_without_access")
+    if user.get("stripe_subscription_id") and not user.get("stripe_current_period_end") and user.get("plan") != "lifetime":
+        issues.append("missing_period_end")
+
+    user["admin"] = {
+        "has_stripe": has_stripe,
+        "issues": issues,
+        "needs_review": bool(issues),
+        "stripe_customer_url": stripe_dashboard_url("customer", user.get("stripe_customer_id")),
+        "stripe_subscription_url": stripe_dashboard_url("subscription", user.get("stripe_subscription_id")),
+    }
+    return user
+
+
+def admin_user_from_row(row):
+    return admin_enrich_user(normalize_account_row(row))
 
 @router.get("/api/admin/users")
 async def admin_users(request: Request):
@@ -34,7 +74,7 @@ async def admin_users(request: Request):
         ORDER BY id DESC
         """
     )
-    return {"users": [normalize_account_row(row) for row in rows]}
+    return {"users": [admin_user_from_row(row) for row in rows]}
 
 
 @router.post("/api/admin/users/{user_id}/access")
@@ -80,7 +120,7 @@ async def admin_update_user_access(user_id: int, payload: AdminAccessPayload, re
         raise HTTPException(status_code=400, detail="Action admin inconnue")
 
     updated = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
-    return {"user": normalize_account_row(updated)}
+    return {"user": admin_user_from_row(updated)}
 
 
 def parse_datetime(value: str | None, fallback_tz=None):
@@ -174,7 +214,7 @@ async def admin_resend_activation_reminders(payload: AdminActivationReminderPayl
         "skipped": skipped,
         "error_count": len(errors),
         "errors": errors[:10],
-        "users": [normalize_account_row(row) for row in updated_rows],
+        "users": [admin_user_from_row(row) for row in updated_rows],
     }
 
 
@@ -215,4 +255,12 @@ async def admin_resend_user_activation(user_id: int, request: Request):
         (now.isoformat(), user_id),
     )
     updated = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
-    return {"user": normalize_account_row(updated), "sent": True}
+    return {"user": admin_user_from_row(updated), "sent": True}
+
+
+@router.post("/api/admin/users/{user_id}/sync-stripe")
+async def admin_sync_user_stripe(user_id: int, request: Request):
+    require_owner(request)
+    sync_result = sync_user_stripe_billing(user_id)
+    updated = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    return {"user": admin_user_from_row(updated), "sync": sync_result}

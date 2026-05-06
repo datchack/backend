@@ -311,6 +311,7 @@ def normalize_account_row(row) -> dict | None:
         "trial_days_left": days_left,
         "stripe_customer_id": row["stripe_customer_id"] if "stripe_customer_id" in row.keys() else None,
         "stripe_subscription_id": row["stripe_subscription_id"] if "stripe_subscription_id" in row.keys() else None,
+        "stripe_checkout_session_id": row["stripe_checkout_session_id"] if "stripe_checkout_session_id" in row.keys() else None,
         "stripe_price_id": row["stripe_price_id"] if "stripe_price_id" in row.keys() else None,
         "stripe_current_period_end": row["stripe_current_period_end"] if "stripe_current_period_end" in row.keys() else None,
         "profile": {

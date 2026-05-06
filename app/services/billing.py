@@ -14,7 +14,7 @@ from app.config import (
     STRIPE_WEBHOOK_MAX_BYTES,
     STRIPE_WEBHOOK_SECRET,
 )
-from app.services.accounts import execute_write, utc_now
+from app.services.accounts import execute_one, execute_write, utc_now
 
 try:
     import stripe
@@ -194,6 +194,94 @@ def retrieve_subscription(subscription_id: str | None) -> Any | None:
     if subscription_api is None:
         raise RuntimeError("Stripe Subscription API unavailable")
     return subscription_api.retrieve(subscription_id)
+
+
+def retrieve_checkout_session(session_id: str | None) -> Any | None:
+    if not session_id:
+        return None
+    return stripe.checkout.Session.retrieve(session_id)
+
+
+def subscription_price_id(subscription: Any) -> str | None:
+    items = stripe_get(stripe_get(subscription, "items", {}), "data", [])
+    if items:
+        return stripe_line_price_id(items[0])
+    return None
+
+
+def list_latest_customer_subscription(customer_id: str | None) -> Any | None:
+    if not customer_id:
+        return None
+    subscription_api = getattr(stripe, "Subscription", None)
+    if subscription_api is None:
+        raise RuntimeError("Stripe Subscription API unavailable")
+    subscriptions = subscription_api.list(customer=customer_id, status="all", limit=1)
+    data = stripe_get(subscriptions, "data", []) or []
+    return data[0] if data else None
+
+
+def sync_user_stripe_billing(user_id: int) -> dict:
+    require_stripe_ready()
+    row = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    if not row:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
+    customer_id = row["stripe_customer_id"] if "stripe_customer_id" in row.keys() else None
+    subscription_id = row["stripe_subscription_id"] if "stripe_subscription_id" in row.keys() else None
+    subscription = None
+    if subscription_id:
+        try:
+            subscription = retrieve_subscription(subscription_id)
+        except Exception:
+            if not customer_id:
+                raise
+    if not subscription:
+        subscription = list_latest_customer_subscription(customer_id)
+
+    if subscription:
+        status = stripe_get(subscription, "status", "unknown")
+        customer_id = stripe_object_id(stripe_get(subscription, "customer"))
+        subscription_id = stripe_object_id(subscription)
+        price_id = subscription_price_id(subscription)
+        current_period_end = iso_from_stripe_timestamp(stripe_get(subscription, "current_period_end"))
+
+        if status in {"active", "trialing"}:
+            if not stripe_price_allowed(price_id):
+                raise HTTPException(status_code=400, detail=f"Prix Stripe non reconnu: {price_id or 'absent'}")
+            mark_user_paid(
+                user_id=user_id,
+                customer_id=customer_id,
+                subscription_id=subscription_id,
+                price_id=price_id,
+                plan=stripe_plan_from_price(price_id, "active"),
+                status="active",
+                current_period_end=current_period_end,
+            )
+        else:
+            update_user_billing_status(customer_id, subscription_id, status)
+
+        return {
+            "source": "subscription",
+            "stripe_status": status,
+            "customer_id": customer_id,
+            "subscription_id": subscription_id,
+            "price_id": price_id,
+            "current_period_end": current_period_end,
+        }
+
+    checkout_session_id = row["stripe_checkout_session_id"] if "stripe_checkout_session_id" in row.keys() else None
+    checkout_session = retrieve_checkout_session(checkout_session_id)
+    if checkout_session:
+        sync_checkout_session_for_user(user_id, checkout_session_id)
+        return {
+            "source": "checkout_session",
+            "stripe_status": stripe_get(checkout_session, "payment_status") or stripe_get(checkout_session, "status"),
+            "customer_id": stripe_object_id(stripe_get(checkout_session, "customer")),
+            "subscription_id": stripe_object_id(stripe_get(checkout_session, "subscription")),
+            "price_id": stripe_get(stripe_get(checkout_session, "metadata", {}) or {}, "price_id"),
+        }
+
+    raise HTTPException(status_code=400, detail="Aucun abonnement ou paiement Stripe retrouve pour ce compte")
 
 
 def subscription_sync_data(subscription_id: str | None) -> dict:

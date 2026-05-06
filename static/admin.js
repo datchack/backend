@@ -27,8 +27,12 @@ const ADMIN_COPY = {
         loading: 'Chargement...',
         status: 'Statut',
         role: 'Rôle',
+        account: 'Compte',
+        state: 'État',
         checks: 'Contrôles',
         stripe: 'Stripe',
+        stripe_billing: 'Stripe & billing',
+        timeline: 'Dates',
         expiration: 'Expiration',
         created: 'Création',
         reminder: 'Relance',
@@ -44,18 +48,29 @@ const ADMIN_COPY = {
         stripe_missing: 'Stripe absent',
         customer: 'Client',
         subscription: 'Abo',
+        session: 'Session',
         price: 'Prix',
+        period_end: 'Fin période',
         never: 'Jamais',
+        billing_status_ok: 'Billing OK',
+        issue_confirmed_no_stripe: 'Confirmé sans Stripe',
+        issue_stripe_without_access: 'Stripe lié, accès inactif',
+        issue_missing_period_end: 'Fin de période manquante',
+        no_issue: 'Aucun souci détecté',
         loading_accounts: 'Chargement des comptes...',
         admin_unavailable: 'Accès admin indisponible',
         synced: 'compte(s) synchronisé(s).',
         admin_error: 'Erreur admin',
         updating: 'Mise à jour du compte...',
         sending_one: 'Envoi de la relance...',
+        syncing_stripe: 'Synchronisation Stripe...',
         action_error: 'Action impossible',
         account_updated: 'Compte mis à jour.',
         reminder_sent: 'Relance envoyée.',
+        stripe_synced: 'Stripe synchronisé.',
         action_remind: 'RELANCE',
+        action_open_stripe: 'STRIPE',
+        action_sync_stripe: 'SYNC',
         action_confirm: 'CONFIRM',
         action_activate: 'ACTIVER',
         action_trial: 'ESSAI',
@@ -89,8 +104,12 @@ const ADMIN_COPY = {
         loading: 'Loading...',
         status: 'Status',
         role: 'Role',
+        account: 'Account',
+        state: 'State',
         checks: 'Checks',
         stripe: 'Stripe',
+        stripe_billing: 'Stripe & billing',
+        timeline: 'Timeline',
         expiration: 'Expiration',
         created: 'Created',
         reminder: 'Reminder',
@@ -106,18 +125,29 @@ const ADMIN_COPY = {
         stripe_missing: 'No Stripe',
         customer: 'Customer',
         subscription: 'Sub',
+        session: 'Session',
         price: 'Price',
+        period_end: 'Period end',
         never: 'Never',
+        billing_status_ok: 'Billing OK',
+        issue_confirmed_no_stripe: 'Confirmed without Stripe',
+        issue_stripe_without_access: 'Stripe linked, access inactive',
+        issue_missing_period_end: 'Missing period end',
+        no_issue: 'No issue detected',
         loading_accounts: 'Loading accounts...',
         admin_unavailable: 'Admin access unavailable',
         synced: 'account(s) synced.',
         admin_error: 'Admin error',
         updating: 'Updating account...',
         sending_one: 'Sending reminder...',
+        syncing_stripe: 'Syncing Stripe...',
         action_error: 'Action impossible',
         account_updated: 'Account updated.',
         reminder_sent: 'Reminder sent.',
+        stripe_synced: 'Stripe synced.',
         action_remind: 'REMIND',
+        action_open_stripe: 'STRIPE',
+        action_sync_stripe: 'SYNC',
         action_confirm: 'CONFIRM',
         action_activate: 'ACTIVATE',
         action_trial: 'TRIAL',
@@ -192,7 +222,7 @@ function isOwner(user) {
 }
 
 function needsReview(user) {
-    return hasStripe(user) && !user.has_access && user.email_confirmed;
+    return !!user.admin?.needs_review || (hasStripe(user) && !user.has_access && user.email_confirmed);
 }
 
 function userMatchesFilter(user, filter) {
@@ -211,25 +241,76 @@ function statusPill(label, ok) {
     return `<span class="admin-pill ${ok ? 'ok' : 'err'}">${label}: ${ok ? t('yes') : t('no')}</span>`;
 }
 
-function renderChecks(user) {
+function issueLabel(issue) {
+    return t(`issue_${issue}`);
+}
+
+function renderAccount(user) {
+    const profile = user.profile || {};
+    const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+    if (!hasStripe(user)) {
+        return `
+            <div class="admin-account-cell">
+                <strong>${escapeHtml(user.email)}</strong>
+                <span>#${user.id}</span>
+                ${name ? `<em>${escapeHtml(name)}</em>` : ''}
+            </div>
+        `;
+    }
     return `
-        <div class="admin-pill-stack">
-            ${statusPill(t('email_confirmed'), !!user.email_confirmed)}
-            ${statusPill(t('terminal_access'), !!user.has_access)}
+        <div class="admin-account-cell">
+            <strong>${escapeHtml(user.email)}</strong>
+            <span>#${user.id}</span>
+            ${name ? `<em>${escapeHtml(name)}</em>` : ''}
         </div>
     `;
 }
 
-function renderStripe(user) {
+function renderState(user) {
+    const role = String(user.role || user.plan || '-').toUpperCase();
+    const status = String(user.status || '-').toUpperCase();
+    const issues = user.admin?.issues || [];
+    return `
+        <div class="admin-card-stack">
+            <div class="admin-state-line">
+                <span class="admin-pill ${user.has_access ? 'ok' : 'err'}">${status}</span>
+                <span class="admin-pill">${role}</span>
+            </div>
+            ${statusPill(t('email_confirmed'), !!user.email_confirmed)}
+            ${statusPill(t('terminal_access'), !!user.has_access)}
+            <span class="admin-pill ${issues.length ? 'warn' : 'ok'}">${issues.length ? issueLabel(issues[0]) : t('no_issue')}</span>
+        </div>
+    `;
+}
+
+function renderStripeBilling(user) {
+    const issues = user.admin?.issues || [];
     if (!hasStripe(user)) {
-        return `<div class="admin-pill-stack"><span class="admin-pill err">${t('stripe_missing')}</span></div>`;
+        return `
+            <div class="admin-card-stack">
+                <span class="admin-pill err">${t('stripe_missing')}</span>
+                <span>${t('price')}: -</span>
+            </div>
+        `;
     }
     return `
         <div class="admin-id-stack">
-            <span class="admin-pill ok">${t('stripe_linked')}</span>
+            <span class="admin-pill ${issues.length ? 'warn' : 'ok'}">${issues.length ? issueLabel(issues[0]) : t('billing_status_ok')}</span>
             <span>${t('customer')}: ${shortId(user.stripe_customer_id)}</span>
             <span>${t('subscription')}: ${shortId(user.stripe_subscription_id)}</span>
+            <span>${t('session')}: ${shortId(user.stripe_checkout_session_id)}</span>
             <span>${t('price')}: ${shortId(user.stripe_price_id)}</span>
+            <span>${t('period_end')}: ${formatDate(user.stripe_current_period_end)}</span>
+        </div>
+    `;
+}
+
+function renderTimeline(user) {
+    return `
+        <div class="admin-id-stack">
+            <span>${t('created')}: ${formatDate(user.created_at)}</span>
+            <span>${t('expiration')}: ${formatAccessEnd(user)}</span>
+            <span>${t('reminder')}: ${user.email_confirmation_reminder_sent_at ? formatDate(user.email_confirmation_reminder_sent_at) : t('never')}</span>
         </div>
     `;
 }
@@ -270,18 +351,23 @@ function renderUsers() {
 
     const users = getFilteredUsers();
     if (!users.length) {
-        body.innerHTML = `<tr><td colspan="9" class="admin-empty">${t('empty')}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="5" class="admin-empty">${t('empty')}</td></tr>`;
         return;
     }
 
     body.innerHTML = users.map((user) => {
-        const role = String(user.role || user.plan || '-').toUpperCase();
-        const status = String(user.status || '-').toUpperCase();
-        const accessClass = user.has_access ? 'ok' : 'err';
         const ownerLocked = user.role === 'owner';
+        const stripeUrl = user.admin?.stripe_customer_url || user.admin?.stripe_subscription_url;
+        const stripeActions = hasStripe(user)
+            ? `
+                ${stripeUrl ? `<a class="panel-btn admin-action-link" href="${escapeHtml(stripeUrl)}" target="_blank" rel="noopener">${t('action_open_stripe')}</a>` : ''}
+                <button type="button" class="panel-btn" data-admin-sync-stripe>${t('action_sync_stripe')}</button>
+            `
+            : '';
         const actions = ownerLocked
             ? '<button type="button" class="panel-btn" disabled>OWNER</button>'
             : `
+                ${stripeActions}
                 ${!user.email_confirmed ? `<button type="button" class="panel-btn" data-admin-remind>${t('action_remind')}</button>` : ''}
                 ${!user.email_confirmed ? `<button type="button" class="panel-btn" data-admin-action="confirm">${t('action_confirm')}</button>` : ''}
                 <button type="button" class="panel-btn" data-admin-action="active">${t('action_activate')}</button>
@@ -291,18 +377,11 @@ function renderUsers() {
             `;
         return `
             <tr data-user-id="${user.id}">
-                <td>
-                    <strong>${escapeHtml(user.email)}</strong>
-                    <span>#${user.id}</span>
-                </td>
-                <td>${role}</td>
-                <td><span class="${accessClass}">${status}</span></td>
-                <td>${renderChecks(user)}</td>
-                <td>${renderStripe(user)}</td>
-                <td>${formatAccessEnd(user)}</td>
-                <td>${formatDate(user.created_at)}</td>
-                <td>${user.email_confirmation_reminder_sent_at ? formatDate(user.email_confirmation_reminder_sent_at) : t('never')}</td>
-                <td>
+                <td data-label="${t('account')}">${renderAccount(user)}</td>
+                <td data-label="${t('state')}">${renderState(user)}</td>
+                <td data-label="${t('stripe_billing')}">${renderStripeBilling(user)}</td>
+                <td data-label="${t('timeline')}">${renderTimeline(user)}</td>
+                <td data-label="${t('actions')}">
                     <div class="admin-row-actions${ownerLocked ? ' owner-locked' : ''}">${actions}</div>
                 </td>
             </tr>
@@ -368,6 +447,27 @@ async function resendUserActivation(userId) {
         setAdminMessage(t('reminder_sent'), 'ok');
     } catch (error) {
         setAdminMessage(error.message || t('resend_error'), 'err');
+    }
+}
+
+async function syncUserStripe(userId) {
+    try {
+        setAdminMessage(t('syncing_stripe'));
+        const response = await fetch(`/api/admin/users/${userId}/sync-stripe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || t('action_error'));
+        }
+
+        adminUsers = adminUsers.map((user) => user.id === payload.user.id ? payload.user : user);
+        renderMetrics();
+        renderUsers();
+        setAdminMessage(t('stripe_synced'), 'ok');
+    } catch (error) {
+        setAdminMessage(error.message || t('admin_error'), 'err');
     }
 }
 
@@ -451,11 +551,16 @@ function bindAdmin() {
     if (body) {
         body.addEventListener('click', (event) => {
             const remindButton = event.target.closest('[data-admin-remind]');
+            const syncStripeButton = event.target.closest('[data-admin-sync-stripe]');
             const button = event.target.closest('[data-admin-action]');
             const row = event.target.closest('[data-user-id]');
             if (!row) return;
             if (remindButton) {
                 resendUserActivation(Number(row.dataset.userId));
+                return;
+            }
+            if (syncStripeButton) {
+                syncUserStripe(Number(row.dataset.userId));
                 return;
             }
             if (!button) return;
