@@ -52,16 +52,16 @@
                     </div>
                     <span class="account-badge" id="account-status-badge">...</span>
                 </div>
-                <p id="account-status-copy">Verification de ton acces.</p>
+                <p id="account-status-copy">Vérification de ton accès.</p>
                 <dl class="account-facts">
                     <div><dt>Email</dt><dd id="account-email">-</dd></div>
                     <div><dt>Plan</dt><dd id="account-plan">-</dd></div>
-                    <div><dt>Acces terminal</dt><dd id="account-access">-</dd></div>
-                    <div><dt>Fin de periode</dt><dd id="account-period-end">-</dd></div>
+                    <div><dt>Accès terminal</dt><dd id="account-access">-</dd></div>
+                    <div><dt>Échéance</dt><dd id="account-period-end">-</dd></div>
                 </dl>
                 <div class="account-actions">
                     <button type="button" class="resource-link-button" id="account-resend-confirmation">Renvoyer le code</button>
-                    <button type="button" class="resource-link-button" id="account-portal">Gerer avec Stripe</button>
+                    <button type="button" class="resource-link-button" id="account-portal">Gérer avec Stripe</button>
                     <a class="resource-cta" href="/terminal">Terminal</a>
                 </div>
             </article>
@@ -69,8 +69,9 @@
             <article class="account-panel account-billing-panel">
                 <div class="landing-kicker">ABONNEMENT</div>
                 <h2>Formule et facturation</h2>
-                <p id="account-billing-copy">Stripe gere les moyens de paiement, factures, changements de formule et annulations.</p>
+                <p id="account-billing-copy">Stripe gère les moyens de paiement, factures, changements de formule et annulations.</p>
                 <dl class="account-facts compact">
+                    <div><dt>Statut</dt><dd id="account-billing-state">-</dd></div>
                     <div><dt>Client Stripe</dt><dd id="account-stripe-customer">-</dd></div>
                     <div><dt>Abonnement</dt><dd id="account-stripe-subscription">-</dd></div>
                     <div><dt>Prix</dt><dd id="account-stripe-price">-</dd></div>
@@ -87,7 +88,7 @@
                 <h2>Informations personnelles</h2>
                 <form class="account-form" id="account-profile-form">
                     <label>
-                        <span>Prenom</span>
+                        <span>Prénom</span>
                         <input id="profile-first-name" name="first_name" type="text" autocomplete="given-name">
                     </label>
                     <label>
@@ -116,7 +117,7 @@
             </article>
 
             <article class="account-panel account-security-panel">
-                <div class="landing-kicker">SECURITE</div>
+                <div class="landing-kicker">SÉCURITÉ</div>
                 <h2>Mot de passe</h2>
                 <form class="account-form single" id="account-password-form">
                     <label>
@@ -127,7 +128,7 @@
                         <span>Nouveau mot de passe</span>
                         <input id="password-new" name="new_password" type="password" autocomplete="new-password">
                     </label>
-                    <button type="submit" class="resource-cta account-submit">Mettre a jour</button>
+                    <button type="submit" class="resource-cta account-submit">Mettre à jour</button>
                 </form>
                 <div class="account-message" id="account-password-message"></div>
             </article>

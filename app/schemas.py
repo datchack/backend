@@ -41,7 +41,12 @@ class AdminAccessPayload(BaseModel):
 
 class BillingCheckoutPayload(BaseModel):
     plan: str
+    return_path: str = "/terminal"
 
 
 class BillingCheckoutSyncPayload(BaseModel):
     session_id: str
+
+
+class BillingPortalPayload(BaseModel):
+    return_path: str = "/terminal"

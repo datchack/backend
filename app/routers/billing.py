@@ -1,4 +1,6 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, Optional
 import traceback
 
 from fastapi import APIRouter, Request
@@ -11,7 +13,7 @@ from app.config import (
     STRIPE_WEBHOOK_SECRET,
     TRIAL_DAYS,
 )
-from app.schemas import BillingCheckoutPayload, BillingCheckoutSyncPayload
+from app.schemas import BillingCheckoutPayload, BillingCheckoutSyncPayload, BillingPortalPayload
 from app.services.accounts import require_user
 from app.services.billing import (
     iso_from_stripe_timestamp,
@@ -32,6 +34,11 @@ from app.services.billing import (
 
 router = APIRouter()
 
+
+def safe_billing_return_path(path: str | None) -> str:
+    return path if path in {"/terminal", "/account"} else "/terminal"
+
+
 @router.post("/api/billing/checkout")
 async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
     require_stripe_ready()
@@ -47,11 +54,13 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
     if not plan_cfg["price"]:
         raise HTTPException(status_code=503, detail=f"Prix Stripe manquant pour {plan_key}")
 
+    return_path = safe_billing_return_path(payload.return_path)
+    cancel_url = f"{APP_BASE_URL}{return_path}?billing=canceled" if return_path == "/account" else f"{APP_BASE_URL}/#pricing"
     session_payload: dict[str, Any] = {
         "mode": plan_cfg["mode"],
         "line_items": [{"price": plan_cfg["price"], "quantity": 1}],
-        "success_url": f"{APP_BASE_URL}/terminal?billing=success&session_id={{CHECKOUT_SESSION_ID}}",
-        "cancel_url": f"{APP_BASE_URL}/#pricing",
+        "success_url": f"{APP_BASE_URL}{return_path}?billing=success&session_id={{CHECKOUT_SESSION_ID}}",
+        "cancel_url": cancel_url,
         "client_reference_id": str(user["id"]),
         "metadata": {
             "user_id": str(user["id"]),
@@ -103,7 +112,7 @@ async def billing_sync_checkout(payload: BillingCheckoutSyncPayload, request: Re
 
 
 @router.post("/api/billing/portal")
-async def billing_portal(request: Request):
+async def billing_portal(request: Request, payload: Optional[BillingPortalPayload] = None):
     require_stripe_ready()
     user = require_user(request)
 
@@ -112,7 +121,7 @@ async def billing_portal(request: Request):
 
     session = stripe.billing_portal.Session.create(
         customer=user["stripe_customer_id"],
-        return_url=f"{APP_BASE_URL}/terminal",
+        return_url=f"{APP_BASE_URL}{safe_billing_return_path(payload.return_path if payload else None)}",
     )
     return {"url": session.url}
 

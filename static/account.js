@@ -58,10 +58,32 @@ function planLabel(account) {
 }
 
 function accessLabel(account) {
+    if (account.role === 'owner') return 'OWNER';
+    if (account.status === 'past_due') return 'PAIEMENT EN RETARD';
+    if (account.status === 'canceled') return 'ANNULE';
     if (account.has_access) return 'ACTIF';
     if (!account.email_confirmed) return 'EMAIL A CONFIRMER';
     if (account.status === 'confirmed') return 'PAIEMENT REQUIS';
     return String(account.status || 'INACTIF').toUpperCase();
+}
+
+function billingStateLabel(account) {
+    if (account.role === 'owner') return 'Compte owner';
+    if (!account.email_confirmed) return 'Email non confirme';
+    if (account.stripe_customer_id && account.has_access) return 'Actif via Stripe';
+    if (account.stripe_customer_id) return 'Stripe lie';
+    if (account.status === 'confirmed') return 'En attente de paiement';
+    return 'Non lie a Stripe';
+}
+
+function billingCopy(account) {
+    if (account.stripe_customer_id && account.has_access) {
+        return 'Ton abonnement est lie a Stripe. Tu peux gerer tes factures, moyens de paiement, changements de formule et annulations depuis le portail Stripe.';
+    }
+    if (account.email_confirmed) {
+        return 'Ton email est confirme. Choisis une formule pour demarrer ton essai et lier automatiquement Stripe a ton compte XAUTERMINAL.';
+    }
+    return 'Confirme ton email avant de choisir une formule. Stripe gerera ensuite les moyens de paiement, factures et annulations.';
 }
 
 function fillProfile(account) {
@@ -107,23 +129,25 @@ function renderAccount(account) {
     const hasAccess = !!account.has_access;
     const emailConfirmed = !!account.email_confirmed;
     const statusTitle = hasAccess
-        ? 'Acces terminal actif'
+        ? 'Accès terminal actif'
         : emailConfirmed
         ? 'Paiement Stripe requis'
-        : 'Email a confirmer';
+        : 'Email à confirmer';
     const statusCopy = hasAccess
-        ? 'Ton compte peut ouvrir le terminal complet. La facturation reste gerable depuis Stripe.'
+        ? 'Ton compte peut ouvrir le terminal complet. La facturation reste gérable depuis Stripe.'
         : emailConfirmed
-        ? 'Ton email est confirme. Choisis une formule pour demarrer ton essai et lier Stripe au compte.'
+        ? 'Ton email est confirmé. Choisis une formule pour démarrer ton essai et lier Stripe au compte.'
         : 'Confirme ton adresse email avant de choisir une formule Stripe.';
 
     setText('account-status-title', statusTitle);
     setText('account-status-copy', statusCopy);
+    setText('account-billing-copy', billingCopy(account));
     setText('account-status-badge', accessLabel(account));
     setText('account-email', account.email);
     setText('account-plan', planLabel(account));
     setText('account-access', accessLabel(account));
     setText('account-period-end', formatDate(account.stripe_current_period_end || account.trial_ends_at));
+    setText('account-billing-state', billingStateLabel(account));
     setText('account-stripe-customer', shortId(account.stripe_customer_id));
     setText('account-stripe-subscription', shortId(account.stripe_subscription_id));
     setText('account-stripe-price', shortId(account.stripe_price_id));
@@ -195,7 +219,7 @@ async function startCheckout(plan) {
         const response = await fetch('/api/billing/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan }),
+            body: JSON.stringify({ plan, return_path: '/account' }),
         });
         const payload = await readJson(response);
         window.location.href = payload.url;
@@ -207,7 +231,11 @@ async function startCheckout(plan) {
 async function openPortal() {
     try {
         setMessage('account-message', 'Ouverture du portail Stripe...');
-        const response = await fetch('/api/billing/portal', { method: 'POST' });
+        const response = await fetch('/api/billing/portal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ return_path: '/account' }),
+        });
         const payload = await readJson(response);
         window.location.href = payload.url;
     } catch (error) {
@@ -231,6 +259,33 @@ async function resendConfirmation() {
     }
 }
 
+async function syncBillingReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('billing');
+    const sessionId = params.get('session_id');
+    if (status === 'canceled') {
+        setMessage('account-message', 'Paiement annule. Tu peux choisir une formule quand tu veux.', 'err');
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+    }
+    if (status !== 'success' || !sessionId) return;
+
+    try {
+        setMessage('account-message', 'Validation du paiement Stripe...');
+        const response = await fetch('/api/billing/sync-checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId }),
+        });
+        await readJson(response);
+        setMessage('account-message', 'Paiement valide. Ton accès est activé.', 'ok');
+    } catch (error) {
+        setMessage('account-message', error.message || 'Paiement reçu, synchronisation en attente.', 'err');
+    } finally {
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+}
+
 async function logout() {
     await fetch('/api/account/logout', { method: 'POST' });
     window.location.href = '/';
@@ -249,7 +304,10 @@ function bindAccountPage() {
 
 document.addEventListener('DOMContentLoaded', () => {
     bindAccountPage();
-    fetchAccount().catch(() => {
+    (async () => {
+        await syncBillingReturn();
+        await fetchAccount();
+    })().catch(() => {
         document.getElementById('account-login-state')?.classList.remove('hidden');
         document.getElementById('account-dashboard')?.classList.add('hidden');
     });

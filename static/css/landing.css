@@ -877,7 +877,6 @@
     line-height: 1.08;
 }
 
-.account-status-panel,
 .account-profile-panel {
     grid-row: span 2;
 }
