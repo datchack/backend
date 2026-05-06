@@ -76,11 +76,29 @@ SEO_CONTENT_PAGES = {
                 "Limite importante",
                 "Le terminal ne fournit pas de conseil financier ni de signal garanti. Il sert à structurer l'information et à gagner du temps dans l'analyse. La décision, le risque et la gestion de position restent sous ta responsabilité.",
             ),
+            (
+                "Routine simple avant une session XAU/USD",
+                "Une routine efficace commence par les événements macro du jour, puis les thèmes dominants: inflation, Fed, dollar, rendements, risque géopolitique et sentiment global. Ensuite seulement, le graphique permet de vérifier si le prix confirme ou contredit ce contexte.",
+            ),
+            (
+                "Pourquoi XAUTERMINAL existe",
+                "L'objectif n'est pas d'ajouter un écran de plus, mais de réduire les allers-retours entre calendrier, news, watchlist, graphique et notes de contexte. Une lecture plus organisée aide à éviter les décisions prises uniquement sous pression ou sur une seule information.",
+            ),
         ],
         "links": [
-            ("/terminal", "Ouvrir le terminal"),
+            ("/#pricing", "Démarrer l'essai XAUTERMINAL"),
             ("/calendrier-economique-or", "Lire le calendrier économique pour l'or"),
             ("/guide/trading-or-macro", "Comprendre la lecture macro de l'or"),
+        ],
+        "faqs": [
+            (
+                "XAUTERMINAL est-il seulement fait pour XAU/USD ?",
+                "Non. XAU/USD est le marché central du projet, mais le terminal propose aussi des profils Forex, indices et crypto pour adapter les news, la watchlist et le contexte.",
+            ),
+            (
+                "Le terminal remplace-t-il une stratégie de trading ?",
+                "Non. Il sert à organiser l'information et à préparer une décision. La stratégie, le timing, le risque et l'exécution restent sous la responsabilité de l'utilisateur.",
+            ),
         ],
     },
     "calendrier_or": {
@@ -107,11 +125,29 @@ SEO_CONTENT_PAGES = {
                 "Utiliser le calendrier avec le reste du contexte",
                 "Un calendrier seul ne suffit pas. Il faut le croiser avec les news, DXY, US10Y, le niveau de volatilité et le comportement du prix. C'est cette combinaison que XAUTERMINAL cherche à rendre plus lisible.",
             ),
+            (
+                "Préparer les annonces plutôt que les subir",
+                "L'intérêt d'un calendrier n'est pas seulement de connaître l'heure d'une annonce. Il permet de décider à l'avance si l'on évite une zone de volatilité, si l'on attend la réaction du marché ou si l'on adapte son plan de risque.",
+            ),
+            (
+                "Les annonces ne se lisent pas toutes pareil",
+                "Une même surprise peut avoir un effet différent selon le contexte. Un CPI supérieur aux attentes ne produit pas toujours la même réaction si le marché anticipe déjà une Fed restrictive ou si le dollar est en correction depuis plusieurs séances.",
+            ),
         ],
         "links": [
-            ("/terminal", "Voir le calendrier dans le terminal"),
+            ("/#pricing", "Tester le terminal complet"),
             ("/terminal-xauusd", "Suivre XAU/USD dans le terminal"),
             ("/news-forex-or", "Comprendre les news macro pour l'or"),
+        ],
+        "faqs": [
+            (
+                "Quels événements économiques influencent le plus l'or ?",
+                "Les publications américaines comme CPI, PCE, NFP, chômage, PMI, ventes au détail, décisions FOMC et discours de la Fed sont souvent centrales car elles influencent le dollar et les taux.",
+            ),
+            (
+                "Faut-il trader pendant les annonces ?",
+                "Pas nécessairement. Beaucoup de traders préfèrent attendre que la volatilité initiale se calme. Le calendrier sert d'abord à connaître le risque événementiel avant de prendre une décision.",
+            ),
         ],
     },
     "news_forex_or": {
@@ -138,11 +174,29 @@ SEO_CONTENT_PAGES = {
                 "Créer une routine plus calme",
                 "L'objectif n'est pas de réagir à chaque headline. Une bonne routine consiste à lire les priorités, repérer le thème dominant, vérifier si le prix confirme, puis attendre un setup compatible avec son propre plan.",
             ),
+            (
+                "Différencier information et décision",
+                "Une headline peut expliquer un mouvement sans offrir une opportunité exploitable. XAUTERMINAL aide à classer l'information, mais la décision doit venir d'un plan cohérent entre contexte, prix, risque et horizon de temps.",
+            ),
+            (
+                "Pourquoi le bruit coûte cher",
+                "Trop de sources ouvertes en même temps peuvent pousser à surinterpréter chaque variation. Un flux mieux organisé permet de se concentrer sur les thèmes réellement capables de modifier le dollar, les taux ou la demande refuge.",
+            ),
         ],
         "links": [
-            ("/terminal", "Voir le flux news du terminal"),
+            ("/#pricing", "Essayer XAUTERMINAL"),
             ("/calendrier-economique-or", "Comparer avec le calendrier économique"),
             ("/guide/trading-or-macro", "Construire une lecture macro"),
+        ],
+        "faqs": [
+            (
+                "Quelles news suivre pour XAU/USD ?",
+                "Les news liées à la Fed, à l'inflation, à l'emploi américain, au dollar, aux rendements obligataires, à la géopolitique et au sentiment de risque sont souvent les plus utiles.",
+            ),
+            (
+                "Une news importante fait-elle toujours bouger l'or ?",
+                "Non. Si l'information est déjà intégrée par les prix ou si un autre thème domine le marché, la réaction peut être faible, retardée ou opposée à l'intuition initiale.",
+            ),
         ],
     },
     "guide_trading_or_macro": {
@@ -169,11 +223,29 @@ SEO_CONTENT_PAGES = {
                 "Momentum et confirmation",
                 "Le contexte macro donne une direction probable, mais le prix doit confirmer. Le Bias Desk et les drivers du terminal servent à organiser cette lecture: macro, momentum, risque événementiel et watchlist.",
             ),
+            (
+                "Construire un scénario plutôt qu'une prédiction",
+                "Une lecture macro utile ne cherche pas à deviner parfaitement le futur. Elle prépare plusieurs scénarios: dollar fort, détente des taux, surprise inflation, stress de marché ou absence de catalyseur clair.",
+            ),
+            (
+                "Relier macro et exécution",
+                "Le contexte aide à savoir où concentrer son attention, mais il ne suffit pas pour entrer en position. L'exécution demande un plan, un niveau d'invalidation, une taille adaptée et une acceptation claire du risque.",
+            ),
         ],
         "links": [
-            ("/terminal", "Tester le terminal"),
+            ("/#pricing", "Tester XAUTERMINAL"),
             ("/terminal-xauusd", "Voir l'approche XAU/USD"),
             ("/news-forex-or", "Lire les news macro utiles"),
+        ],
+        "faqs": [
+            (
+                "Quels sont les grands drivers macro de l'or ?",
+                "Les plus importants sont souvent le dollar américain, les taux US, les rendements réels, l'inflation, la Fed, la géopolitique, le stress de marché et le momentum du prix.",
+            ),
+            (
+                "La macro suffit-elle pour trader l'or ?",
+                "Non. La macro donne un cadre de lecture, mais le prix, la volatilité, la liquidité, le timing et la gestion du risque restent indispensables.",
+            ),
         ],
     },
 }
@@ -201,14 +273,26 @@ def content_page(page_key: str) -> str:
         </section>"""
         for index, (title, copy) in enumerate(page["sections"], start=1)
     )
+    faqs = page.get("faqs", [])
+    faq_html = "\n".join(
+        f"""            <article>
+                <h3 data-i18n="{prefix}_faq{index}_question">{escape(question)}</h3>
+                <p data-i18n="{prefix}_faq{index}_answer">{escape(answer)}</p>
+            </article>"""
+        for index, (question, answer) in enumerate(faqs, start=1)
+    )
+    faq_section = f"""        <section class="resource-faq">
+            <div class="landing-kicker" data-i18n="seo_faq_kicker">FAQ</div>
+            <h2 data-i18n="seo_faq_title">Questions fréquentes</h2>
+{faq_html}
+        </section>""" if faq_html else ""
     links = "\n".join(
         f'<a class="resource-link-button" href="{escape(href, quote=True)}" data-i18n="{prefix}_link{index}">{escape(label)}</a>'
         for index, (href, label) in enumerate(page["links"], start=1)
     )
     related_links = ", ".join(label for _, label in page["links"])
-    structured_data = json.dumps(
+    structured_graph = [
         {
-            "@context": "https://schema.org",
             "@type": "Article",
             "headline": page["h1"],
             "description": page["description"],
@@ -221,10 +305,34 @@ def content_page(page_key: str) -> str:
                 "@type": "Organization",
                 "name": LEGAL_BUSINESS_NAME,
                 "url": APP_BASE_URL,
+                "logo": absolute_url("/static/icon-192x192.png"),
             },
             "mainEntityOfPage": canonical,
             "inLanguage": "fr-FR",
             "about": related_links,
+        }
+    ]
+    if faqs:
+        structured_graph.append(
+            {
+                "@type": "FAQPage",
+                "mainEntity": [
+                    {
+                        "@type": "Question",
+                        "name": question,
+                        "acceptedAnswer": {
+                            "@type": "Answer",
+                            "text": answer,
+                        },
+                    }
+                    for question, answer in faqs
+                ],
+            }
+        )
+    structured_data = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@graph": structured_graph,
         },
         ensure_ascii=False,
     )
@@ -265,9 +373,10 @@ def content_page(page_key: str) -> str:
         <h1 data-i18n="{prefix}_h1">{escaped_h1}</h1>
         <p data-i18n="{prefix}_intro">{escaped_intro}</p>
 {sections}
+{faq_section}
         <section class="legal-contact">
             <h2 data-i18n="seo_continue_title">Continuer avec XAUTERMINAL</h2>
-            <p data-i18n="seo_continue_copy">Ces ressources sont pensées pour être utilisées ensemble: contexte macro, calendrier économique, news filtrées et charting. Elles complètent le terminal sans constituer un conseil financier.</p>
+            <p data-i18n="seo_continue_copy">Ces ressources sont pensées pour être utilisées ensemble: contexte macro, calendrier économique, news filtrées et charting. Pour tester l'espace complet, reviens sur la landing et démarre l'essai depuis le parcours officiel.</p>
             <div class="landing-actions">{links}</div>
         </section>
     </main>

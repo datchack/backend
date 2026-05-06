@@ -714,6 +714,25 @@
     border-color: rgba(0, 242, 173, 0.22) !important;
 }
 
+.resource-faq {
+    display: grid;
+    gap: 14px;
+}
+
+.resource-faq article {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.resource-faq h3 {
+    margin: 0 0 8px;
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.35;
+}
+
 .pricing-badge {
     position: absolute;
     top: 16px;
