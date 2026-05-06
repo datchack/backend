@@ -22,6 +22,17 @@ def absolute_url(path: str = "/") -> str:
     suffix = path if path.startswith("/") else f"/{path}"
     return f"{APP_BASE_URL}{suffix}"
 
+
+FAVICON_LINKS = """    <link rel="icon" href="/static/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="48x48" href="/static/favicon-48x48.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="apple-touch-icon" href="/static/apple-icon-180x180.png">
+    <link rel="manifest" href="/static/manifest.json">"""
+
+BRAND_MARKUP = """<img class="brand-logo" src="/static/xauterminal-logo.png" alt="" width="36" height="36">
+            <span>XAUTERMINAL</span>"""
+
 LEGAL_PAGE_META = {
     "terms_title": {
         "title": "Conditions générales d'utilisation",
@@ -231,15 +242,16 @@ def content_page(page_key: str) -> str:
     <meta property="og:title" content="{escaped_title}" data-i18n-content="{prefix}_title">
     <meta property="og:description" content="{escaped_description}" data-i18n-content="{prefix}_description">
     <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
     <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
     <link rel="stylesheet" href="/static/styles.css">
     <script type="application/ld+json">{structured_data}</script>
 </head>
 <body class="legal-body">
     <header class="landing-nav">
         <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
-            <span class="brand-mark"></span>
-            <span>XAUTERMINAL</span>
+            {BRAND_MARKUP}
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#features" data-i18n="nav_tools">Outils</a>
@@ -320,15 +332,16 @@ def resources_page() -> str:
     <meta property="og:title" content="Ressources trading macro, XAU/USD et calendrier économique" data-i18n-content="resources_page_title">
     <meta property="og:description" content="Guides publics pour mieux lire l'or, les news macro, le calendrier économique et les drivers de marché." data-i18n-content="resources_page_description">
     <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
     <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
     <link rel="stylesheet" href="/static/styles.css">
     <script type="application/ld+json">{structured_data}</script>
 </head>
 <body class="legal-body">
     <header class="landing-nav">
         <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
-            <span class="brand-mark"></span>
-            <span>XAUTERMINAL</span>
+            {BRAND_MARKUP}
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#features" data-i18n="nav_tools">Outils</a>
@@ -391,14 +404,15 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     <meta property="og:title" content="{page_title}">
     <meta property="og:description" content="{escaped_description}">
     <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
     <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="legal-body">
     <header class="landing-nav">
         <a class="landing-brand" href="/" aria-label="{business_name}">
-            <span class="brand-mark"></span>
-            <span>{business_name}</span>
+            {BRAND_MARKUP}
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
@@ -450,7 +464,7 @@ async def index():
 
 @router.get("/terminal", response_class=HTMLResponse)
 async def terminal():
-    return FileResponse("templates/index.html")
+    return FileResponse("templates/index.html", headers={"X-Robots-Tag": "noindex, follow"})
 
 
 @router.get("/account", response_class=HTMLResponse)
@@ -546,7 +560,6 @@ async def sitemap_xml():
     today = utc_now().date().isoformat()
     urls = [
         ("/", "daily", "1.0"),
-        ("/terminal", "daily", "0.8"),
         ("/ressources", "weekly", "0.8"),
         ("/terminal-xauusd", "weekly", "0.8"),
         ("/calendrier-economique-or", "weekly", "0.8"),
