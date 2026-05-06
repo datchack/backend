@@ -9,12 +9,12 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Content-Security-Policy": (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://s3.tradingview.com https://www.tradingview.com; "
+        "script-src 'self' 'unsafe-inline' https://s3.tradingview.com https://www.tradingview.com https://www.googletagmanager.com; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data: https:; "
         "font-src 'self' data:; "
         "connect-src 'self' https: wss:; "
-        "frame-src https://www.tradingview.com https://s.tradingview.com; "
+        "frame-src https://www.tradingview.com https://s.tradingview.com https://www.tradingview-widget.com; "
         "object-src 'none'; "
         "base-uri 'self'; "
         "frame-ancestors 'none'"

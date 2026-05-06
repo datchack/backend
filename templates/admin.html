@@ -3,42 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADMIN - XAUTERMINAL</title>
+    <title data-i18n="meta_title">ADMIN - XAUTERMINAL</title>
     <meta name="robots" content="noindex,nofollow">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="admin-body">
     <header class="admin-topbar">
         <div>
-            <div class="admin-kicker">OWNER CONTROL</div>
-            <h1>Administration</h1>
+            <div class="admin-kicker" data-i18n="kicker">OWNER CONTROL</div>
+            <h1 data-i18n="title">Administration</h1>
         </div>
         <div class="admin-top-actions">
             <a class="panel-btn admin-link" href="/terminal">TERMINAL</a>
-            <button type="button" class="panel-btn" id="admin-refresh">REFRESH</button>
+            <button type="button" class="panel-btn" data-admin-lang-toggle>EN</button>
+            <button type="button" class="panel-btn" id="admin-refresh" data-i18n="refresh">REFRESH</button>
         </div>
     </header>
 
     <main class="admin-shell">
         <section class="admin-metrics" aria-label="Statistiques utilisateurs">
             <div class="admin-metric">
-                <span>TOTAL</span>
+                <span data-i18n="metric_total">TOTAL</span>
                 <strong id="metric-total">0</strong>
             </div>
             <div class="admin-metric">
-                <span>ACTIVE</span>
+                <span data-i18n="metric_active">ACTIFS</span>
                 <strong id="metric-active">0</strong>
             </div>
             <div class="admin-metric">
-                <span>TRIAL</span>
+                <span data-i18n="metric_trial">ESSAIS</span>
                 <strong id="metric-trial">0</strong>
             </div>
             <div class="admin-metric">
-                <span>PENDING</span>
+                <span data-i18n="metric_pending">EN ATTENTE</span>
                 <strong id="metric-pending">0</strong>
             </div>
             <div class="admin-metric">
-                <span>EXPIRED</span>
+                <span data-i18n="metric_expired">EXPIRÉS</span>
                 <strong id="metric-expired">0</strong>
             </div>
         </section>
@@ -46,13 +47,13 @@
         <section class="admin-panel">
             <div class="admin-panel-head">
                 <div>
-                    <span class="admin-kicker">USERS</span>
-                    <h2>Comptes terminal</h2>
+                    <span class="admin-kicker" data-i18n="users_kicker">USERS</span>
+                    <h2 data-i18n="users_title">Comptes terminal</h2>
                 </div>
                 <div class="admin-filter">
-                    <input id="admin-search" type="search" placeholder="Rechercher un email" autocomplete="off">
-                    <select id="admin-status-filter" title="Filtrer par statut">
-                        <option value="all">TOUS</option>
+                    <input id="admin-search" type="search" placeholder="Rechercher un email" autocomplete="off" data-i18n-placeholder="search_placeholder">
+                    <select id="admin-status-filter" title="Filtrer par statut" data-i18n-title="filter_title">
+                        <option value="all" data-i18n="filter_all">TOUS</option>
                         <option value="owner">OWNER</option>
                         <option value="active">ACTIVE</option>
                         <option value="trial">TRIAL</option>
@@ -69,11 +70,11 @@
                     <thead>
                         <tr>
                             <th>Email</th>
-                            <th>Role</th>
-                            <th>Statut</th>
-                            <th>Expiration</th>
-                            <th>Creation</th>
-                            <th>Actions</th>
+                            <th data-i18n="role">Rôle</th>
+                            <th data-i18n="status">Statut</th>
+                            <th data-i18n="expiration">Expiration</th>
+                            <th data-i18n="created">Création</th>
+                            <th data-i18n="actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="admin-users-body"></tbody>

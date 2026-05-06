@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon compte - XAUTERMINAL</title>
+    <title data-i18n="meta_title">Mon compte - XAUTERMINAL</title>
     <meta name="robots" content="noindex,nofollow">
     <link rel="canonical" href="https://xauterminal.com/account">
     <link rel="stylesheet" href="/static/styles.css">
@@ -15,129 +15,130 @@
             <span>XAUTERMINAL</span>
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation compte">
-            <a href="/#pricing">Formules</a>
-            <a href="/terminal">Terminal</a>
-            <button type="button" class="landing-lang" id="account-logout">Logout</button>
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Terminal</a>
+            <button type="button" class="landing-lang" data-account-lang-toggle>EN</button>
+            <button type="button" class="landing-lang" id="account-logout" data-i18n="nav_logout">Déconnexion</button>
         </nav>
     </header>
 
     <main class="account-page">
         <section class="account-hero">
             <div>
-                <div class="landing-kicker">ESPACE PERSONNEL</div>
-                <h1>Mon compte XAUTERMINAL</h1>
-                <p>Gère ton profil, ton accès au terminal, ta sécurité et ton abonnement depuis un espace dédié.</p>
+                <div class="landing-kicker" data-i18n="hero_kicker">ESPACE PERSONNEL</div>
+                <h1 data-i18n="hero_title">Mon compte XAUTERMINAL</h1>
+                <p data-i18n="hero_copy">Gère ton profil, ton accès au terminal, ta sécurité et ton abonnement depuis un espace dédié.</p>
             </div>
             <div class="account-hero-actions">
-                <a class="resource-link-button" href="/">Retour landing</a>
-                <a class="resource-cta" href="/terminal">Ouvrir le terminal</a>
+                <a class="resource-link-button" href="/" data-i18n="back_landing">Retour landing</a>
+                <a class="resource-cta" href="/terminal" data-i18n="open_terminal">Ouvrir le terminal</a>
             </div>
         </section>
 
         <section class="account-panel account-auth-state hidden" id="account-login-state">
             <div>
-                <div class="landing-kicker">CONNEXION REQUISE</div>
-                <h2>Connecte-toi pour acceder a ton espace compte.</h2>
-                <p>Depuis la landing, ouvre la connexion. Une fois connecte, le bouton Connexion devient Mon compte.</p>
+                <div class="landing-kicker" data-i18n="login_required_kicker">CONNEXION REQUISE</div>
+                <h2 data-i18n="login_required_title">Connecte-toi pour accéder à ton espace compte.</h2>
+                <p data-i18n="login_required_copy">Depuis la landing, ouvre la connexion. Une fois connecté, le bouton Connexion devient Mon compte.</p>
             </div>
-            <a class="resource-cta" href="/">Retour landing</a>
+            <a class="resource-cta" href="/" data-i18n="back_landing">Retour landing</a>
         </section>
 
         <section class="account-dashboard hidden" id="account-dashboard">
             <article class="account-panel account-status-panel">
                 <div class="account-status-top">
                     <div>
-                        <div class="landing-kicker">STATUT</div>
-                        <h2 id="account-status-title">Chargement...</h2>
+                        <div class="landing-kicker" data-i18n="status_kicker">STATUT</div>
+                        <h2 id="account-status-title" data-i18n="loading">Chargement...</h2>
                     </div>
                     <span class="account-badge" id="account-status-badge">...</span>
                 </div>
-                <p id="account-status-copy">Vérification de ton accès.</p>
+                <p id="account-status-copy" data-i18n="status_loading_copy">Vérification de ton accès.</p>
                 <dl class="account-facts">
                     <div><dt>Email</dt><dd id="account-email">-</dd></div>
                     <div><dt>Plan</dt><dd id="account-plan">-</dd></div>
-                    <div><dt>Accès terminal</dt><dd id="account-access">-</dd></div>
-                    <div><dt>Échéance</dt><dd id="account-period-end">-</dd></div>
+                    <div><dt data-i18n="terminal_access">Accès terminal</dt><dd id="account-access">-</dd></div>
+                    <div><dt data-i18n="period_end">Échéance</dt><dd id="account-period-end">-</dd></div>
                 </dl>
                 <div class="account-actions">
-                    <button type="button" class="resource-link-button" id="account-resend-confirmation">Renvoyer le code</button>
-                    <button type="button" class="resource-link-button" id="account-portal">Gérer avec Stripe</button>
+                    <button type="button" class="resource-link-button" id="account-resend-confirmation" data-i18n="resend_code">Renvoyer le code</button>
+                    <button type="button" class="resource-link-button" id="account-portal" data-i18n="manage_stripe">Gérer avec Stripe</button>
                     <a class="resource-cta" href="/terminal">Terminal</a>
                 </div>
             </article>
 
             <article class="account-panel account-billing-panel">
-                <div class="landing-kicker">ABONNEMENT</div>
-                <h2>Formule et facturation</h2>
-                <p id="account-billing-copy">Stripe gère les moyens de paiement, factures, changements de formule et annulations.</p>
+                <div class="landing-kicker" data-i18n="billing_kicker">ABONNEMENT</div>
+                <h2 data-i18n="billing_title">Formule et facturation</h2>
+                <p id="account-billing-copy" data-i18n="billing_default_copy">Stripe gère les moyens de paiement, factures, changements de formule et annulations.</p>
                 <dl class="account-facts compact">
-                    <div><dt>Statut</dt><dd id="account-billing-state">-</dd></div>
-                    <div><dt>Client Stripe</dt><dd id="account-stripe-customer">-</dd></div>
-                    <div><dt>Abonnement</dt><dd id="account-stripe-subscription">-</dd></div>
-                    <div><dt>Prix</dt><dd id="account-stripe-price">-</dd></div>
+                    <div><dt data-i18n="billing_status">Statut</dt><dd id="account-billing-state">-</dd></div>
+                    <div><dt data-i18n="stripe_customer">Client Stripe</dt><dd id="account-stripe-customer">-</dd></div>
+                    <div><dt data-i18n="subscription">Abonnement</dt><dd id="account-stripe-subscription">-</dd></div>
+                    <div><dt data-i18n="price">Prix</dt><dd id="account-stripe-price">-</dd></div>
                 </dl>
                 <div class="account-plan-actions">
-                    <button type="button" class="resource-cta" data-account-plan="monthly">Mensuel</button>
-                    <button type="button" class="resource-cta" data-account-plan="yearly">Annuel</button>
-                    <button type="button" class="resource-cta" data-account-plan="lifetime">Lifetime</button>
+                    <button type="button" class="resource-cta" data-account-plan="monthly" data-i18n="monthly">Mensuel</button>
+                    <button type="button" class="resource-cta" data-account-plan="yearly" data-i18n="yearly">Annuel</button>
+                    <button type="button" class="resource-cta" data-account-plan="lifetime" data-i18n="lifetime_plan">Lifetime</button>
                 </div>
             </article>
 
             <article class="account-panel account-admin-panel hidden" id="account-admin-panel">
-                <div class="landing-kicker">ADMINISTRATION</div>
-                <h2>Panel admin</h2>
-                <p>Accède à la gestion des utilisateurs, des accès et des statuts de compte depuis ton espace owner.</p>
+                <div class="landing-kicker" data-i18n="admin_kicker">ADMINISTRATION</div>
+                <h2 data-i18n="admin_title">Panel admin</h2>
+                <p data-i18n="admin_copy">Accède à la gestion des utilisateurs, des accès et des statuts de compte depuis ton espace owner.</p>
                 <div class="account-actions">
-                    <a class="resource-cta" href="/admin">Ouvrir le panel admin</a>
+                    <a class="resource-cta" href="/admin" data-i18n="open_admin">Ouvrir le panel admin</a>
                 </div>
             </article>
 
             <article class="account-panel account-profile-panel">
-                <div class="landing-kicker">PROFIL</div>
-                <h2>Informations personnelles</h2>
+                <div class="landing-kicker" data-i18n="profile_kicker">PROFIL</div>
+                <h2 data-i18n="profile_title">Informations personnelles</h2>
                 <form class="account-form" id="account-profile-form">
                     <label>
-                        <span>Prénom</span>
+                        <span data-i18n="first_name">Prénom</span>
                         <input id="profile-first-name" name="first_name" type="text" autocomplete="given-name">
                     </label>
                     <label>
-                        <span>Nom</span>
+                        <span data-i18n="last_name">Nom</span>
                         <input id="profile-last-name" name="last_name" type="text" autocomplete="family-name">
                     </label>
                     <label class="account-form-wide">
-                        <span>Adresse</span>
+                        <span data-i18n="address">Adresse</span>
                         <input id="profile-address-line" name="address_line" type="text" autocomplete="street-address">
                     </label>
                     <label>
-                        <span>Code postal</span>
+                        <span data-i18n="postal_code">Code postal</span>
                         <input id="profile-postal-code" name="postal_code" type="text" autocomplete="postal-code">
                     </label>
                     <label>
-                        <span>Ville</span>
+                        <span data-i18n="city">Ville</span>
                         <input id="profile-city" name="city" type="text" autocomplete="address-level2">
                     </label>
                     <label>
-                        <span>Pays</span>
+                        <span data-i18n="country">Pays</span>
                         <input id="profile-country" name="country" type="text" autocomplete="country-name">
                     </label>
-                    <button type="submit" class="resource-cta account-submit">Enregistrer le profil</button>
+                    <button type="submit" class="resource-cta account-submit" data-i18n="save_profile">Enregistrer le profil</button>
                 </form>
                 <div class="account-message" id="account-message"></div>
             </article>
 
             <article class="account-panel account-security-panel">
-                <div class="landing-kicker">SÉCURITÉ</div>
-                <h2>Mot de passe</h2>
+                <div class="landing-kicker" data-i18n="security_kicker">SÉCURITÉ</div>
+                <h2 data-i18n="password_title">Mot de passe</h2>
                 <form class="account-form single" id="account-password-form">
                     <label>
-                        <span>Mot de passe actuel</span>
+                        <span data-i18n="current_password">Mot de passe actuel</span>
                         <input id="password-current" name="current_password" type="password" autocomplete="current-password">
                     </label>
                     <label>
-                        <span>Nouveau mot de passe</span>
+                        <span data-i18n="new_password">Nouveau mot de passe</span>
                         <input id="password-new" name="new_password" type="password" autocomplete="new-password">
                     </label>
-                    <button type="submit" class="resource-cta account-submit">Mettre à jour</button>
+                    <button type="submit" class="resource-cta account-submit" data-i18n="update_password">Mettre à jour</button>
                 </form>
                 <div class="account-message" id="account-password-message"></div>
             </article>

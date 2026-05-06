@@ -1,6 +1,96 @@
 let adminUsers = [];
 let searchQuery = '';
 let statusFilter = 'all';
+let adminLang = localStorage.getItem('xt_lang') || 'fr';
+
+const ADMIN_COPY = {
+    fr: {
+        meta_title: 'ADMIN - XAUTERMINAL',
+        kicker: 'OWNER CONTROL',
+        title: 'Administration',
+        refresh: 'REFRESH',
+        metric_total: 'TOTAL',
+        metric_active: 'ACTIFS',
+        metric_trial: 'ESSAIS',
+        metric_pending: 'EN ATTENTE',
+        metric_expired: 'EXPIRÉS',
+        users_kicker: 'USERS',
+        users_title: 'Comptes terminal',
+        search_placeholder: 'Rechercher un email',
+        filter_title: 'Filtrer par statut',
+        filter_all: 'TOUS',
+        loading: 'Chargement...',
+        status: 'Statut',
+        role: 'Rôle',
+        expiration: 'Expiration',
+        created: 'Création',
+        actions: 'Actions',
+        empty: 'Aucun compte trouvé.',
+        access_active: 'ACCÈS ACTIF',
+        expired: 'EXPIRÉ',
+        loading_accounts: 'Chargement des comptes...',
+        admin_unavailable: 'Accès admin indisponible',
+        synced: 'compte(s) synchronisé(s).',
+        admin_error: 'Erreur admin',
+        updating: 'Mise à jour du compte...',
+        action_error: 'Action impossible',
+        account_updated: 'Compte mis à jour.',
+    },
+    en: {
+        meta_title: 'ADMIN - XAUTERMINAL',
+        kicker: 'OWNER CONTROL',
+        title: 'Administration',
+        refresh: 'REFRESH',
+        metric_total: 'TOTAL',
+        metric_active: 'ACTIVE',
+        metric_trial: 'TRIAL',
+        metric_pending: 'PENDING',
+        metric_expired: 'EXPIRED',
+        users_kicker: 'USERS',
+        users_title: 'Terminal accounts',
+        search_placeholder: 'Search email',
+        filter_title: 'Filter by status',
+        filter_all: 'ALL',
+        loading: 'Loading...',
+        status: 'Status',
+        role: 'Role',
+        expiration: 'Expiration',
+        created: 'Created',
+        actions: 'Actions',
+        empty: 'No account found.',
+        access_active: 'ACCESS ACTIVE',
+        expired: 'EXPIRED',
+        loading_accounts: 'Loading accounts...',
+        admin_unavailable: 'Admin access unavailable',
+        synced: 'account(s) synced.',
+        admin_error: 'Admin error',
+        updating: 'Updating account...',
+        action_error: 'Action impossible',
+        account_updated: 'Account updated.',
+    },
+};
+
+function t(key) {
+    return ADMIN_COPY[adminLang]?.[key] || ADMIN_COPY.fr[key] || key;
+}
+
+function applyAdminLanguage() {
+    document.documentElement.lang = adminLang;
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+        el.title = t(el.dataset.i18nTitle);
+    });
+    const title = document.querySelector('title');
+    if (title?.dataset.i18n) title.textContent = t(title.dataset.i18n);
+    const toggle = document.querySelector('[data-admin-lang-toggle]');
+    if (toggle) toggle.textContent = adminLang === 'fr' ? 'EN' : 'FR';
+    renderUsers();
+}
 
 function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (char) => ({
@@ -15,14 +105,14 @@ function escapeHtml(value) {
 function formatDate(value, lifetime = false) {
     if (lifetime) return 'LIFETIME';
     if (!value) return '-';
-    return new Date(value).toLocaleDateString('fr-FR');
+    return new Date(value).toLocaleDateString(adminLang === 'fr' ? 'fr-FR' : 'en-US');
 }
 
 function formatAccessEnd(user) {
     if (user.role === 'owner') return 'LIFETIME';
-    if (user.role === 'member') return 'ACCES ACTIF';
+    if (user.role === 'member') return t('access_active');
     if (user.role === 'trial') return formatDate(user.trial_ends_at);
-    return 'EXPIRE';
+    return t('expired');
 }
 
 function setAdminMessage(message, tone = '') {
@@ -67,7 +157,7 @@ function renderUsers() {
 
     const users = getFilteredUsers();
     if (!users.length) {
-        body.innerHTML = '<tr><td colspan="6" class="admin-empty">Aucun compte trouve.</td></tr>';
+        body.innerHTML = `<tr><td colspan="6" class="admin-empty">${t('empty')}</td></tr>`;
         return;
     }
 
@@ -106,25 +196,25 @@ function renderUsers() {
 
 async function fetchAdminUsers() {
     try {
-        setAdminMessage('Chargement des comptes...');
+        setAdminMessage(t('loading_accounts'));
         const response = await fetch('/api/admin/users', { cache: 'no-store' });
         const payload = await response.json();
         if (!response.ok) {
-            throw new Error(payload.detail || 'Acces admin indisponible');
+            throw new Error(payload.detail || t('admin_unavailable'));
         }
 
         adminUsers = payload.users || [];
         renderMetrics();
         renderUsers();
-        setAdminMessage(`${adminUsers.length} compte(s) synchronise(s).`, 'ok');
+        setAdminMessage(`${adminUsers.length} ${t('synced')}`, 'ok');
     } catch (error) {
-        setAdminMessage(error.message || 'Erreur admin', 'err');
+        setAdminMessage(error.message || t('admin_error'), 'err');
     }
 }
 
 async function updateUserAccess(userId, action) {
     try {
-        setAdminMessage('Mise a jour du compte...');
+        setAdminMessage(t('updating'));
         const response = await fetch(`/api/admin/users/${userId}/access`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -132,15 +222,15 @@ async function updateUserAccess(userId, action) {
         });
         const payload = await response.json();
         if (!response.ok) {
-            throw new Error(payload.detail || 'Action impossible');
+            throw new Error(payload.detail || t('action_error'));
         }
 
         adminUsers = adminUsers.map((user) => user.id === payload.user.id ? payload.user : user);
         renderMetrics();
         renderUsers();
-        setAdminMessage('Compte mis a jour.', 'ok');
+        setAdminMessage(t('account_updated'), 'ok');
     } catch (error) {
-        setAdminMessage(error.message || 'Erreur admin', 'err');
+        setAdminMessage(error.message || t('admin_error'), 'err');
     }
 }
 
@@ -149,6 +239,7 @@ function bindAdmin() {
     const search = document.getElementById('admin-search');
     const filter = document.getElementById('admin-status-filter');
     const body = document.getElementById('admin-users-body');
+    const langToggle = document.querySelector('[data-admin-lang-toggle]');
 
     if (refresh) refresh.addEventListener('click', fetchAdminUsers);
     if (search) {
@@ -163,6 +254,14 @@ function bindAdmin() {
             renderUsers();
         });
     }
+    if (langToggle) {
+        langToggle.addEventListener('click', () => {
+            adminLang = adminLang === 'fr' ? 'en' : 'fr';
+            localStorage.setItem('xt_lang', adminLang);
+            applyAdminLanguage();
+            if (adminUsers.length) setAdminMessage(`${adminUsers.length} ${t('synced')}`, 'ok');
+        });
+    }
     if (body) {
         body.addEventListener('click', (event) => {
             const button = event.target.closest('[data-admin-action]');
@@ -175,5 +274,6 @@ function bindAdmin() {
 
 document.addEventListener('DOMContentLoaded', () => {
     bindAdmin();
+    applyAdminLanguage();
     fetchAdminUsers();
 });

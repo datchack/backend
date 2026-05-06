@@ -21,13 +21,18 @@ export function renderBiasCard(context) {
 
     if (!card || !scoreEl || !labelEl || !actionEl || !toneEl || !layersEl || !reasonsEl || !confidenceEl || !volEl || !sessionEl) return;
 
-    const toneClass = context.bias === 'Bullish' ? 'bullish' : context.bias === 'Bearish' ? 'bearish' : 'neutral';
+    const bias = context.bias || 'Neutral';
+    const score = Number(context.score || 0);
+    const tone = context.action_reason || context.tone || 'Market feed live';
+    const volatility = context.volatility || '-';
+    const session = context.session || 'SESSION -';
+    const toneClass = bias === 'Bullish' ? 'bullish' : bias === 'Bearish' ? 'bearish' : 'neutral';
     card.classList.remove('bullish', 'bearish', 'neutral');
     card.classList.add(toneClass);
 
-    scoreEl.textContent = `${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}`;
+    scoreEl.textContent = `${score > 0 ? '+' : ''}${score.toFixed(1)}`;
     scoreEl.className = `desk-pill ${toneClass}`;
-    labelEl.textContent = context.bias.toUpperCase();
+    labelEl.textContent = bias.toUpperCase();
     labelEl.className = `bias-label ${toneClass}`;
     actionEl.textContent = context.action || 'WAIT';
     actionEl.className = `bias-action ${context.action === 'NO TRADE' ? 'neutral' : toneClass}`;
@@ -37,7 +42,7 @@ export function renderBiasCard(context) {
 
     const target = context.target || context.gold;
     const targetLabel = context.target_label || context.bias_name || 'Market';
-    toneEl.textContent = `${(context.action_reason || context.tone).toUpperCase()} - ${context.summary || (target ? `${targetLabel} ${formatSignedPercent(target.change_pct)}` : 'Market feed live')}`;
+    toneEl.textContent = `${tone.toUpperCase()} - ${context.summary || (target ? `${targetLabel} ${formatSignedPercent(target.change_pct)}` : 'Market feed live')}`;
     const layers = context.layers || {};
     const eventRisk = layers.event_risk || {};
     const eventMinutes = ['High', 'Elevated'].includes(eventRisk.level) && eventRisk.minutes !== null && eventRisk.minutes !== undefined
@@ -51,22 +56,22 @@ export function renderBiasCard(context) {
     reasonsEl.innerHTML = (context.reasons || []).slice(0, 3).map((reason) => `<span class="bias-reason">${reason}</span>`).join('');
     confidenceEl.textContent = `CONF ${context.confidence || 0}%`;
     confidenceEl.className = `desk-pill ${toneClass}`;
-    volEl.textContent = `VOL ${context.volatility}`;
-    sessionEl.textContent = context.session;
+    volEl.textContent = `VOL ${volatility}`;
+    sessionEl.textContent = session;
 
     if (snapshotBias) {
-        snapshotBias.textContent = `${context.bias.toUpperCase()} ${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}`;
+        snapshotBias.textContent = `${bias.toUpperCase()} ${score > 0 ? '+' : ''}${score.toFixed(1)}`;
         snapshotBias.className = `desk-pill ${toneClass}`;
     }
     if (snapshotSession) {
-        snapshotSession.textContent = context.session || 'SESSION -';
+        snapshotSession.textContent = session;
     }
     if (snapshotVol) {
-        snapshotVol.textContent = `VOL ${context.volatility || '-'}`;
+        snapshotVol.textContent = `VOL ${volatility}`;
     }
 
     if (statusContext) {
-        statusContext.textContent = `${context.bias_name || 'Bias'}: ${context.action || context.bias} (${context.score > 0 ? '+' : ''}${Number(context.score).toFixed(1)}) - ${context.confidence || 0}%`;
+        statusContext.textContent = `${context.bias_name || 'Bias'}: ${context.action || bias} (${score > 0 ? '+' : ''}${score.toFixed(1)}) - ${context.confidence || 0}%`;
     }
 }
 

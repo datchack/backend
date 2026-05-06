@@ -1,6 +1,218 @@
 const state = {
     account: null,
 };
+let accountLang = localStorage.getItem('xt_lang') || 'fr';
+
+const ACCOUNT_COPY = {
+    fr: {
+        meta_title: 'Mon compte - XAUTERMINAL',
+        nav_pricing: 'Formules',
+        nav_terminal: 'Terminal',
+        nav_logout: 'Déconnexion',
+        hero_kicker: 'ESPACE PERSONNEL',
+        hero_title: 'Mon compte XAUTERMINAL',
+        hero_copy: 'Gère ton profil, ton accès au terminal, ta sécurité et ton abonnement depuis un espace dédié.',
+        back_landing: 'Retour landing',
+        open_terminal: 'Ouvrir le terminal',
+        login_required_kicker: 'CONNEXION REQUISE',
+        login_required_title: 'Connecte-toi pour accéder à ton espace compte.',
+        login_required_copy: 'Depuis la landing, ouvre la connexion. Une fois connecté, le bouton Connexion devient Mon compte.',
+        status_kicker: 'STATUT',
+        loading: 'Chargement...',
+        status_loading_copy: 'Vérification de ton accès.',
+        terminal_access: 'Accès terminal',
+        period_end: 'Échéance',
+        resend_code: 'Renvoyer le code',
+        manage_stripe: 'Gérer avec Stripe',
+        billing_kicker: 'ABONNEMENT',
+        billing_title: 'Formule et facturation',
+        billing_default_copy: 'Stripe gère les moyens de paiement, factures, changements de formule et annulations.',
+        billing_status: 'Statut',
+        stripe_customer: 'Client Stripe',
+        subscription: 'Abonnement',
+        price: 'Prix',
+        monthly: 'Mensuel',
+        yearly: 'Annuel',
+        lifetime_plan: 'Lifetime',
+        admin_kicker: 'ADMINISTRATION',
+        admin_title: 'Panel admin',
+        admin_copy: 'Accède à la gestion des utilisateurs, des accès et des statuts de compte depuis ton espace owner.',
+        open_admin: 'Ouvrir le panel admin',
+        profile_kicker: 'PROFIL',
+        profile_title: 'Informations personnelles',
+        first_name: 'Prénom',
+        last_name: 'Nom',
+        address: 'Adresse',
+        postal_code: 'Code postal',
+        city: 'Ville',
+        country: 'Pays',
+        save_profile: 'Enregistrer le profil',
+        security_kicker: 'SÉCURITÉ',
+        password_title: 'Mot de passe',
+        current_password: 'Mot de passe actuel',
+        new_password: 'Nouveau mot de passe',
+        update_password: 'Mettre à jour',
+        owner: 'OWNER',
+        active: 'ACTIF',
+        monthly_plan: 'MENSUEL',
+        yearly_plan: 'ANNUEL',
+        lifetime: 'LIFETIME',
+        trial: 'ESSAI',
+        past_due: 'PAIEMENT EN RETARD',
+        canceled: 'ANNULÉ',
+        email_to_confirm: 'EMAIL À CONFIRMER',
+        payment_required: 'PAIEMENT REQUIS',
+        inactive: 'INACTIF',
+        owner_account: 'Compte owner',
+        email_unconfirmed: 'Email non confirmé',
+        active_stripe: 'Actif via Stripe',
+        stripe_linked: 'Stripe lié',
+        waiting_payment: 'En attente de paiement',
+        stripe_unlinked: 'Non lié à Stripe',
+        status_active_title: 'Accès terminal actif',
+        status_payment_title: 'Paiement Stripe requis',
+        status_confirm_title: 'Email à confirmer',
+        status_active_copy: 'Ton compte peut ouvrir le terminal complet. La facturation reste gérable depuis Stripe.',
+        status_payment_copy: 'Ton email est confirmé. Choisis une formule pour démarrer ton essai et lier Stripe au compte.',
+        status_confirm_copy: 'Confirme ton adresse email avant de choisir une formule Stripe.',
+        billing_active_copy: 'Ton abonnement est lié à Stripe. Tu peux gérer tes factures, moyens de paiement, changements de formule et annulations depuis le portail Stripe.',
+        billing_ready_copy: 'Ton email est confirmé. Choisis une formule pour démarrer ton essai et lier automatiquement Stripe à ton compte XAUTERMINAL.',
+        billing_confirm_copy: 'Confirme ton email avant de choisir une formule. Stripe gérera ensuite les moyens de paiement, factures et annulations.',
+        stripe_portal_ready: 'Ouvrir le portail Stripe',
+        stripe_portal_missing: 'Un paiement Stripe doit être lié au compte avant d’ouvrir le portail',
+        choose_plan_ready: 'Choisir cette formule via Stripe',
+        choose_plan_missing: 'Confirme ton email avant de choisir une formule',
+        saving: 'Enregistrement...',
+        profile_saved: 'Profil enregistré.',
+        profile_error: "Impossible d'enregistrer le profil.",
+        updating: 'Mise à jour...',
+        password_saved: 'Mot de passe mis à jour.',
+        password_error: 'Mot de passe non modifié.',
+        redirect_stripe: 'Redirection vers Stripe...',
+        payment_unavailable: 'Paiement indisponible.',
+        opening_portal: 'Ouverture du portail Stripe...',
+        portal_unavailable: 'Portail Stripe indisponible.',
+        sending_code: 'Envoi du code...',
+        code_sent: 'Code de confirmation renvoyé par email.',
+        code_error: 'Code non envoyé.',
+        payment_canceled: 'Paiement annulé. Tu peux choisir une formule quand tu veux.',
+        validating_payment: 'Validation du paiement Stripe...',
+        payment_valid: 'Paiement validé. Ton accès est activé.',
+        payment_pending: 'Paiement reçu, synchronisation en attente.',
+    },
+    en: {
+        meta_title: 'My account - XAUTERMINAL',
+        nav_pricing: 'Plans',
+        nav_terminal: 'Terminal',
+        nav_logout: 'Logout',
+        hero_kicker: 'PERSONAL SPACE',
+        hero_title: 'My XAUTERMINAL Account',
+        hero_copy: 'Manage your profile, terminal access, security and subscription from one dedicated space.',
+        back_landing: 'Back to landing',
+        open_terminal: 'Open terminal',
+        login_required_kicker: 'LOGIN REQUIRED',
+        login_required_title: 'Log in to access your account space.',
+        login_required_copy: 'Open login from the landing page. Once connected, the Login button becomes My account.',
+        status_kicker: 'STATUS',
+        loading: 'Loading...',
+        status_loading_copy: 'Checking your access.',
+        terminal_access: 'Terminal access',
+        period_end: 'Period end',
+        resend_code: 'Resend code',
+        manage_stripe: 'Manage with Stripe',
+        billing_kicker: 'SUBSCRIPTION',
+        billing_title: 'Plan and billing',
+        billing_default_copy: 'Stripe manages payment methods, invoices, plan changes and cancellations.',
+        billing_status: 'Status',
+        stripe_customer: 'Stripe customer',
+        subscription: 'Subscription',
+        price: 'Price',
+        monthly: 'Monthly',
+        yearly: 'Yearly',
+        lifetime_plan: 'Lifetime',
+        admin_kicker: 'ADMINISTRATION',
+        admin_title: 'Admin panel',
+        admin_copy: 'Access user, access and account status management from your owner space.',
+        open_admin: 'Open admin panel',
+        profile_kicker: 'PROFILE',
+        profile_title: 'Personal information',
+        first_name: 'First name',
+        last_name: 'Last name',
+        address: 'Address',
+        postal_code: 'Postal code',
+        city: 'City',
+        country: 'Country',
+        save_profile: 'Save profile',
+        security_kicker: 'SECURITY',
+        password_title: 'Password',
+        current_password: 'Current password',
+        new_password: 'New password',
+        update_password: 'Update',
+        owner: 'OWNER',
+        active: 'ACTIVE',
+        monthly_plan: 'MONTHLY',
+        yearly_plan: 'YEARLY',
+        lifetime: 'LIFETIME',
+        trial: 'TRIAL',
+        past_due: 'PAYMENT PAST DUE',
+        canceled: 'CANCELED',
+        email_to_confirm: 'EMAIL TO CONFIRM',
+        payment_required: 'PAYMENT REQUIRED',
+        inactive: 'INACTIVE',
+        owner_account: 'Owner account',
+        email_unconfirmed: 'Email not confirmed',
+        active_stripe: 'Active via Stripe',
+        stripe_linked: 'Stripe linked',
+        waiting_payment: 'Waiting for payment',
+        stripe_unlinked: 'Not linked to Stripe',
+        status_active_title: 'Terminal access active',
+        status_payment_title: 'Stripe payment required',
+        status_confirm_title: 'Email to confirm',
+        status_active_copy: 'Your account can open the full terminal. Billing remains manageable through Stripe.',
+        status_payment_copy: 'Your email is confirmed. Choose a plan to start your trial and link Stripe to the account.',
+        status_confirm_copy: 'Confirm your email before choosing a Stripe plan.',
+        billing_active_copy: 'Your subscription is linked to Stripe. You can manage invoices, payment methods, plan changes and cancellations from the Stripe portal.',
+        billing_ready_copy: 'Your email is confirmed. Choose a plan to start your trial and automatically link Stripe to your XAUTERMINAL account.',
+        billing_confirm_copy: 'Confirm your email before choosing a plan. Stripe will then manage payment methods, invoices and cancellations.',
+        stripe_portal_ready: 'Open Stripe portal',
+        stripe_portal_missing: 'A Stripe payment must be linked before opening the portal',
+        choose_plan_ready: 'Choose this plan via Stripe',
+        choose_plan_missing: 'Confirm your email before choosing a plan',
+        saving: 'Saving...',
+        profile_saved: 'Profile saved.',
+        profile_error: 'Unable to save profile.',
+        updating: 'Updating...',
+        password_saved: 'Password updated.',
+        password_error: 'Password not changed.',
+        redirect_stripe: 'Redirecting to Stripe...',
+        payment_unavailable: 'Payment unavailable.',
+        opening_portal: 'Opening Stripe portal...',
+        portal_unavailable: 'Stripe portal unavailable.',
+        sending_code: 'Sending code...',
+        code_sent: 'Confirmation code sent again by email.',
+        code_error: 'Code not sent.',
+        payment_canceled: 'Payment canceled. You can choose a plan whenever you want.',
+        validating_payment: 'Validating Stripe payment...',
+        payment_valid: 'Payment valid. Your access is active.',
+        payment_pending: 'Payment received, sync pending.',
+    },
+};
+
+function t(key) {
+    return ACCOUNT_COPY[accountLang]?.[key] || ACCOUNT_COPY.fr[key] || key;
+}
+
+function applyAccountLanguage() {
+    document.documentElement.lang = accountLang;
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    const title = document.querySelector('title');
+    if (title?.dataset.i18n) title.textContent = t(title.dataset.i18n);
+    const toggle = document.querySelector('[data-account-lang-toggle]');
+    if (toggle) toggle.textContent = accountLang === 'fr' ? 'EN' : 'FR';
+    if (state.account) renderAccount(state.account);
+}
 
 function setText(id, value = '-') {
     const el = document.getElementById(id);
@@ -31,7 +243,7 @@ function formatDate(value) {
     if (!value) return '-';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('fr-FR', {
+    return date.toLocaleDateString(accountLang === 'fr' ? 'fr-FR' : 'en-US', {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
@@ -48,42 +260,42 @@ function planLabel(account) {
     const plan = account.plan || account.role || '-';
     const labels = {
         owner: 'OWNER',
-        active: 'ACTIF',
-        monthly: 'MENSUEL',
-        yearly: 'ANNUEL',
-        lifetime: 'LIFETIME',
-        trial: 'ESSAI',
+        active: t('active'),
+        monthly: t('monthly_plan'),
+        yearly: t('yearly_plan'),
+        lifetime: t('lifetime'),
+        trial: t('trial'),
     };
     return labels[plan] || String(plan).toUpperCase();
 }
 
 function accessLabel(account) {
     if (account.role === 'owner') return 'OWNER';
-    if (account.status === 'past_due') return 'PAIEMENT EN RETARD';
-    if (account.status === 'canceled') return 'ANNULE';
-    if (account.has_access) return 'ACTIF';
-    if (!account.email_confirmed) return 'EMAIL A CONFIRMER';
-    if (account.status === 'confirmed') return 'PAIEMENT REQUIS';
-    return String(account.status || 'INACTIF').toUpperCase();
+    if (account.status === 'past_due') return t('past_due');
+    if (account.status === 'canceled') return t('canceled');
+    if (account.has_access) return t('active');
+    if (!account.email_confirmed) return t('email_to_confirm');
+    if (account.status === 'confirmed') return t('payment_required');
+    return String(account.status || t('inactive')).toUpperCase();
 }
 
 function billingStateLabel(account) {
-    if (account.role === 'owner') return 'Compte owner';
-    if (!account.email_confirmed) return 'Email non confirme';
-    if (account.stripe_customer_id && account.has_access) return 'Actif via Stripe';
-    if (account.stripe_customer_id) return 'Stripe lie';
-    if (account.status === 'confirmed') return 'En attente de paiement';
-    return 'Non lie a Stripe';
+    if (account.role === 'owner') return t('owner_account');
+    if (!account.email_confirmed) return t('email_unconfirmed');
+    if (account.stripe_customer_id && account.has_access) return t('active_stripe');
+    if (account.stripe_customer_id) return t('stripe_linked');
+    if (account.status === 'confirmed') return t('waiting_payment');
+    return t('stripe_unlinked');
 }
 
 function billingCopy(account) {
     if (account.stripe_customer_id && account.has_access) {
-        return 'Ton abonnement est lie a Stripe. Tu peux gerer tes factures, moyens de paiement, changements de formule et annulations depuis le portail Stripe.';
+        return t('billing_active_copy');
     }
     if (account.email_confirmed) {
-        return 'Ton email est confirme. Choisis une formule pour demarrer ton essai et lier automatiquement Stripe a ton compte XAUTERMINAL.';
+        return t('billing_ready_copy');
     }
-    return 'Confirme ton email avant de choisir une formule. Stripe gerera ensuite les moyens de paiement, factures et annulations.';
+    return t('billing_confirm_copy');
 }
 
 function fillProfile(account) {
@@ -105,8 +317,8 @@ function updateActionStates(account) {
     if (portalButton) {
         portalButton.disabled = !account.stripe_customer_id;
         portalButton.title = account.stripe_customer_id
-            ? 'Ouvrir le portail Stripe'
-            : 'Un paiement Stripe doit etre lie au compte avant d ouvrir le portail';
+            ? t('stripe_portal_ready')
+            : t('stripe_portal_missing');
     }
 
     if (resendButton) {
@@ -120,8 +332,8 @@ function updateActionStates(account) {
     planButtons.forEach((button) => {
         button.disabled = !account.email_confirmed;
         button.title = account.email_confirmed
-            ? 'Choisir cette formule via Stripe'
-            : 'Confirme ton email avant de choisir une formule';
+            ? t('choose_plan_ready')
+            : t('choose_plan_missing');
     });
 }
 
@@ -134,15 +346,15 @@ function renderAccount(account) {
     const hasAccess = !!account.has_access;
     const emailConfirmed = !!account.email_confirmed;
     const statusTitle = hasAccess
-        ? 'Accès terminal actif'
+        ? t('status_active_title')
         : emailConfirmed
-        ? 'Paiement Stripe requis'
-        : 'Email à confirmer';
+        ? t('status_payment_title')
+        : t('status_confirm_title');
     const statusCopy = hasAccess
-        ? 'Ton compte peut ouvrir le terminal complet. La facturation reste gérable depuis Stripe.'
+        ? t('status_active_copy')
         : emailConfirmed
-        ? 'Ton email est confirmé. Choisis une formule pour démarrer ton essai et lier Stripe au compte.'
-        : 'Confirme ton adresse email avant de choisir une formule Stripe.';
+        ? t('status_payment_copy')
+        : t('status_confirm_copy');
 
     setText('account-status-title', statusTitle);
     setText('account-status-copy', statusCopy);
@@ -175,7 +387,7 @@ async function fetchAccount() {
 async function saveProfile(event) {
     event.preventDefault();
     try {
-        setMessage('account-message', 'Enregistrement...');
+        setMessage('account-message', t('saving'));
         const response = await fetch('/api/account/profile', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -190,9 +402,9 @@ async function saveProfile(event) {
         });
         const payload = await readJson(response);
         renderAccount(payload.account);
-        setMessage('account-message', 'Profil enregistre.', 'ok');
+        setMessage('account-message', t('profile_saved'), 'ok');
     } catch (error) {
-        setMessage('account-message', error.message || "Impossible d'enregistrer le profil.", 'err');
+        setMessage('account-message', error.message || t('profile_error'), 'err');
     }
 }
 
@@ -201,7 +413,7 @@ async function savePassword(event) {
     try {
         const currentPassword = document.getElementById('password-current')?.value || '';
         const newPassword = document.getElementById('password-new')?.value || '';
-        setMessage('account-password-message', 'Mise a jour...');
+        setMessage('account-password-message', t('updating'));
         const response = await fetch('/api/account/password', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -212,15 +424,15 @@ async function savePassword(event) {
         });
         await readJson(response);
         document.getElementById('account-password-form')?.reset();
-        setMessage('account-password-message', 'Mot de passe mis a jour.', 'ok');
+        setMessage('account-password-message', t('password_saved'), 'ok');
     } catch (error) {
-        setMessage('account-password-message', error.message || 'Mot de passe non modifie.', 'err');
+        setMessage('account-password-message', error.message || t('password_error'), 'err');
     }
 }
 
 async function startCheckout(plan) {
     try {
-        setMessage('account-message', 'Redirection vers Stripe...');
+        setMessage('account-message', t('redirect_stripe'));
         const response = await fetch('/api/billing/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -229,13 +441,13 @@ async function startCheckout(plan) {
         const payload = await readJson(response);
         window.location.href = payload.url;
     } catch (error) {
-        setMessage('account-message', error.message || 'Paiement indisponible.', 'err');
+        setMessage('account-message', error.message || t('payment_unavailable'), 'err');
     }
 }
 
 async function openPortal() {
     try {
-        setMessage('account-message', 'Ouverture du portail Stripe...');
+        setMessage('account-message', t('opening_portal'));
         const response = await fetch('/api/billing/portal', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -244,23 +456,23 @@ async function openPortal() {
         const payload = await readJson(response);
         window.location.href = payload.url;
     } catch (error) {
-        setMessage('account-message', error.message || 'Portail Stripe indisponible.', 'err');
+        setMessage('account-message', error.message || t('portal_unavailable'), 'err');
     }
 }
 
 async function resendConfirmation() {
     if (!state.account?.email) return;
     try {
-        setMessage('account-message', 'Envoi du code...');
+        setMessage('account-message', t('sending_code'));
         const response = await fetch('/api/account/resend-confirmation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: state.account.email }),
         });
         await readJson(response);
-        setMessage('account-message', 'Code de confirmation renvoye par email.', 'ok');
+        setMessage('account-message', t('code_sent'), 'ok');
     } catch (error) {
-        setMessage('account-message', error.message || 'Code non envoye.', 'err');
+        setMessage('account-message', error.message || t('code_error'), 'err');
     }
 }
 
@@ -269,23 +481,23 @@ async function syncBillingReturn() {
     const status = params.get('billing');
     const sessionId = params.get('session_id');
     if (status === 'canceled') {
-        setMessage('account-message', 'Paiement annule. Tu peux choisir une formule quand tu veux.', 'err');
+        setMessage('account-message', t('payment_canceled'), 'err');
         window.history.replaceState({}, '', window.location.pathname);
         return;
     }
     if (status !== 'success' || !sessionId) return;
 
     try {
-        setMessage('account-message', 'Validation du paiement Stripe...');
+        setMessage('account-message', t('validating_payment'));
         const response = await fetch('/api/billing/sync-checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ session_id: sessionId }),
         });
         await readJson(response);
-        setMessage('account-message', 'Paiement valide. Ton accès est activé.', 'ok');
+        setMessage('account-message', t('payment_valid'), 'ok');
     } catch (error) {
-        setMessage('account-message', error.message || 'Paiement reçu, synchronisation en attente.', 'err');
+        setMessage('account-message', error.message || t('payment_pending'), 'err');
     } finally {
         window.history.replaceState({}, '', window.location.pathname);
     }
@@ -302,6 +514,11 @@ function bindAccountPage() {
     document.getElementById('account-portal')?.addEventListener('click', openPortal);
     document.getElementById('account-resend-confirmation')?.addEventListener('click', resendConfirmation);
     document.getElementById('account-logout')?.addEventListener('click', logout);
+    document.querySelector('[data-account-lang-toggle]')?.addEventListener('click', () => {
+        accountLang = accountLang === 'fr' ? 'en' : 'fr';
+        localStorage.setItem('xt_lang', accountLang);
+        applyAccountLanguage();
+    });
     document.querySelectorAll('[data-account-plan]').forEach((button) => {
         button.addEventListener('click', () => startCheckout(button.dataset.accountPlan));
     });
@@ -309,6 +526,7 @@ function bindAccountPage() {
 
 document.addEventListener('DOMContentLoaded', () => {
     bindAccountPage();
+    applyAccountLanguage();
     (async () => {
         await syncBillingReturn();
         await fetchAccount();
