@@ -226,6 +226,10 @@ export function bindAccountControls({
 
     if (toggle) {
         toggle.addEventListener('click', () => {
+            if (getAccountState().authenticated) {
+                window.location.href = '/account';
+                return;
+            }
             toggleAccountPanel(getAccountState(), null, false);
             renderAccount();
         });

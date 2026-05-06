@@ -99,6 +99,7 @@ function fillProfile(account) {
 function updateActionStates(account) {
     const portalButton = document.getElementById('account-portal');
     const resendButton = document.getElementById('account-resend-confirmation');
+    const adminPanel = document.getElementById('account-admin-panel');
     const planButtons = document.querySelectorAll('[data-account-plan]');
 
     if (portalButton) {
@@ -110,6 +111,10 @@ function updateActionStates(account) {
 
     if (resendButton) {
         resendButton.hidden = !!account.email_confirmed;
+    }
+
+    if (adminPanel) {
+        adminPanel.classList.toggle('hidden', account.role !== 'owner');
     }
 
     planButtons.forEach((button) => {
