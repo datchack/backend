@@ -473,6 +473,128 @@ def resources_page() -> str:
             <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
         </div>
         <nav aria-label="Documents légaux">
+            <a href="/support" data-i18n="nav_support">Support</a>
+            <a href="/terms" data-i18n="terms_kicker">CGU</a>
+            <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
+            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
+        </nav>
+    </footer>
+    <script src="/static/landing.js"></script>
+</body>
+</html>"""
+
+
+def support_page() -> str:
+    canonical = absolute_url("/support")
+    email = LEGAL_CONTACT_EMAIL
+    structured_data = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "ContactPage",
+            "name": "Support XAUTERMINAL",
+            "description": "Aide XAUTERMINAL pour les comptes, codes email, paiements Stripe, abonnements, accès au terminal et sécurité.",
+            "url": canonical,
+            "publisher": {
+                "@type": "Organization",
+                "name": LEGAL_BUSINESS_NAME,
+                "url": APP_BASE_URL,
+                "logo": absolute_url("/static/icon-192x192.png"),
+                "contactPoint": {
+                    "@type": "ContactPoint",
+                    "email": email,
+                    "contactType": "customer support",
+                    "availableLanguage": ["fr", "en"],
+                },
+            },
+        },
+        ensure_ascii=False,
+    )
+    cards = [
+        ("support_card_code_title", "support_card_code_copy"),
+        ("support_card_paid_title", "support_card_paid_copy"),
+        ("support_card_password_title", "support_card_password_copy"),
+        ("support_card_subscription_title", "support_card_subscription_copy"),
+        ("support_card_terminal_title", "support_card_terminal_copy"),
+        ("support_card_security_title", "support_card_security_copy"),
+    ]
+    card_html = "\n".join(
+        f"""            <article class="support-card">
+                <h2 data-i18n="{title_key}">{title_key}</h2>
+                <p data-i18n="{copy_key}">{copy_key}</p>
+            </article>"""
+        for title_key, copy_key in cards
+    )
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="support_title">Support XAUTERMINAL</title>
+    <meta name="description" content="Aide XAUTERMINAL pour les comptes, codes email, paiements Stripe, abonnements, accès au terminal et sécurité." data-i18n-content="support_description">
+    <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="XAUTERMINAL">
+    <meta property="og:title" content="Support XAUTERMINAL" data-i18n-content="support_title">
+    <meta property="og:description" content="Aide XAUTERMINAL pour les comptes, codes email, paiements Stripe, abonnements, accès au terminal et sécurité." data-i18n-content="support_description">
+    <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
+    <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            {BRAND_MARKUP}
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation support">
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/account" data-i18n="nav_account">Mon compte</a>
+            <a href="/ressources" data-i18n="nav_resources">Ressources</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
+        </nav>
+    </header>
+
+    <main class="legal-page support-page">
+        <div class="landing-kicker" data-i18n="support_kicker">SUPPORT</div>
+        <h1 data-i18n="support_h1">Aide et support XAUTERMINAL</h1>
+        <p data-i18n="support_intro">Retrouve les réponses aux situations les plus fréquentes: validation email, accès au terminal, paiement Stripe, abonnement, mot de passe et sécurité du compte.</p>
+
+        <section class="support-quick-actions" aria-label="Actions rapides">
+            <a class="resource-cta" href="/account" data-i18n="support_action_account">Ouvrir mon compte</a>
+            <a class="resource-link-button" href="/#pricing" data-i18n="support_action_plans">Voir les formules</a>
+            <a class="resource-link-button" href="/reset-password" data-i18n="support_action_password">Réinitialiser mon mot de passe</a>
+        </section>
+
+        <section class="support-grid" aria-label="Questions fréquentes">
+{card_html}
+        </section>
+
+        <section class="support-process">
+            <h2 data-i18n="support_process_title">Avant de contacter le support</h2>
+            <ol>
+                <li data-i18n="support_process_1">Vérifie que ton email est bien confirmé avec le dernier code reçu.</li>
+                <li data-i18n="support_process_2">Si tu as payé, reconnecte-toi puis ouvre ton espace Mon compte pour relancer la synchronisation automatique.</li>
+                <li data-i18n="support_process_3">Si l'accès reste bloqué, contacte le support avec ton email de compte et, si possible, l'heure du paiement Stripe.</li>
+            </ol>
+        </section>
+
+        <section class="legal-contact">
+            <h2 data-i18n="support_contact_title">Contacter XAUTERMINAL</h2>
+            <p><span data-i18n="support_contact_copy">Pour une demande compte, paiement ou accès terminal, écris-nous à</span> <a href="mailto:{email}">{email}</a>.</p>
+        </section>
+    </main>
+
+    <footer class="landing-footer">
+        <div>
+            <strong>XAUTERMINAL</strong>
+            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+        </div>
+        <nav aria-label="Support et documents">
+            <a href="/support" data-i18n="nav_support">Support</a>
+            <a href="/ressources" data-i18n="nav_resources">Ressources</a>
             <a href="/terms" data-i18n="terms_kicker">CGU</a>
             <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
             <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
@@ -556,6 +678,7 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
             <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
         </div>
         <nav aria-label="Documents légaux">
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terms" data-i18n="terms_kicker">CGU</a>
             <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
             <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
@@ -589,6 +712,11 @@ async def reset_password_page():
 @router.get("/ressources", response_class=HTMLResponse)
 async def resources_index_page():
     return HTMLResponse(resources_page())
+
+
+@router.get("/support", response_class=HTMLResponse)
+async def support_index_page():
+    return HTMLResponse(support_page())
 
 
 @router.get("/terminal-xauusd", response_class=HTMLResponse)
@@ -669,6 +797,7 @@ async def sitemap_xml():
     today = utc_now().date().isoformat()
     urls = [
         ("/", "daily", "1.0"),
+        ("/support", "weekly", "0.7"),
         ("/ressources", "weekly", "0.8"),
         ("/terminal-xauusd", "weekly", "0.8"),
         ("/calendrier-economique-or", "weekly", "0.8"),
