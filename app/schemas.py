@@ -39,6 +39,10 @@ class AdminAccessPayload(BaseModel):
     action: str
 
 
+class AdminActivationReminderPayload(BaseModel):
+    limit: int = 50
+
+
 class BillingCheckoutPayload(BaseModel):
     plan: str
     return_path: str = "/terminal"

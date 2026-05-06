@@ -16,6 +16,7 @@ const ADMIN_COPY = {
         metric_expired: 'EXPIRÉS',
         users_kicker: 'USERS',
         users_title: 'Comptes terminal',
+        resend_activation: 'Relancer validations',
         search_placeholder: 'Rechercher un email',
         filter_title: 'Filtrer par statut',
         filter_all: 'TOUS',
@@ -35,6 +36,11 @@ const ADMIN_COPY = {
         updating: 'Mise à jour du compte...',
         action_error: 'Action impossible',
         account_updated: 'Compte mis à jour.',
+        resend_confirm: 'Envoyer un email de validation aux comptes non confirmés éligibles ?',
+        resend_running: 'Envoi des relances de validation...',
+        resend_done: 'relance(s) envoyée(s).',
+        resend_none: 'Aucun compte éligible à relancer.',
+        resend_error: 'Relance impossible',
     },
     en: {
         meta_title: 'ADMIN - XAUTERMINAL',
@@ -48,6 +54,7 @@ const ADMIN_COPY = {
         metric_expired: 'EXPIRED',
         users_kicker: 'USERS',
         users_title: 'Terminal accounts',
+        resend_activation: 'Send reminders',
         search_placeholder: 'Search email',
         filter_title: 'Filter by status',
         filter_all: 'ALL',
@@ -67,6 +74,11 @@ const ADMIN_COPY = {
         updating: 'Updating account...',
         action_error: 'Action impossible',
         account_updated: 'Account updated.',
+        resend_confirm: 'Send a validation email to eligible unconfirmed accounts?',
+        resend_running: 'Sending validation reminders...',
+        resend_done: 'reminder(s) sent.',
+        resend_none: 'No eligible account to remind.',
+        resend_error: 'Unable to send reminders',
     },
 };
 
@@ -234,14 +246,45 @@ async function updateUserAccess(userId, action) {
     }
 }
 
+async function resendActivationReminders(button) {
+    if (!window.confirm(t('resend_confirm'))) return;
+    try {
+        if (button) button.disabled = true;
+        setAdminMessage(t('resend_running'));
+        const response = await fetch('/api/admin/users/resend-activation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ limit: 50 }),
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.detail || t('resend_error'));
+        }
+
+        adminUsers = payload.users || adminUsers;
+        renderMetrics();
+        renderUsers();
+        const sent = Number(payload.sent_count || 0);
+        setAdminMessage(sent ? `${sent} ${t('resend_done')}` : t('resend_none'), sent ? 'ok' : '');
+    } catch (error) {
+        setAdminMessage(error.message || t('resend_error'), 'err');
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
 function bindAdmin() {
     const refresh = document.getElementById('admin-refresh');
+    const resendActivation = document.getElementById('admin-resend-activation');
     const search = document.getElementById('admin-search');
     const filter = document.getElementById('admin-status-filter');
     const body = document.getElementById('admin-users-body');
     const langToggle = document.querySelector('[data-admin-lang-toggle]');
 
     if (refresh) refresh.addEventListener('click', fetchAdminUsers);
+    if (resendActivation) {
+        resendActivation.addEventListener('click', () => resendActivationReminders(resendActivation));
+    }
     if (search) {
         search.addEventListener('input', () => {
             searchQuery = search.value;
