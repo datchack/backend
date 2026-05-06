@@ -71,6 +71,13 @@ async def admin_update_user_access(user_id: int, payload: AdminAccessPayload, re
             "UPDATE users SET email_confirmed = ?, status = ?, trial_started_at = ?, trial_ends_at = ? WHERE id = ?",
             (True, "confirmed", now.isoformat(), now.isoformat(), user_id),
         )
+    elif action == "expire":
+        execute_write(
+            "UPDATE users SET plan = ?, status = ?, trial_ends_at = ? WHERE id = ?",
+            ("trial", "expired", now.isoformat(), user_id),
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Action admin inconnue")
 
     updated = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
     return {"user": normalize_account_row(updated)}
@@ -169,3 +176,43 @@ async def admin_resend_activation_reminders(payload: AdminActivationReminderPayl
         "errors": errors[:10],
         "users": [normalize_account_row(row) for row in updated_rows],
     }
+
+
+@router.post("/api/admin/users/{user_id}/resend-activation")
+async def admin_resend_user_activation(user_id: int, request: Request):
+    require_owner(request)
+    if not is_email_confirmation_enabled():
+        raise HTTPException(status_code=503, detail="Service email de confirmation indisponible")
+
+    row = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    if not row:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
+    now = utc_now()
+    eligible, reason = should_send_activation_reminder(row, now)
+    if not eligible:
+        raise HTTPException(status_code=400, detail=f"Compte non eligible a la relance: {reason}")
+
+    email = str(row["email"]).strip().lower()
+    code = generate_email_confirmation_code()
+    expires_at = email_confirmation_expires_at()
+    execute_write(
+        """
+        UPDATE users
+        SET email_confirmation_code = ?,
+            email_confirmation_expires_at = ?
+        WHERE id = ?
+        """,
+        (code, expires_at, user_id),
+    )
+    try:
+        send_activation_reminder_email(email, code)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Email de relance non envoye") from exc
+
+    execute_write(
+        "UPDATE users SET email_confirmation_reminder_sent_at = ? WHERE id = ?",
+        (now.isoformat(), user_id),
+    )
+    updated = execute_one("SELECT * FROM users WHERE id = ?", (user_id,))
+    return {"user": normalize_account_row(updated), "sent": True}

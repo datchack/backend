@@ -27,21 +27,29 @@
                 <strong id="metric-total">0</strong>
             </div>
             <div class="admin-metric">
+                <span data-i18n="metric_unconfirmed">NON CONFIRMÉS</span>
+                <strong id="metric-unconfirmed">0</strong>
+            </div>
+            <div class="admin-metric">
+                <span data-i18n="metric_to_pay">À PAYER</span>
+                <strong id="metric-to-pay">0</strong>
+            </div>
+            <div class="admin-metric">
                 <span data-i18n="metric_active">ACTIFS</span>
                 <strong id="metric-active">0</strong>
             </div>
             <div class="admin-metric">
-                <span data-i18n="metric_trial">ESSAIS</span>
-                <strong id="metric-trial">0</strong>
+                <span data-i18n="metric_review">À VÉRIFIER</span>
+                <strong id="metric-review">0</strong>
             </div>
-            <div class="admin-metric">
-                <span data-i18n="metric_pending">EN ATTENTE</span>
-                <strong id="metric-pending">0</strong>
-            </div>
-            <div class="admin-metric">
-                <span data-i18n="metric_expired">EXPIRÉS</span>
-                <strong id="metric-expired">0</strong>
-            </div>
+        </section>
+
+        <section class="admin-quick-filters" aria-label="Filtres rapides">
+            <button type="button" class="panel-btn active" data-admin-filter="all" data-i18n="filter_all">TOUS</button>
+            <button type="button" class="panel-btn" data-admin-filter="unconfirmed" data-i18n="filter_unconfirmed">NON CONFIRMÉS</button>
+            <button type="button" class="panel-btn" data-admin-filter="confirmed_no_stripe" data-i18n="filter_confirmed_no_stripe">CONFIRMÉS SANS STRIPE</button>
+            <button type="button" class="panel-btn" data-admin-filter="active" data-i18n="filter_active">ACTIFS</button>
+            <button type="button" class="panel-btn" data-admin-filter="needs_review" data-i18n="filter_needs_review">À VÉRIFIER</button>
         </section>
 
         <section class="admin-panel">
@@ -73,8 +81,11 @@
                             <th>Email</th>
                             <th data-i18n="role">Rôle</th>
                             <th data-i18n="status">Statut</th>
-                            <th data-i18n="expiration">Expiration</th>
+                            <th data-i18n="checks">Contrôles</th>
+                            <th data-i18n="stripe">Stripe</th>
+                            <th data-i18n="expiration">Échéance</th>
                             <th data-i18n="created">Création</th>
+                            <th data-i18n="reminder">Relance</th>
                             <th data-i18n="actions">Actions</th>
                         </tr>
                     </thead>
