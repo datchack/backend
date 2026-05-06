@@ -1112,109 +1112,6 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     position: relative;
 }
 
-.account-panel {
-    position: absolute;
-    right: 0;
-    bottom: calc(100% + 8px);
-    width: min(340px, calc(100vw - 24px));
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: rgba(10, 13, 18, 0.98);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
-    z-index: 40;
-}
-
-.account-panel.hidden,
-.account-user.hidden {
-    display: none;
-}
-
-.account-head,
-.account-user-line,
-.account-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.account-head {
-    margin-bottom: 10px;
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: 0.5px;
-    color: var(--muted);
-}
-
-.account-summary,
-.account-message {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 12px;
-    line-height: 1.45;
-    color: var(--muted);
-}
-
-.account-summary {
-    margin-bottom: 10px;
-}
-
-.account-form {
-    display: grid;
-    gap: 8px;
-}
-
-.account-form input {
-    min-height: 36px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: #0b0f15;
-    color: var(--text);
-    outline: none;
-}
-
-.account-form input:focus {
-    border-color: var(--accent);
-}
-
-.account-actions {
-    margin-top: 4px;
-}
-
-.account-user {
-    display: grid;
-    gap: 8px;
-}
-
-.account-user-line {
-    min-height: 28px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
-    font-size: 10px;
-    color: var(--muted);
-}
-
-.account-user-line strong {
-    color: var(--text);
-    font-size: 11px;
-}
-
-.account-message {
-    min-height: 18px;
-    margin-top: 10px;
-}
-
-.account-message.ok {
-    color: var(--buy);
-}
-
-.account-message.err {
-    color: var(--sell);
-}
-
 .status-select-wrap {
     gap: 6px;
     padding-right: 4px;
@@ -1829,7 +1726,6 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
         display: none;
     }
 
-    .account-panel,
     .customize-panel {
         position: fixed;
         left: 8px;
@@ -1839,12 +1735,6 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
         overflow: auto;
         width: auto;
         z-index: 70;
-    }
-
-    .account-actions {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 6px;
     }
 
     .access-gate {

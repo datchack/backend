@@ -258,6 +258,14 @@ async def account_preferences(request: Request):
     return {"prefs": user["prefs"]}
 
 
+@router.post("/api/account/preferences")
+async def account_save_preferences(payload: PreferencesPayload, request: Request):
+    user = require_user(request)
+    prefs = validate_preferences_payload(payload.prefs)
+    execute_write("UPDATE users SET prefs_json = ? WHERE id = ?", (json.dumps(prefs), int(user["id"])))
+    return {"prefs": prefs}
+
+
 def clean_profile_value(value: str, limit: int = 120) -> str:
     return value.strip()[:limit]
 

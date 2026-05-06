@@ -11,10 +11,7 @@ import {
 import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js';
 import {
     fetchAccountState as fetchAccountStateAction,
-    logoutAccount as logoutAccountAction,
-    openBillingPortal as openBillingPortalAction,
     submitAccessAuthForm as submitAccessAuthFormAction,
-    submitAccountForm as submitAccountFormAction,
 } from './terminal-account-actions.js';
 import {
     bindAccountControls as bindAccountControlsModule,
@@ -22,7 +19,6 @@ import {
     renderAccessGate as renderAccessGateView,
     renderAccountState as renderAccountStateView,
     setAccessAuthMessage,
-    toggleAccountPanel as toggleAccountPanelView,
 } from './terminal-account-ui.js';
 import { createCalendarController } from './terminal-calendar.js';
 import {
@@ -252,10 +248,6 @@ function renderAccountState() {
     accountMode = renderAccountStateView(accountState, accountMode, accessFormMode);
 }
 
-function toggleAccountPanel(forceOpen = null, heroOpen = false) {
-    toggleAccountPanelView(accountState, forceOpen, heroOpen);
-}
-
 async function fetchAccountState() {
     await fetchAccountStateAction({
         setAccountState: (nextAccountState) => {
@@ -283,21 +275,6 @@ async function syncBillingReturn() {
     }
 }
 
-async function submitAccountForm(event) {
-    await submitAccountFormAction(event, {
-        getAccountMode: () => accountMode,
-        setAccountState: (nextAccountState) => {
-            accountState = nextAccountState;
-        },
-        renderAccountState,
-        syncPreferences,
-        hasTerminalAccess,
-        bootTerminalApp,
-        renderAccessGate,
-        toggleAccountPanel,
-    });
-}
-
 async function submitAccessAuthForm(event) {
     await submitAccessAuthFormAction(event, {
         getAccessFormMode: () => accessFormMode,
@@ -315,10 +292,6 @@ async function submitAccessAuthForm(event) {
     });
 }
 
-async function logoutAccount() {
-    await logoutAccountAction();
-}
-
 function bindAccountControls() {
     bindAccountControlsModule({
         getAccountState: () => accountState,
@@ -331,10 +304,7 @@ function bindAccountControls() {
             accessFormMode = mode;
         },
         renderAccount: renderAccountState,
-        submitAccountForm,
         submitAccessAuthForm,
-        logoutAccount,
-        openBillingPortal: openBillingPortalAction,
         syncPreferences,
     });
 }
