@@ -128,6 +128,7 @@
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="#features" data-i18n="nav_tools">Outils</a>
             <a href="#profiles" data-i18n="nav_markets">Marchés</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="#pricing" data-i18n="nav_pricing">Formules</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
             <button type="button" class="landing-login" data-auth-mode="login" data-i18n="nav_login">Connexion</button>
@@ -193,6 +194,38 @@
             </div>
         </section>
 
+        <section class="landing-band learning-band" id="resources">
+            <div class="landing-section-head">
+                <div class="landing-kicker" data-i18n="resources_kicker">RESSOURCES</div>
+                <h2 data-i18n="resources_title">Comprendre le contexte avant d'ouvrir le terminal.</h2>
+                <p data-i18n="resources_intro">Accède rapidement aux guides, aux pages XAU/USD et aux explications macro pour mieux comprendre ce que le terminal rassemble.</p>
+                <div class="landing-actions">
+                    <a class="resource-cta" href="/guides" data-i18n="guides_cta">Voir les guides trading</a>
+                    <a class="resource-link-button" href="/ressources" data-i18n="resources_cta">Voir toutes les ressources</a>
+                </div>
+            </div>
+            <div class="learning-grid">
+                <article class="learning-card featured">
+                    <span data-i18n="learning_guides_kicker">GUIDES</span>
+                    <h3><a href="/guides" data-i18n="learning_guides_title">Guides trading XAU/USD, macro et Bias Desk</a></h3>
+                    <p data-i18n="learning_guides_copy">Construis une routine de marché claire autour du dollar, des taux US, des news et du Bias Desk.</p>
+                    <a class="resource-link-button" href="/guides" data-i18n="learning_open_guides">Ouvrir les guides</a>
+                </article>
+                <article class="learning-card">
+                    <span data-i18n="learning_xau_kicker">XAU/USD</span>
+                    <h3><a href="/terminal-xauusd" data-i18n="resource_terminal_title">Terminal XAU/USD</a></h3>
+                    <p data-i18n="resource_terminal_copy">Pourquoi l'or demande une lecture croisée du dollar, des taux US, de la Fed, de l'inflation et du momentum.</p>
+                    <a class="resource-link-button" href="/terminal-xauusd" data-i18n="learning_read_page">Lire la page</a>
+                </article>
+                <article class="learning-card">
+                    <span data-i18n="learning_macro_kicker">MACRO</span>
+                    <h3><a href="/guide/trading-or-macro" data-i18n="resource_guide_title">Guide macro pour trader l'or</a></h3>
+                    <p data-i18n="resource_guide_copy">Une lecture pédagogique des principaux drivers macro: DXY, US10Y, inflation, Fed et stress de marché.</p>
+                    <a class="resource-link-button" href="/guide/trading-or-macro" data-i18n="learning_read_page">Lire la page</a>
+                </article>
+            </div>
+        </section>
+
         <section class="landing-band" id="features">
             <div class="landing-section-head">
                 <div class="landing-kicker" data-i18n="features_kicker">OUTILS</div>
@@ -237,14 +270,10 @@
             </div>
         </section>
 
-        <section class="landing-band" id="resources">
+        <section class="landing-band compact">
             <div class="landing-section-head">
-                <div class="landing-kicker" data-i18n="resources_kicker">RESSOURCES</div>
-                <h2 data-i18n="resources_title">Comprendre le contexte avant d'ouvrir le terminal.</h2>
-                <div class="landing-actions">
-                    <a class="resource-cta" href="/ressources" data-i18n="resources_cta">Voir toutes les ressources XAUTERMINAL</a>
-                    <a class="resource-link-button" href="/guides" data-i18n="guides_cta">Voir les guides trading</a>
-                </div>
+                <div class="landing-kicker" data-i18n="resources_deep_kicker">LECTURES UTILES</div>
+                <h2 data-i18n="resources_deep_title">Approfondir les pages liées au terminal.</h2>
             </div>
             <div class="feature-grid">
                 <article class="feature-card">
@@ -343,21 +372,53 @@
         </section>
 
         <footer class="landing-footer">
-            <div>
-                <strong>XAUTERMINAL</strong>
-                <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+            <div class="footer-brand">
+                <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+                    <img class="brand-logo" src="/static/xauterminal-logo.png" alt="" width="36" height="36">
+                    <span>XAUTERMINAL</span>
+                </a>
+                <p data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</p>
+                <a class="resource-cta" href="#pricing" data-i18n="footer_trial">Démarrer l'essai</a>
             </div>
-            <nav aria-label="Documents légaux">
-                <a href="/support" data-i18n="nav_support">Support</a>
-                <a href="/ressources" data-i18n="nav_resources">Ressources</a>
-                <a href="/terminal-xauusd" data-i18n="resource_terminal_short">XAU/USD</a>
-                <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
-                <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
-                <a href="/guide/trading-or-macro" data-i18n="resource_guide_short">Guide macro</a>
-                <a href="/terms" data-i18n="terms_kicker">CGU</a>
-                <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
-                <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
+            <nav class="footer-grid" aria-label="Plan du site">
+                <div class="footer-column">
+                    <h3 data-i18n="footer_product">Produit</h3>
+                    <a href="#features" data-i18n="nav_tools">Outils</a>
+                    <a href="#profiles" data-i18n="nav_markets">Marchés</a>
+                    <a href="#pricing" data-i18n="nav_pricing">Formules</a>
+                    <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+                </div>
+                <div class="footer-column">
+                    <h3 data-i18n="footer_learn">Apprendre</h3>
+                    <a href="/guides" data-i18n="nav_guides">Guides</a>
+                    <a href="/ressources" data-i18n="nav_resources">Ressources</a>
+                    <a href="/terminal-xauusd" data-i18n="resource_terminal_short">XAU/USD</a>
+                    <a href="/guide/trading-or-macro" data-i18n="resource_guide_short">Guide macro</a>
+                </div>
+                <div class="footer-column">
+                    <h3 data-i18n="footer_markets">Marchés et données</h3>
+                    <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
+                    <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
+                    <a href="/guides/dxy-taux-us-or" data-i18n="footer_dxy_rates">DXY et taux US</a>
+                    <a href="/guides/bias-desk-trading" data-i18n="footer_bias_desk">Bias Desk</a>
+                </div>
+                <div class="footer-column">
+                    <h3 data-i18n="footer_account">Compte</h3>
+                    <a href="/account" data-i18n="nav_account">Mon compte</a>
+                    <a href="/support" data-i18n="nav_support">Support</a>
+                    <a href="/#pricing" data-i18n="footer_subscriptions">Abonnements</a>
+                    <a href="mailto:mdtrading@xauterminal.com" data-i18n="footer_contact">Contact</a>
+                </div>
+                <div class="footer-column">
+                    <h3 data-i18n="footer_legal">Légal</h3>
+                    <a href="/terms" data-i18n="terms_kicker">CGU</a>
+                    <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
+                    <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
+                </div>
             </nav>
+            <div class="footer-risk" data-i18n="footer_risk">
+                Le trading comporte un risque de perte. XAUTERMINAL fournit des informations de marché et des outils d'organisation, sans conseil financier personnalisé.
+            </div>
         </footer>
     </main>
 
