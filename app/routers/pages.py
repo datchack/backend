@@ -23,7 +23,7 @@ def absolute_url(path: str = "/") -> str:
     return f"{APP_BASE_URL}{suffix}"
 
 
-FAVICON_LINKS = """    <link rel="icon" href="/static/favicon.ico" sizes="any">
+FAVICON_LINKS = """    <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="48x48" href="/static/favicon-48x48.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
@@ -1153,6 +1153,11 @@ Disallow: /ws/
 
 Sitemap: {absolute_url('/sitemap.xml')}
 """
+
+
+@router.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico", media_type="image/x-icon")
 
 
 @router.get("/sitemap.xml")
