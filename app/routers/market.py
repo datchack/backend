@@ -155,7 +155,7 @@ async def health():
 
 
 @router.get("/api/context")
-async def get_context(request: Request, profile: Optional[str] = None, countries: Optional[str] = None):
+async def get_context(request: Request, profile: Optional[str] = None, countries: Optional[str] = None, symbol: Optional[str] = None):
     require_terminal_access(request)
-    context = await fetch_market_context(profile, countries)
+    context = await fetch_market_context(profile, countries, symbol)
     return context

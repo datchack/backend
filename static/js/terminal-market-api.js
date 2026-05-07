@@ -16,8 +16,9 @@ export async function fetchCalendarFeed(profile, countries) {
     return readJsonResponse(response, 'Calendar unavailable');
 }
 
-export async function fetchMarketContext(profile, countries) {
-    const response = await fetch(`/api/context?profile=${profile}&countries=${countries}`, { cache: 'no-store' });
+export async function fetchMarketContext(profile, countries, symbol = '') {
+    const symbolParam = symbol ? `&symbol=${encodeURIComponent(symbol)}` : '';
+    const response = await fetch(`/api/context?profile=${profile}&countries=${countries}${symbolParam}`, { cache: 'no-store' });
     return readJsonResponse(response, 'Context unavailable');
 }
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import asyncio
+import re
 import time
 from typing import Optional
 
@@ -9,7 +10,7 @@ import aiohttp
 
 from app.config import *
 from app.services.calendar import fetch_calendar
-from app.services.profiles import get_market_profile, parse_country_filter
+from app.services.profiles import MARKET_PROFILES, get_market_profile, parse_country_filter
 from app.services.quotes import fetch_market_snapshot
 
 
@@ -29,6 +30,21 @@ MARKET_SYMBOLS = {
     "usdjpy": {"symbol": "JPY=X", "label": "USD/JPY"},
     "btc": {"symbol": "BTC-USD", "label": "BTC"},
 }
+
+CURRENCY_COUNTRIES = {
+    "USD": "US",
+    "EUR": "EU",
+    "GBP": "GB",
+    "JPY": "JP",
+    "AUD": "AU",
+    "CAD": "CA",
+    "CHF": "CH",
+    "NZD": "NZ",
+    "CNY": "CN",
+}
+
+CRYPTO_SYMBOLS = {"BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC"}
+EQUITY_EXCHANGES = {"NASDAQ", "NYSE", "AMEX", "NASDAQGM", "NASDAQGS"}
 
 BIAS_PROFILES = {
     "xauusd": {
@@ -455,8 +471,14 @@ def build_gold_context(markets: dict[str, dict], events: list[dict] | None = Non
     }
 
 
-def build_market_context(profile_id: str, markets: dict[str, dict], events: list[dict] | None = None) -> dict:
-    config = BIAS_PROFILES.get(profile_id, BIAS_PROFILES["xauusd"])
+def build_market_context(
+    profile_id: str,
+    markets: dict[str, dict],
+    events: list[dict] | None = None,
+    config_override: dict | None = None,
+) -> dict:
+    config = config_override or BIAS_PROFILES.get(profile_id, BIAS_PROFILES["xauusd"])
+    symbol_catalog = {**MARKET_SYMBOLS, **config.get("symbols", {})}
     drivers = []
 
     for spec in config["drivers"]:
@@ -563,7 +585,8 @@ def build_market_context(profile_id: str, markets: dict[str, dict], events: list
         volatility = "QUIET"
 
     target = markets.get(config["target_key"])
-    watch_keys = list(dict.fromkeys([config["target_key"], "dxy", "us10y", "gold", "qqq", "spy", "oil", "btc"]))
+    driver_watch_keys = [spec["key"] for spec in config["drivers"]]
+    watch_keys = list(dict.fromkeys([config["target_key"], *driver_watch_keys, "dxy", "us10y", "gold", "qqq", "spy", "oil", "btc"]))
     return {
         "profile": profile_id,
         "title": config["title"],
@@ -587,13 +610,23 @@ def build_market_context(profile_id: str, markets: dict[str, dict], events: list
         "session": active_session,
         "drivers": drivers,
         "watchlist": [
-            {"key": key, "label": MARKET_SYMBOLS[key]["label"], **markets[key]}
+            {
+                "key": key,
+                "label": symbol_catalog[key]["label"],
+                **markets[key],
+                "symbol": symbol_catalog[key].get("tv_symbol", markets[key]["symbol"]),
+            }
             for key in watch_keys
-            if key in markets and key in MARKET_SYMBOLS
+            if key in markets and key in symbol_catalog
         ],
         "available_watchlist": [
-            {"key": key, "label": MARKET_SYMBOLS[key]["label"], **markets[key]}
-            for key in MARKET_SYMBOLS
+            {
+                "key": key,
+                "label": symbol_catalog[key]["label"],
+                **markets[key],
+                "symbol": symbol_catalog[key].get("tv_symbol", markets[key]["symbol"]),
+            }
+            for key in symbol_catalog
             if key in markets
         ],
         "target": target,
@@ -601,28 +634,298 @@ def build_market_context(profile_id: str, markets: dict[str, dict], events: list
     }
 
 
-async def fetch_market_context(profile_id: Optional[str] = None, countries: Optional[str] = None) -> dict:
+def normalize_tradingview_symbol(symbol: str | None) -> str:
+    raw = (symbol or "").strip().upper().split(":")[-1]
+    return re.sub(r"[^A-Z0-9]", "", raw)
+
+
+def yahoo_forex_symbol(base: str, quote: str) -> str:
+    if base == "USD":
+        return f"{quote}=X"
+    return f"{base}{quote}=X"
+
+
+def known_profile_from_symbol(symbol: str | None) -> str | None:
+    normalized = normalize_tradingview_symbol(symbol)
+    if not normalized:
+        return None
+
+    for profile_id, profile in MARKET_PROFILES.items():
+        if normalize_tradingview_symbol(profile.get("symbol")) == normalized:
+            return profile_id
+    return None
+
+
+def dynamic_forex_context_config(symbol: str | None) -> tuple[str, dict] | None:
+    normalized = normalize_tradingview_symbol(symbol)
+    if len(normalized) != 6 or not normalized.isalpha():
+        return None
+
+    base = normalized[:3]
+    quote = normalized[3:]
+    if base not in CURRENCY_COUNTRIES or quote not in CURRENCY_COUNTRIES or base == quote:
+        return None
+
+    pair = f"{base}/{quote}"
+    pair_key = f"fx_{base.lower()}{quote.lower()}"
+    pair_label = f"{base}{quote}"
+    symbols = {
+        pair_key: {"symbol": yahoo_forex_symbol(base, quote), "tv_symbol": f"FX:{base}{quote}", "label": pair},
+    }
+    drivers = [
+        {
+            "key": pair_key,
+            "driver_key": f"{pair_key}_momo",
+            "label": pair_label,
+            "bullish_when": "up",
+            "weight": 2.6,
+            "strong": 0.55,
+            "medium": 0.20,
+            "layer": "momentum",
+            "bullish": f"{pair} momentum confirms buyers",
+            "bearish": f"{pair} momentum confirms sellers",
+            "neutral": f"{pair} momentum undecided",
+        }
+    ]
+
+    if base != "USD" and quote != "USD":
+        base_key = f"fx_{base.lower()}usd"
+        symbols[base_key] = {"symbol": yahoo_forex_symbol(base, "USD"), "tv_symbol": f"FX:{base}USD", "label": f"{base}/USD"}
+        drivers.append({
+            "key": base_key,
+            "label": f"{base} strength",
+            "bullish_when": "up",
+            "weight": 1.8,
+            "strong": 0.45,
+            "medium": 0.18,
+            "layer": "macro",
+            "bullish": f"{base} strength supports {pair}",
+            "bearish": f"{base} weakness pressures {pair}",
+            "neutral": f"{base} leg is mixed",
+        })
+
+    if quote != "USD" and base != "USD":
+        quote_key = f"fx_usd{quote.lower()}"
+        symbols[quote_key] = {"symbol": yahoo_forex_symbol("USD", quote), "tv_symbol": f"FX:USD{quote}", "label": f"USD/{quote}"}
+        drivers.append({
+            "key": quote_key,
+            "label": f"{quote} pressure",
+            "bullish_when": "up",
+            "weight": 1.8,
+            "strong": 0.45,
+            "medium": 0.18,
+            "layer": "macro",
+            "bullish": f"{quote} weakness supports {pair}",
+            "bearish": f"{quote} strength pressures {pair}",
+            "neutral": f"{quote} leg is mixed",
+        })
+
+    if base == "USD" or quote == "USD":
+        usd_bullish_when = "up" if base == "USD" else "down"
+        drivers.extend([
+            {
+                "key": "dxy",
+                "label": "Dollar",
+                "bullish_when": usd_bullish_when,
+                "weight": 2.4,
+                "strong": 0.25,
+                "medium": 0.10,
+                "layer": "macro",
+                "bullish": f"Dollar tone supports {pair}",
+                "bearish": f"Dollar tone pressures {pair}",
+                "neutral": "Dollar impact limited",
+            },
+            {
+                "key": "us10y",
+                "label": "US10Y",
+                "bullish_when": usd_bullish_when,
+                "weight": 1.6,
+                "strong": 0.30,
+                "medium": 0.12,
+                "layer": "macro",
+                "bullish": f"US yields support {pair}",
+                "bearish": f"US yields pressure {pair}",
+                "neutral": "Yield signal mixed",
+            },
+        ])
+
+    if quote == "JPY":
+        drivers.append({
+            "key": "spy",
+            "label": "Risk",
+            "bullish_when": "up",
+            "weight": 1.2,
+            "strong": 0.90,
+            "medium": 0.35,
+            "layer": "risk",
+            "bullish": f"Risk appetite supports {pair} carry",
+            "bearish": f"Risk-off pressures {pair}",
+            "neutral": "Risk tone mixed",
+        })
+
+    config = {
+        "title": pair,
+        "target_key": pair_key,
+        "target_label": pair,
+        "bias_name": pair_label,
+        "bullish_action": f"LONG {pair_label}",
+        "bearish_action": f"SHORT {pair_label}",
+        "drivers": drivers,
+        "symbols": symbols,
+    }
+    return pair_key, config
+
+
+def generic_yahoo_symbol(symbol: str | None) -> tuple[str, str, str] | None:
+    raw_symbol = (symbol or "").strip().upper()
+    exchange = raw_symbol.split(":", 1)[0] if ":" in raw_symbol else ""
+    normalized = normalize_tradingview_symbol(symbol)
+    if not normalized:
+        return None
+
+    if normalized.endswith("USDT") and normalized[:-4] in CRYPTO_SYMBOLS:
+        base = normalized[:-4]
+        return f"{base.lower()}usd", f"{base}-USD", f"{base}/USD"
+
+    if normalized.endswith("USD") and normalized[:-3] in CRYPTO_SYMBOLS:
+        base = normalized[:-3]
+        return f"{base.lower()}usd", f"{base}-USD", f"{base}/USD"
+
+    if (exchange in EQUITY_EXCHANGES or not exchange) and 1 <= len(normalized) <= 8:
+        return f"eq_{normalized.lower()}", normalized.replace(".", "-"), normalized
+
+    return None
+
+
+def generic_symbol_context_config(symbol: str | None) -> tuple[str, dict] | None:
+    parsed = generic_yahoo_symbol(symbol)
+    if not parsed:
+        return None
+
+    target_key, yahoo_symbol, label = parsed
+    normalized = normalize_tradingview_symbol(symbol)
+    raw_symbol = (symbol or "").strip().upper()
+    tv_symbol = raw_symbol if ":" in raw_symbol else normalized
+    is_crypto = yahoo_symbol.endswith("-USD")
+
+    symbols = {
+        target_key: {"symbol": yahoo_symbol, "tv_symbol": tv_symbol, "label": label},
+    }
+    drivers = [
+        {
+            "key": target_key,
+            "driver_key": f"{target_key}_momo",
+            "label": label,
+            "bullish_when": "up",
+            "weight": 3.0,
+            "strong": 1.20 if is_crypto else 0.90,
+            "medium": 0.45 if is_crypto else 0.30,
+            "layer": "momentum",
+            "bullish": f"{label} momentum confirms buyers",
+            "bearish": f"{label} momentum confirms sellers",
+            "neutral": f"{label} momentum undecided",
+        },
+        {
+            "key": "qqq" if not is_crypto else "btc",
+            "label": "Crypto beta" if is_crypto else "Tech beta",
+            "bullish_when": "up",
+            "weight": 1.4,
+            "strong": 1.20 if is_crypto else 0.90,
+            "medium": 0.45 if is_crypto else 0.35,
+            "layer": "risk",
+            "bullish": f"Risk beta supports {label}",
+            "bearish": f"Risk beta pressures {label}",
+            "neutral": "Risk beta mixed",
+        },
+        {
+            "key": "spy",
+            "label": "Risk",
+            "bullish_when": "up",
+            "weight": 1.0,
+            "strong": 0.90,
+            "medium": 0.35,
+            "layer": "risk",
+            "bullish": f"Broad risk appetite supports {label}",
+            "bearish": f"Broad risk-off pressures {label}",
+            "neutral": "Broad risk tone mixed",
+        },
+        {
+            "key": "dxy",
+            "label": "Dollar",
+            "bullish_when": "down",
+            "weight": 1.2,
+            "strong": 0.25,
+            "medium": 0.10,
+            "layer": "macro",
+            "bullish": f"Softer dollar supports {label}",
+            "bearish": f"Stronger dollar pressures {label}",
+            "neutral": "Dollar impact limited",
+        },
+        {
+            "key": "us10y",
+            "label": "US10Y",
+            "bullish_when": "down",
+            "weight": 1.2,
+            "strong": 0.30,
+            "medium": 0.12,
+            "layer": "macro",
+            "bullish": f"Lower yields support {label}",
+            "bearish": f"Higher yields pressure {label}",
+            "neutral": "Yield signal mixed",
+        },
+    ]
+
+    config = {
+        "title": label,
+        "target_key": target_key,
+        "target_label": label,
+        "bias_name": normalized,
+        "bullish_action": f"LONG {normalized}",
+        "bearish_action": f"SHORT {normalized}",
+        "drivers": drivers,
+        "symbols": symbols,
+    }
+    return target_key, config
+
+
+async def fetch_market_context(profile_id: Optional[str] = None, countries: Optional[str] = None, symbol: Optional[str] = None) -> dict:
     profile = get_market_profile(profile_id)
-    bias_profile_id = profile["id"] if profile["id"] in BIAS_PROFILES else "xauusd"
+    dynamic_config = None
+    symbol_profile_id = known_profile_from_symbol(symbol)
+    if symbol_profile_id:
+        bias_profile_id = symbol_profile_id
+    else:
+        dynamic = dynamic_forex_context_config(symbol)
+        if dynamic:
+            bias_profile_id, dynamic_config = dynamic
+        else:
+            generic = generic_symbol_context_config(symbol)
+            if generic:
+                bias_profile_id, dynamic_config = generic
+            else:
+                bias_profile_id = profile["id"] if profile["id"] in BIAS_PROFILES else "xauusd"
+
     event_countries = parse_country_filter(countries, profile.get("calendar_countries", ["US"]))
-    cache_key = f"{bias_profile_id}:{','.join(event_countries)}"
+    cache_key = f"{bias_profile_id}:{normalize_tradingview_symbol(symbol)}:{','.join(event_countries)}"
     now = time.time()
     cached = _context_cache.get(cache_key)
     if cached and (now - cached["ts"]) < CONTEXT_CACHE_TTL:
         return cached["data"]
 
+    symbol_catalog = {**MARKET_SYMBOLS, **(dynamic_config or {}).get("symbols", {})}
+
     async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0 TradingTerminal"}) as session:
         snapshots = await asyncio.gather(*(
             fetch_market_snapshot(session, cfg["symbol"])
-            for cfg in MARKET_SYMBOLS.values()
+            for cfg in symbol_catalog.values()
         ))
 
     markets = {
         key: snapshot
-        for (key, _cfg), snapshot in zip(MARKET_SYMBOLS.items(), snapshots)
+        for (key, _cfg), snapshot in zip(symbol_catalog.items(), snapshots)
         if snapshot
     }
     events, _error = await fetch_calendar(event_countries)
-    context = build_market_context(bias_profile_id, markets, events)
+    context = build_market_context(bias_profile_id, markets, events, dynamic_config)
     _context_cache[cache_key] = {"data": context, "ts": now}
     return context

@@ -198,15 +198,40 @@ function getActiveMarketProfile() {
     return MARKET_PROFILES[currentMarketProfile] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
 }
 
+const CURRENCY_COUNTRIES = {
+    USD: 'US',
+    EUR: 'EU',
+    GBP: 'GB',
+    JPY: 'JP',
+    AUD: 'AU',
+    CAD: 'CA',
+    CHF: 'CH',
+    NZD: 'NZ',
+    CNY: 'CN',
+};
+
+function parseForexSymbol(symbol) {
+    const raw = String(symbol || '').split(':').pop().toUpperCase().replace(/[^A-Z]/g, '');
+    if (raw.length !== 6) return null;
+    const base = raw.slice(0, 3);
+    const quote = raw.slice(3);
+    if (!CURRENCY_COUNTRIES[base] || !CURRENCY_COUNTRIES[quote]) return null;
+    return { base, quote };
+}
+
 function getProfileQuery() {
     return encodeURIComponent(getActiveMarketProfile().id);
 }
 
 function getCalendarCountries() {
     const profileCountries = getActiveMarketProfile().countries || ['US'];
+    const forex = parseForexSymbol(currentSymbol);
+    const symbolCountries = forex
+        ? [CURRENCY_COUNTRIES[forex.base], CURRENCY_COUNTRIES[forex.quote], 'US'].filter(Boolean)
+        : profileCountries;
     return Array.isArray(customCalendarCountries) && customCalendarCountries.length
         ? customCalendarCountries
-        : profileCountries;
+        : [...new Set(symbolCountries)].slice(0, 4);
 }
 
 function getCalendarCountryQuery() {
@@ -232,7 +257,7 @@ function setMarketProfile(profileId) {
 
     syncCommandSymbol(currentSymbol);
 
-    changeChart(currentSymbol, { save: false });
+    changeChart(currentSymbol, { save: false, refresh: false });
     savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol });
     renderCustomizePanel();
     getNews();
@@ -357,6 +382,10 @@ function changeChart(symbol, options = {}) {
     if (options.save !== false) {
         savePrefs({ symbol, marketProfile: currentMarketProfile });
     }
+    if (options.refresh !== false) {
+        fetchCalendar(false);
+        fetchContext(false);
+    }
 }
 
 function updateClocks() {
@@ -411,7 +440,7 @@ function bindCustomizeControls() {
 
 async function fetchContext(scheduleNext = true) {
     try {
-        const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery());
+        const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery(), currentSymbol);
         contextState = payload;
         renderMarketContext(payload, { selectedKeys: customWatchlistKeys, onSymbolSelect: changeChart });
         renderCustomizePanel();
