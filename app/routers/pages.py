@@ -694,9 +694,19 @@ async def index():
     return FileResponse("templates/landing.html")
 
 
+@router.head("/")
+async def index_head():
+    return FastAPIResponse(status_code=200)
+
+
 @router.get("/terminal", response_class=HTMLResponse)
 async def terminal():
     return FileResponse("templates/index.html", headers={"X-Robots-Tag": "noindex, follow"})
+
+
+@router.head("/terminal")
+async def terminal_head():
+    return FastAPIResponse(status_code=200, headers={"X-Robots-Tag": "noindex, follow"})
 
 
 @router.get("/account", response_class=HTMLResponse)
@@ -830,8 +840,19 @@ async def admin_page(request: Request):
     return FileResponse("templates/admin.html")
 
 
+@router.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+
+@router.head("/healthz")
+async def healthz_head():
+    return FastAPIResponse(status_code=200)
+
+
 @router.get("/db-test")
-def db_test():
+def db_test(request: Request):
+    require_owner(request)
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -841,5 +862,5 @@ def db_test():
         conn.close()
 
         return {"database": "ok", "result": result[0]}
-    except Exception as e:
-        return {"database": "error", "message": str(e)}
+    except Exception:
+        return {"database": "error"}
