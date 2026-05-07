@@ -926,6 +926,29 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     canonical = absolute_url(page_path)
     page_title = f'{meta["title"]} - {business_name}'
     escaped_description = escape(meta["description"], quote=True)
+    structured_data = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": meta["title"],
+            "description": meta["description"],
+            "url": canonical,
+            "isPartOf": {
+                "@type": "WebSite",
+                "name": business_name,
+                "url": APP_BASE_URL,
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": business_name,
+                "url": APP_BASE_URL,
+                "logo": absolute_url("/static/icon-192x192.png"),
+            },
+            "inLanguage": "fr-FR",
+            "dateModified": utc_now().date().isoformat(),
+        },
+        ensure_ascii=False,
+    )
     section_html = "\n".join(
         f'<section><h2 data-i18n="{section_title_key}">{section_title_key}</h2><p data-i18n="{section_content_key}">{section_content_key}</p></section>'
         for section_title_key, section_content_key in sections
@@ -938,6 +961,7 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     <title data-i18n="{title_key}">{page_title}</title>
     <meta name="description" content="{escaped_description}">
     <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{business_name}">
     <meta property="og:title" content="{page_title}">
@@ -947,6 +971,7 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     <meta name="twitter:card" content="summary">
 {FAVICON_LINKS}
     <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
 </head>
 <body class="legal-body">
     <header class="landing-nav">
@@ -1019,12 +1044,12 @@ async def terminal_head():
 
 @router.get("/account", response_class=HTMLResponse)
 async def account_page():
-    return FileResponse("templates/account.html")
+    return FileResponse("templates/account.html", headers={"X-Robots-Tag": "noindex, nofollow"})
 
 
 @router.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page():
-    return FileResponse("templates/reset_password.html")
+    return FileResponse("templates/reset_password.html", headers={"X-Robots-Tag": "noindex, nofollow"})
 
 
 @router.get("/ressources", response_class=HTMLResponse)
