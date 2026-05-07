@@ -86,6 +86,24 @@ export function renderNewsFeed(data, state) {
 
     renderNewsSummaries(items);
 
+    if (!items.length) {
+        container.innerHTML = '<div class="feed-empty">Aucune news prioritaire pour le moment. Le fil se met à jour automatiquement.</div>';
+        const statusNews = document.getElementById('status-news');
+        if (statusNews) {
+            statusNews.textContent = `News: 0 item - fenêtre ${data.window_hours || 72}h`;
+        }
+        return {
+            state: {
+                lastSeenTs: state.lastSeenTs,
+                hasLoaded: true,
+                suppressNextFresh: false,
+                alertedNewsIds,
+            },
+            freshAlertCount,
+            suppressFresh,
+        };
+    }
+
     items.forEach((itemData) => {
         const newsId = itemData.id || `${itemData.s}:${itemData.ts}:${itemData.t}`;
         const isFresh = state.hasLoaded && !suppressFresh && itemData.ts > state.lastSeenTs && !alertedNewsIds.has(newsId);
@@ -124,5 +142,9 @@ export function renderNewsError() {
     const statusNews = document.getElementById('status-news');
     if (statusNews) {
         statusNews.textContent = 'News: erreur de chargement';
+    }
+    const container = document.getElementById('news-content');
+    if (container) {
+        container.innerHTML = '<div class="feed-empty">Impossible de charger le fil news pour le moment. Nouvelle tentative automatique dans quelques secondes.</div>';
     }
 }

@@ -29,30 +29,30 @@ export function renderAccessGate(accountState, accessFormMode) {
 
     if (!authenticated) {
         title.textContent = 'Active ton essai gratuit 7 jours';
-        copy.textContent = 'Accede au terminal complet, personnalise ton workspace et centralise news, calendrier et charting en un seul endroit.';
+        copy.textContent = 'Accède au terminal complet, personnalise ton workspace et centralise news, calendrier économique et charting en un seul endroit.';
         return;
     }
 
     if (role === 'pending') {
         title.textContent = 'Confirme ton adresse email';
-        copy.textContent = 'Saisis le code recu par email, puis choisis une formule Stripe pour demarrer ton essai.';
+        copy.textContent = 'Saisis le code reçu par email, puis choisis une formule Stripe pour démarrer ton essai.';
         return;
     }
 
     if (role === 'confirmed') {
-        title.textContent = 'Choisis une formule pour demarrer ton essai';
-        copy.textContent = 'Ton email est confirme. L’acces terminal s’ouvre apres le passage par Stripe.';
+        title.textContent = 'Choisis une formule pour démarrer ton essai';
+        copy.textContent = 'Ton email est confirmé. L’accès terminal s’ouvre après le passage par Stripe.';
         return;
     }
 
     if (role === 'expired') {
-        title.textContent = 'Ton essai est termine';
-        copy.textContent = 'Reconnecte le terminal complet en passant a l’abonnement quand tu seras pret.';
+        title.textContent = 'Ton essai est terminé';
+        copy.textContent = 'Reconnecte le terminal complet en passant à l’abonnement quand tu seras prêt.';
         return;
     }
 
-    title.textContent = 'Complete ton acces';
-    copy.textContent = 'Ce terminal complet est reserve aux comptes en essai, abonnes ou owner.';
+    title.textContent = 'Complète ton accès';
+    copy.textContent = 'Ce terminal complet est réservé aux comptes en essai, abonnés ou owner.';
 }
 
 export function setAccessAuthMessage(message = '', tone = '') {
@@ -72,21 +72,22 @@ export function setAccessFormMode(mode, accountState) {
     const switchBtn = document.getElementById('access-auth-switch');
     const password = document.getElementById('access-auth-password');
     const codeInput = document.getElementById('access-auth-code');
+    const forgotPassword = document.getElementById('access-forgot-password');
 
     if (accessFormMode === 'intro') {
         renderAccessGate(accountState, accessFormMode);
         return accessFormMode;
     }
 
-    if (kicker) kicker.textContent = accessFormMode === 'login' ? 'CONNEXION' : accessFormMode === 'confirm' ? 'CONFIRMATION EMAIL' : 'CREATION DE COMPTE';
+    if (kicker) kicker.textContent = accessFormMode === 'login' ? 'CONNEXION' : accessFormMode === 'confirm' ? 'CONFIRMATION EMAIL' : 'CRÉATION DE COMPTE';
     if (title) title.textContent = accessFormMode === 'login' ? 'Reconnecte-toi au terminal' : accessFormMode === 'confirm' ? 'Confirme ton adresse email' : 'Active ton essai maintenant';
     if (copy) copy.textContent = accessFormMode === 'login'
-        ? 'Connecte-toi pour retrouver ton workspace et tes preferences.'
+        ? 'Connecte-toi pour retrouver ton workspace et tes préférences.'
         : accessFormMode === 'confirm'
-        ? 'Saisis le code recu par email pour activer ton essai gratuit.'
-        : 'Cree ton compte pour ouvrir le terminal complet pendant 7 jours.';
-    if (submit) submit.textContent = accessFormMode === 'login' ? 'SE CONNECTER' : accessFormMode === 'confirm' ? 'VALIDER LE CODE' : 'CREER MON COMPTE';
-    if (switchBtn) switchBtn.textContent = accessFormMode === 'login' ? 'CREER UN COMPTE' : "J'AI DEJA UN COMPTE";
+        ? 'Saisis le code reçu par email pour valider ton compte avant de choisir ta formule.'
+        : 'Crée ton compte pour ouvrir le terminal complet pendant 7 jours.';
+    if (submit) submit.textContent = accessFormMode === 'login' ? 'SE CONNECTER' : accessFormMode === 'confirm' ? 'VALIDER LE CODE' : 'CRÉER MON COMPTE';
+    if (switchBtn) switchBtn.textContent = accessFormMode === 'login' ? 'CRÉER UN COMPTE' : "J'AI DÉJÀ UN COMPTE";
     if (password) {
         password.style.display = accessFormMode === 'confirm' ? 'none' : '';
         password.required = accessFormMode !== 'confirm';
@@ -95,6 +96,9 @@ export function setAccessFormMode(mode, accountState) {
     if (codeInput) {
         codeInput.style.display = accessFormMode === 'confirm' ? '' : 'none';
         codeInput.required = accessFormMode === 'confirm';
+    }
+    if (forgotPassword) {
+        forgotPassword.classList.toggle('hidden', accessFormMode !== 'login');
     }
 
     renderAccessGate(accountState, accessFormMode);

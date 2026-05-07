@@ -63,13 +63,13 @@ export function renderCalendar(events, meta, filters) {
     }
 
     if (!Array.isArray(events) || events.length === 0) {
-        root.innerHTML = '<div class="cal-empty">Aucun evenement a venir.</div>';
+        root.innerHTML = '<div class="cal-empty">Aucun événement à venir.</div>';
         return;
     }
 
     const filtered = events.filter((event) => filters.impact.has(event.impact));
     if (filtered.length === 0) {
-        root.innerHTML = '<div class="cal-empty">Aucun evenement pour ce filtre.</div>';
+        root.innerHTML = '<div class="cal-empty">Aucun événement pour ce filtre.</div>';
         return;
     }
 
@@ -79,7 +79,7 @@ export function renderCalendar(events, meta, filters) {
     const upcoming = filtered.filter((event) => getDateKeyFromTs(event.ts, timeZone) >= todayKey);
 
     if (upcoming.length === 0) {
-        root.innerHTML = '<div class="cal-empty">Aucun evenement a venir.</div>';
+        root.innerHTML = '<div class="cal-empty">Aucun événement à venir.</div>';
         return;
     }
 

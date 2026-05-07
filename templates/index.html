@@ -51,11 +51,18 @@
     </div>
 
     <div class="top-bar">
+        <a class="terminal-brand" href="/" aria-label="Retour à l'accueil XAUTERMINAL">
+            <img src="/static/xauterminal-logo.png" alt="" width="34" height="34">
+            <span>
+                <strong>XAUTERMINAL</strong>
+                <em>Private trading desk</em>
+            </span>
+        </a>
         <div class="cmd-bar">
             <span class="prompt">&gt;</span>
-            <select id="market-profile" class="market-profile-select" title="Profil de marche"></select>
-            <input id="cmd" type="text" placeholder="Saisir un symbole (ex: OANDA:XAUUSD, CAPITALCOM:DXY, AMEX:SPY) puis Entree..." autocomplete="off" spellcheck="false">
-            <span class="hint">Entree pour charger</span>
+            <select id="market-profile" class="market-profile-select" title="Profil de marché"></select>
+            <input id="cmd" type="text" placeholder="Saisir un symbole (ex: OANDA:XAUUSD, CAPITALCOM:DXY, AMEX:SPY) puis Entrée..." autocomplete="off" spellcheck="false" aria-label="Charger un symbole dans le graphique">
+            <span class="hint">Entrée pour charger</span>
         </div>
         <div class="clocks">
             <div class="clock" id="mk-NY"><span><span class="dot"></span><span class="city">NEW YORK</span></span><span class="time" id="time-NY">--:--:--</span></div>
@@ -82,44 +89,46 @@
                 <div id="access-intro">
                     <div class="access-kicker">TRADING TERMINAL</div>
                     <h1 id="access-title">Active ton essai gratuit 7 jours</h1>
-                    <p id="access-copy">Centralise news, calendrier economique, market bias et charting dans un seul poste de travail personnalisable.</p>
+                    <p id="access-copy">Centralise news, calendrier économique, market bias et charting dans un seul poste de travail personnalisable.</p>
                     <div class="access-actions">
-                        <button type="button" id="access-start-trial" class="panel-btn">DEMARRER MON ESSAI</button>
-                        <button type="button" id="access-login" class="panel-btn">J'AI DEJA UN COMPTE</button>
+                        <button type="button" id="access-start-trial" class="panel-btn panel-btn-primary">DÉMARRER MON ESSAI</button>
+                        <button type="button" id="access-login" class="panel-btn">J'AI DÉJÀ UN COMPTE</button>
                     </div>
+                    <a class="access-support-link" href="/support">Besoin d'aide pour accéder au terminal ?</a>
                 </div>
                 <div id="access-auth" class="access-auth hidden">
-                    <div class="access-kicker" id="access-auth-kicker">CREATION DE COMPTE</div>
+                    <div class="access-kicker" id="access-auth-kicker">CRÉATION DE COMPTE</div>
                     <h1 id="access-auth-title">Active ton essai maintenant</h1>
-                    <p id="access-auth-copy">Cree ton compte pour ouvrir le terminal complet pendant 7 jours.</p>
+                    <p id="access-auth-copy">Crée ton compte pour ouvrir le terminal complet pendant 7 jours.</p>
                     <form id="access-auth-form" class="access-auth-form">
                         <input id="access-auth-email" type="email" placeholder="Email" autocomplete="email" required>
-                        <input id="access-auth-password" type="password" placeholder="Mot de passe (8 caracteres min.)" autocomplete="new-password" required>
+                        <input id="access-auth-password" type="password" placeholder="Mot de passe (8 caractères min.)" autocomplete="new-password" required>
                         <input id="access-auth-code" type="text" placeholder="Code de confirmation" autocomplete="one-time-code" style="display:none;" inputmode="numeric" pattern="[0-9]*">
                         <div class="access-actions">
-                            <button type="submit" id="access-auth-submit" class="panel-btn">CREER MON COMPTE</button>
-                            <button type="button" id="access-auth-switch" class="panel-btn">J'AI DEJA UN COMPTE</button>
+                            <button type="submit" id="access-auth-submit" class="panel-btn panel-btn-primary">CRÉER MON COMPTE</button>
+                            <button type="button" id="access-auth-switch" class="panel-btn">J'AI DÉJÀ UN COMPTE</button>
                         </div>
                     </form>
+                    <a id="access-forgot-password" class="access-inline-link hidden" href="/reset-password">Mot de passe oublié ?</a>
                     <div id="access-auth-message" class="access-auth-message"></div>
                     <button type="button" id="access-back" class="access-back">Retour</button>
                 </div>
             </div>
         </div>
         <div class="col col-left" data-layout-panel="left">
-            <button type="button" class="panel-rail" data-toggle-panel="left" title="Ouvrir ou reduire le calendrier">CAL</button>
+            <button type="button" class="panel-rail" data-toggle-panel="left" title="Ouvrir ou réduire le calendrier">CAL</button>
             <div class="p-header">
-                <span>CALENDRIER ECONOMIQUE</span>
+                <span>CALENDRIER ÉCONOMIQUE</span>
                 <span class="p-header-tools">
                     <span class="live" id="cal-live">LIVE</span>
-                    <button type="button" class="panel-btn" data-toggle-panel="left" title="Reduire le calendrier">-</button>
+                    <button type="button" class="panel-btn" data-toggle-panel="left" title="Réduire le calendrier">-</button>
                 </span>
             </div>
             <div class="cal-toolbar" id="cal-filters"></div>
             <div class="cal-head-row">
                 <span>HEURE</span>
                 <span></span>
-                <span>EVENEMENT</span>
+                <span>ÉVÉNEMENT</span>
                 <span style="text-align:right;">ACTUEL</span>
                 <span style="text-align:right;">PREV.</span>
                 <span style="text-align:right;">PREC.</span>
@@ -133,15 +142,15 @@
                 <span id="chart-symbol">- CHART -</span>
                 <span class="p-header-tools">
                     <span class="live">LIVE</span>
-                    <button type="button" class="panel-btn" id="layout-reset" title="Reinitialiser la disposition">R</button>
+                    <button type="button" class="panel-btn" id="layout-reset" title="Réinitialiser la disposition">R</button>
                 </span>
             </div>
             <div class="center-shell">
                 <div class="chart-stage" data-layout-panel="chart">
-                    <button type="button" class="panel-rail panel-rail-inner" data-toggle-panel="chart" title="Ouvrir ou reduire le graphique">CHART</button>
+                    <button type="button" class="panel-rail panel-rail-inner" data-toggle-panel="chart" title="Ouvrir ou réduire le graphique">CHART</button>
                     <div class="stage-toolbar">
                         <span>CHART VIEW</span>
-                        <button type="button" class="panel-btn" data-toggle-panel="chart" title="Reduire le graphique">-</button>
+                        <button type="button" class="panel-btn" data-toggle-panel="chart" title="Réduire le graphique">-</button>
                     </div>
                     <div class="center-snapshot">
                         <span id="snapshot-bias" class="desk-pill neutral">BIAS -</span>
@@ -152,12 +161,12 @@
                 </div>
                 <div class="layout-splitter inner-splitter" data-resize="insight" title="Ajuster le panel bias"></div>
                 <div class="insight-panel" data-layout-panel="insight">
-                    <button type="button" class="panel-rail panel-rail-inner" data-toggle-panel="insight" title="Ouvrir ou reduire le panel bias">BIAS</button>
+                    <button type="button" class="panel-rail panel-rail-inner" data-toggle-panel="insight" title="Ouvrir ou réduire le panel bias">BIAS</button>
                     <div class="stage-toolbar insight-toolbar">
                         <span>BIAS DESK</span>
-                        <button type="button" class="panel-btn" data-toggle-panel="insight" title="Reduire le panel bias">-</button>
+                        <button type="button" class="panel-btn" data-toggle-panel="insight" title="Réduire le panel bias">-</button>
                     </div>
-                    <div class="panel-tabs" role="tablist" aria-label="Navigation analyse marche">
+                    <div class="panel-tabs" role="tablist" aria-label="Navigation analyse marché">
                         <button type="button" class="panel-tab active" data-center-tab="bias">Bias</button>
                         <button type="button" class="panel-tab" data-center-tab="drivers">Drivers</button>
                         <button type="button" class="panel-tab" data-center-tab="watch">Watch</button>
@@ -202,12 +211,12 @@
         <div class="layout-splitter" data-resize="right" title="Ajuster le fil news"></div>
 
         <div class="col col-right" data-layout-panel="right">
-            <button type="button" class="panel-rail" data-toggle-panel="right" title="Ouvrir ou reduire les news">NEWS</button>
+            <button type="button" class="panel-rail" data-toggle-panel="right" title="Ouvrir ou réduire les news">NEWS</button>
             <div class="p-header">
                 <span>FIL INFO MULTI-SOURCE</span>
                 <span class="p-header-tools">
                     <span class="live">LIVE</span>
-                    <button type="button" class="panel-btn" data-toggle-panel="right" title="Reduire les news">-</button>
+                    <button type="button" class="panel-btn" data-toggle-panel="right" title="Réduire les news">-</button>
                 </span>
             </div>
             <div class="news-toolbar">
@@ -240,7 +249,8 @@
                     <option value="alert">ALERT</option>
                 </select>
             </label>
-            <button type="button" id="layout-reset-status" class="status-item status-button" title="Reinitialiser la disposition">RESET LAYOUT</button>
+            <a class="status-item status-button status-link" href="/support" title="Centre d'aide XAUTERMINAL">SUPPORT</a>
+            <button type="button" id="layout-reset-status" class="status-item status-button" title="Réinitialiser la disposition">RESET LAYOUT</button>
             <div class="customize-slot">
                 <button type="button" id="customize-toggle" class="status-item status-button" title="Personnaliser le terminal">CUSTOMIZE</button>
                 <div id="customize-panel" class="customize-panel hidden">
@@ -266,7 +276,7 @@
                 </div>
             </div>
             <div class="account-slot">
-                <button type="button" id="account-toggle" class="status-item status-button" title="Espace compte">ACCOUNT</button>
+                <button type="button" id="account-toggle" class="status-item status-button" title="Espace compte">MON COMPTE</button>
             </div>
             <span id="status-clock" class="status-item status-clock">--:--:--</span>
         </div>

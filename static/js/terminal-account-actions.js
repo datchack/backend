@@ -78,7 +78,7 @@ export async function submitAccessAuthForm(event, {
             setAccessAuthMessage('Confirmation du code en cours...');
             payload = await confirmAccountEmail(email, code);
         } else {
-            setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion en cours...' : 'Creation du compte...');
+            setAccessAuthMessage(accessFormMode === 'login' ? 'Connexion en cours...' : 'Création du compte...');
             const endpoint = accessFormMode === 'login' ? 'login' : 'register';
             payload = await submitAccountAuth(endpoint, email, password);
         }
@@ -87,10 +87,10 @@ export async function submitAccessAuthForm(event, {
         renderAccountState();
         setAccessAuthMessage(
             accessFormMode === 'login'
-                ? 'Connexion reussie.'
+                ? 'Connexion réussie.'
                 : accessFormMode === 'confirm'
-                ? 'Email confirme. Choisis une formule Stripe pour demarrer ton essai.'
-                : 'Compte cree. Un code de confirmation a ete envoye.',
+                ? 'Email confirmé. Choisis une formule Stripe pour démarrer ton essai.'
+                : 'Compte créé. Un code de confirmation a été envoyé.',
             'ok',
         );
         await syncPreferences();
