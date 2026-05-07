@@ -634,6 +634,26 @@
         #0b0f15;
 }
 
+.pulse-live-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(0, 242, 173, 0.18);
+    border-radius: 4px;
+    background: rgba(0, 242, 173, 0.05);
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.pulse-live-note strong {
+    color: var(--buy);
+}
+
 .pulse-board-top {
     display: flex;
     align-items: center;
@@ -697,6 +717,110 @@
 .pulse-asset-grid strong {
     color: var(--text);
     font-size: 16px;
+}
+
+.pulse-live-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.pulse-live-panel {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+}
+
+.pulse-live-head {
+    display: grid;
+    gap: 5px;
+    margin-bottom: 8px;
+}
+
+.pulse-live-head span,
+.pulse-live-row span {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.pulse-live-head strong {
+    color: var(--text);
+    font-size: 20px;
+}
+
+.pulse-live-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    min-height: 74px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    background: rgba(5, 7, 10, 0.44);
+    color: inherit;
+    text-decoration: none;
+}
+
+.pulse-live-row:hover {
+    border-color: rgba(0, 242, 173, 0.28);
+    background: rgba(0, 242, 173, 0.055);
+}
+
+.pulse-live-row strong {
+    grid-column: 1 / -1;
+    color: #eef3fb;
+    font-size: 15px;
+    line-height: 1.35;
+}
+
+.pulse-live-row em {
+    align-self: start;
+    padding: 4px 7px;
+    border: 1px solid rgba(0, 242, 173, 0.18);
+    border-radius: 4px;
+    color: var(--buy);
+    font-family: "Courier New", monospace;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.pulse-live-row.locked em {
+    border-color: rgba(255, 204, 102, 0.24);
+    color: #ffcc66;
+}
+
+.pulse-live-empty,
+.pulse-locked-note,
+.pulse-public-summary {
+    margin: 0;
+    color: #aeb6c5;
+    line-height: 1.55;
+}
+
+.pulse-live-empty {
+    padding: 14px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.pulse-locked-note {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.pulse-public-summary {
+    max-width: 780px;
+    margin-bottom: 14px;
 }
 
 .pulse-feature-grid {
@@ -1786,6 +1910,7 @@
     .trust-grid,
     .pulse-preview-grid,
     .pulse-hero,
+    .pulse-live-grid,
     .pulse-feature-grid,
     .pulse-workflow,
     .pulse-asset-grid,

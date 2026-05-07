@@ -14,6 +14,7 @@ from app.config import (
     LEGAL_PUBLISHER_NAME,
 )
 from app.services.accounts import get_db_connection, require_owner, utc_now
+from app.services.pulse import build_public_market_pulse
 
 router = APIRouter()
 
@@ -812,8 +813,53 @@ def guides_page() -> str:
 </html>"""
 
 
-def market_pulse_page() -> str:
+def market_pulse_page(pulse: dict) -> str:
     canonical = absolute_url("/market-pulse")
+    summary = pulse.get("summary") or {}
+    news_items = pulse.get("news") or []
+    calendar_items = pulse.get("calendar") or []
+    asset_items = pulse.get("assets") or []
+    drivers = pulse.get("drivers") or []
+    generated_at = escape(str(pulse.get("generated_at") or ""), quote=True)
+    locked_note = escape(str(pulse.get("locked_note") or ""), quote=True)
+    risk_score = int(summary.get("risk_score") or 0)
+    risk_label = escape(str(summary.get("risk_label") or "Risque actif"))
+    pulse_headline = escape(str(summary.get("headline") or "Marché à surveiller"))
+    pulse_summary = escape(str(summary.get("summary") or "Le briefing public affiche une synthèse limitée."))
+    pulse_action = escape(str(summary.get("action") or "WAIT"))
+    pulse_bias = escape(str(summary.get("bias") or "Neutral"))
+    news_html = "\n".join(
+        f"""                <a class="pulse-live-row" href="{escape(item.get("url") or "#", quote=True)}" target="_blank" rel="noopener noreferrer">
+                    <span>{escape(item.get("time") or "--:--")} · {escape(item.get("source") or "NEWS")}</span>
+                    <strong>{escape(item.get("title") or "Market news")}</strong>
+                    <em>{escape(str(item.get("priority") or "low").upper())}</em>
+                </a>"""
+        for item in news_items
+    ) or """                <div class="pulse-live-empty">Aucune news prioritaire disponible pour le moment.</div>"""
+    calendar_html = "\n".join(
+        f"""                <article class="pulse-live-row locked">
+                    <span>{escape(item.get("time") or "--:--")} · {escape(item.get("country") or "-")} · {escape(item.get("impact") or "-")}</span>
+                    <strong>{escape(item.get("title") or "Economic event")}</strong>
+                    <em>{escape(item.get("label") or "WATCH")}</em>
+                </article>"""
+        for item in calendar_items
+    ) or """                <div class="pulse-live-empty">Aucun événement majeur détecté dans la fenêtre publique.</div>"""
+    asset_html = "\n".join(
+        f"""                <article>
+                    <span>{escape(item.get("label") or "-")}</span>
+                    <strong>{escape(item.get("direction") or "MIXED")} · {escape(item.get("activity") or "Watch")}</strong>
+                    <em>{escape(item.get("note") or "Lecture complète dans le terminal")}</em>
+                </article>"""
+        for item in asset_items
+    )
+    driver_html = "\n".join(
+        f"""                <article>
+                    <span>{escape(driver.get("label") or "-")}</span>
+                    <strong>{escape(str(driver.get("bias") or "neutral").upper())}</strong>
+                    <em>{escape(driver.get("note") or "Driver à surveiller")}</em>
+                </article>"""
+        for driver in drivers
+    )
     structured_data = json.dumps(
         {
             "@context": "https://schema.org",
@@ -923,6 +969,10 @@ def market_pulse_page() -> str:
                 <div class="landing-kicker" data-i18n="pulse_page_kicker">MARKET PULSE</div>
                 <h1 data-i18n="pulse_page_h1">Le briefing de marché avant d'ouvrir le terminal</h1>
                 <p data-i18n="pulse_page_intro">Market Pulse rassemble la lecture macro essentielle: calendrier du jour, news qui comptent, actifs à surveiller, niveau de risque et biais de contexte. L'objectif est simple: savoir où regarder avant de prendre une décision.</p>
+                <div class="pulse-live-note">
+                    <span data-i18n="pulse_live_updated">Mis à jour</span>
+                    <strong>{generated_at}</strong>
+                </div>
                 <div class="landing-actions">
                     <a class="resource-cta" href="/#pricing" data-i18n="pulse_page_trial">Tester XAUTERMINAL</a>
                     <a class="resource-link-button" href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
@@ -931,31 +981,49 @@ def market_pulse_page() -> str:
             <aside class="pulse-board" aria-label="Aperçu Market Pulse">
                 <div class="pulse-board-top">
                     <span data-i18n="pulse_board_today">AUJOURD'HUI</span>
-                    <strong data-i18n="pulse_board_risk">Risque élevé</strong>
+                    <strong>{risk_label}</strong>
                 </div>
                 <div class="pulse-score">
-                    <span>72</span>
-                    <p data-i18n="pulse_board_score">Contexte actif avant données US</p>
+                    <span>{risk_score}</span>
+                    <p>{pulse_headline}</p>
                 </div>
                 <div class="pulse-mini-grid">
                     <div>
                         <span>XAU/USD</span>
-                        <strong>WAIT</strong>
+                        <strong>{pulse_action}</strong>
                     </div>
                     <div>
-                        <span>DXY</span>
-                        <strong data-i18n="pulse_board_dxy">Fort</strong>
-                    </div>
-                    <div>
-                        <span>US10Y</span>
-                        <strong data-i18n="pulse_board_yields">Pression</strong>
+                        <span>BIAS</span>
+                        <strong>{pulse_bias}</strong>
                     </div>
                     <div>
                         <span data-i18n="pulse_board_news_label">News</span>
-                        <strong>3</strong>
+                        <strong>{len(news_items)}</strong>
+                    </div>
+                    <div>
+                        <span data-i18n="pulse_calendar_label">Calendrier</span>
+                        <strong>{len(calendar_items)}</strong>
                     </div>
                 </div>
             </aside>
+        </section>
+
+        <section class="pulse-live-grid">
+            <article class="pulse-live-panel">
+                <div class="pulse-live-head">
+                    <span data-i18n="pulse_live_news_kicker">NEWS LIVE</span>
+                    <strong data-i18n="pulse_live_news_title">Titres importants récents</strong>
+                </div>
+{news_html}
+            </article>
+            <article class="pulse-live-panel">
+                <div class="pulse-live-head">
+                    <span data-i18n="pulse_live_calendar_kicker">CALENDRIER</span>
+                    <strong data-i18n="pulse_live_calendar_title">Événements à venir</strong>
+                </div>
+{calendar_html}
+                <p class="pulse-locked-note">{locked_note}</p>
+            </article>
         </section>
 
         <section class="pulse-feature-grid">
@@ -981,13 +1049,19 @@ def market_pulse_page() -> str:
                 <div class="landing-kicker" data-i18n="pulse_assets_kicker">RADAR MARCHÉS</div>
                 <h2 data-i18n="pulse_assets_title">Les marchés qui méritent une lecture dédiée</h2>
             </div>
+            <p class="pulse-public-summary">{pulse_summary}</p>
             <div class="pulse-asset-grid">
-                <article><span>XAU/USD</span><strong data-i18n="pulse_asset_gold">Or et macro US</strong></article>
-                <article><span>EUR/USD</span><strong data-i18n="pulse_asset_eurusd">Dollar et BCE</strong></article>
-                <article><span>GBP/JPY</span><strong data-i18n="pulse_asset_gbpjpy">Volatilité FX</strong></article>
-                <article><span>NASDAQ</span><strong data-i18n="pulse_asset_nasdaq">Taux et risk-on</strong></article>
-                <article><span>DXY</span><strong data-i18n="pulse_asset_dxy">Force dollar</strong></article>
-                <article><span>US10Y</span><strong data-i18n="pulse_asset_us10y">Rendements US</strong></article>
+{asset_html}
+            </div>
+        </section>
+
+        <section class="pulse-assets">
+            <div class="landing-section-head">
+                <div class="landing-kicker" data-i18n="pulse_drivers_kicker">DRIVERS PUBLICS</div>
+                <h2 data-i18n="pulse_drivers_title">Ce qui influence le contexte</h2>
+            </div>
+            <div class="pulse-asset-grid">
+{driver_html}
             </div>
         </section>
 
@@ -1280,7 +1354,8 @@ async def guides_index_page():
 
 @router.get("/market-pulse", response_class=HTMLResponse)
 async def market_pulse_index_page():
-    return HTMLResponse(market_pulse_page())
+    pulse = await build_public_market_pulse()
+    return HTMLResponse(market_pulse_page(pulse))
 
 
 @router.get("/support", response_class=HTMLResponse)
