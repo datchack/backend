@@ -584,6 +584,46 @@
     white-space: nowrap;
 }
 
+.trust-band {
+    border-top: 1px solid rgba(0, 242, 173, 0.16);
+    border-bottom: 1px solid var(--border);
+    background:
+        linear-gradient(180deg, rgba(0, 242, 173, 0.04), rgba(5, 7, 10, 0)),
+        #05070a;
+}
+
+.trust-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.trust-card {
+    min-height: 210px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(17, 21, 28, 0.84);
+}
+
+.trust-card span {
+    color: var(--buy);
+    font-family: "Courier New", monospace;
+    font-weight: 900;
+}
+
+.trust-card h3 {
+    margin: 22px 0 8px;
+    color: var(--text);
+    font-size: 18px;
+}
+
+.trust-card p {
+    margin: 0;
+    color: #aeb6c5;
+    line-height: 1.55;
+}
+
 .guide-index-page {
     width: min(1120px, calc(100% - 32px));
 }
@@ -1497,12 +1537,14 @@
     .learning-grid,
     .landing-footer,
     .footer-grid,
+    .trust-grid,
     .article-hero,
     .article-layout {
         grid-template-columns: 1fr;
     }
 
-    .learning-card {
+    .learning-card,
+    .trust-card {
         min-height: auto;
     }
 
