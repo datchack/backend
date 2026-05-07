@@ -171,6 +171,19 @@
     margin-top: 24px;
 }
 
+.landing-actions > .resource-cta,
+.landing-actions > .resource-link-button,
+.support-quick-actions > .resource-cta,
+.support-quick-actions > .resource-link-button,
+.account-actions > .resource-cta,
+.account-actions > .resource-link-button,
+.account-plan-actions > .resource-cta,
+.account-plan-actions > .resource-link-button,
+.account-next-actions > .resource-cta,
+.account-next-actions > .resource-link-button {
+    margin-top: 0;
+}
+
 .landing-primary,
 .landing-secondary {
     min-height: 42px;
