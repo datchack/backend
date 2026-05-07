@@ -901,6 +901,197 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.markets-page {
+    width: min(1180px, calc(100% - 32px));
+}
+
+.markets-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.65fr);
+    gap: 14px;
+    align-items: stretch;
+    margin-bottom: 18px;
+}
+
+.markets-hero > div,
+.markets-source-panel,
+.market-card,
+.market-detail-card {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+}
+
+.markets-hero > div {
+    padding: clamp(24px, 4vw, 42px);
+}
+
+.markets-hero h1 {
+    margin: 10px 0 14px;
+    font-size: clamp(34px, 5vw, 62px);
+    line-height: 0.98;
+    letter-spacing: 0;
+}
+
+.markets-hero p {
+    max-width: 760px;
+    color: #c7ceda;
+    font-size: clamp(16px, 2vw, 19px);
+    line-height: 1.6;
+}
+
+.markets-source-panel {
+    display: grid;
+    align-content: center;
+    gap: 12px;
+    padding: 22px;
+    background:
+        linear-gradient(135deg, rgba(0, 242, 173, 0.1), rgba(17, 21, 28, 0.88)),
+        #0b0f15;
+}
+
+.markets-source-panel span,
+.market-card-top span,
+.market-card-top em,
+.market-card strong,
+.market-detail-card > span,
+.market-driver-tags span {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.markets-source-panel strong {
+    color: var(--buy);
+    font-family: "Courier New", monospace;
+    font-size: clamp(42px, 7vw, 76px);
+    line-height: 0.9;
+}
+
+.market-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.market-card {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    min-height: 245px;
+    padding: 18px;
+}
+
+.market-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.market-card h2 {
+    margin: 8px 0 0;
+    color: var(--text);
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1;
+}
+
+.market-card strong {
+    color: var(--buy);
+}
+
+.market-card p {
+    margin: 0;
+    color: #aeb6c5;
+    line-height: 1.5;
+}
+
+.market-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: auto;
+}
+
+.market-card-actions .resource-cta,
+.market-card-actions .resource-link-button {
+    margin-top: 0;
+}
+
+.markets-explain {
+    margin-bottom: 18px;
+}
+
+.market-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.market-detail-card {
+    min-height: 230px;
+    padding: 18px;
+}
+
+.market-detail-card.featured {
+    background:
+        linear-gradient(135deg, rgba(0, 242, 173, 0.08), rgba(17, 21, 28, 0.92)),
+        var(--card);
+}
+
+.market-detail-card h2 {
+    margin: 20px 0 10px;
+    color: var(--text);
+    font-size: 22px;
+}
+
+.market-detail-card p {
+    margin: 0;
+    color: #c7ceda;
+    line-height: 1.6;
+}
+
+.market-driver-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.market-driver-tags span {
+    padding: 8px 10px;
+    border: 1px solid rgba(0, 242, 173, 0.2);
+    border-radius: 4px;
+    background: rgba(0, 242, 173, 0.05);
+    color: var(--buy);
+}
+
+.market-related-links {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.market-related-links a {
+    min-height: 54px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    background: rgba(5, 7, 10, 0.44);
+    color: var(--text);
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.market-related-links a:hover {
+    border-color: rgba(0, 242, 173, 0.28);
+    color: var(--buy);
+}
+
 .resource-list {
     display: grid;
     gap: 12px;
@@ -1914,6 +2105,10 @@
     .pulse-feature-grid,
     .pulse-workflow,
     .pulse-asset-grid,
+    .markets-hero,
+    .market-grid,
+    .market-detail-grid,
+    .market-related-links,
     .article-hero,
     .article-layout {
         grid-template-columns: 1fr;
@@ -1928,6 +2123,11 @@
 
     .pulse-mini-grid {
         grid-template-columns: 1fr;
+    }
+
+    .market-card,
+    .market-detail-card {
+        min-height: auto;
     }
 
     .footer-grid {

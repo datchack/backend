@@ -61,6 +61,7 @@ PUBLIC_FOOTER = """    <footer class="landing-footer">
             </div>
             <div class="footer-column">
                 <h3 data-i18n="footer_markets">Marchés et données</h3>
+                <a href="/marches" data-i18n="nav_markets">Marchés</a>
                 <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
                 <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
                 <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
@@ -103,6 +104,287 @@ LEGAL_PAGE_META = {
         "description": "Avertissement sur les risques liés au trading, aux données de marché et à l'utilisation des outils XAUTERMINAL.",
     },
 }
+
+FX_MARKET_PAIRS = [
+    {
+        "slug": "eurusd",
+        "pair": "EUR/USD",
+        "rank": 1,
+        "share": "21.2%",
+        "tv_symbol": "FX:EURUSD",
+        "fr": {
+            "name": "Euro / dollar américain",
+            "headline": "La paire centrale du marché Forex mondial",
+            "intro": "EUR/USD concentre la liquidité entre les deux plus grandes zones monétaires. Elle réagit fortement aux écarts de politique Fed/BCE, aux taux, au DXY, aux surprises d'inflation et au sentiment de risque global.",
+            "role": "Paire de référence pour lire la force relative euro-dollar et l'appétit pour le dollar.",
+            "drivers": ["Fed vs BCE", "DXY", "Taux US et européens", "Inflation", "PMI et croissance"],
+            "terminal": "Dans XAUTERMINAL, EUR/USD peut être suivi avec le graphique TradingView, les news dollar/euro, le calendrier US/EU et une lecture de contexte adaptée au symbole.",
+        },
+        "en": {
+            "name": "Euro / US dollar",
+            "headline": "The central pair of the global Forex market",
+            "intro": "EUR/USD concentrates liquidity between the two largest monetary areas. It reacts strongly to Fed/ECB policy spreads, yields, DXY, inflation surprises and global risk sentiment.",
+            "role": "Reference pair for reading euro-dollar relative strength and dollar appetite.",
+            "drivers": ["Fed vs ECB", "DXY", "US and European yields", "Inflation", "PMIs and growth"],
+            "terminal": "In XAUTERMINAL, EUR/USD can be followed with TradingView charting, dollar/euro news, the US/EU calendar and a context read adapted to the symbol.",
+        },
+    },
+    {
+        "slug": "usdjpy",
+        "pair": "USD/JPY",
+        "rank": 2,
+        "share": "14.3%",
+        "tv_symbol": "FX:USDJPY",
+        "fr": {
+            "name": "Dollar américain / yen japonais",
+            "headline": "La paire du dollar, des taux US et du yen",
+            "intro": "USD/JPY est très sensible aux rendements américains, aux attentes de la BoJ, aux interventions verbales japonaises et aux mouvements risk-on/risk-off.",
+            "role": "Paire majeure pour suivre le carry trade, les taux US et la pression sur le yen.",
+            "drivers": ["US10Y", "BoJ", "Fed", "Différentiel de taux", "Risk sentiment"],
+            "terminal": "Le terminal aide à croiser USD/JPY avec DXY, US10Y, news Fed/BoJ et calendrier US/JP.",
+        },
+        "en": {
+            "name": "US dollar / Japanese yen",
+            "headline": "The pair of the dollar, US yields and the yen",
+            "intro": "USD/JPY is highly sensitive to US yields, Bank of Japan expectations, Japanese verbal intervention and risk-on/risk-off moves.",
+            "role": "Major pair for tracking carry, US yields and pressure on the yen.",
+            "drivers": ["US10Y", "BoJ", "Fed", "Yield spread", "Risk sentiment"],
+            "terminal": "The terminal helps compare USD/JPY with DXY, US10Y, Fed/BoJ news and the US/JP calendar.",
+        },
+    },
+    {
+        "slug": "gbpusd",
+        "pair": "GBP/USD",
+        "rank": 3,
+        "share": "7.6%",
+        "tv_symbol": "FX:GBPUSD",
+        "fr": {
+            "name": "Livre sterling / dollar américain",
+            "headline": "La paire sterling-dollar la plus suivie",
+            "intro": "GBP/USD combine le dollar, la politique de la BoE, les données britanniques et le sentiment global. Elle peut être vive pendant Londres et autour des statistiques US.",
+            "role": "Paire clé pour lire la livre face au dollar et les arbitrages Fed/BoE.",
+            "drivers": ["BoE", "Fed", "Inflation UK", "DXY", "Session Londres"],
+            "terminal": "XAUTERMINAL centralise le graphique, les news UK/US et le calendrier à surveiller avant de trader GBP/USD.",
+        },
+        "en": {
+            "name": "British pound / US dollar",
+            "headline": "The most followed sterling-dollar pair",
+            "intro": "GBP/USD combines the dollar, Bank of England policy, UK data and global sentiment. It can be lively during London and around US releases.",
+            "role": "Key pair for reading sterling against the dollar and Fed/BoE repricing.",
+            "drivers": ["BoE", "Fed", "UK inflation", "DXY", "London session"],
+            "terminal": "XAUTERMINAL centralizes charting, UK/US news and the calendar to watch before trading GBP/USD.",
+        },
+    },
+    {
+        "slug": "usdcny",
+        "pair": "USD/CNY",
+        "rank": 4,
+        "share": "6%+",
+        "tv_symbol": "FX_IDC:USDCNY",
+        "fr": {
+            "name": "Dollar américain / yuan chinois",
+            "headline": "La paire Chine-dollar à surveiller",
+            "intro": "USD/CNY reflète la relation dollar-yuan, les fixings de la PBoC, les flux commerciaux, la croissance chinoise et le niveau général du dollar.",
+            "role": "Paire importante pour suivre le yuan, la Chine et les tensions dollar/Asie.",
+            "drivers": ["PBoC", "DXY", "Croissance chinoise", "Commerce mondial", "Risk Asia"],
+            "terminal": "La page publique donne le cadre; le terminal permet de suivre le symbole, les news Chine/US et les drivers associés.",
+        },
+        "en": {
+            "name": "US dollar / Chinese yuan",
+            "headline": "The China-dollar pair to watch",
+            "intro": "USD/CNY reflects the dollar-yuan relationship, PBoC fixings, trade flows, Chinese growth and the broader dollar level.",
+            "role": "Important pair for tracking the yuan, China and dollar/Asia tension.",
+            "drivers": ["PBoC", "DXY", "Chinese growth", "Global trade", "Asia risk"],
+            "terminal": "The public page gives the framework; the terminal lets users track the symbol, China/US news and related drivers.",
+        },
+    },
+    {
+        "slug": "usdcad",
+        "pair": "USD/CAD",
+        "rank": 5,
+        "share": "5%+",
+        "tv_symbol": "FX:USDCAD",
+        "fr": {
+            "name": "Dollar américain / dollar canadien",
+            "headline": "Dollar, pétrole et Canada",
+            "intro": "USD/CAD mélange le dollar américain, la politique de la BoC, les statistiques canadiennes et la sensibilité du CAD au pétrole.",
+            "role": "Paire majeure pour suivre le CAD, le pétrole et les écarts Fed/BoC.",
+            "drivers": ["BoC", "Fed", "Pétrole WTI", "Emploi Canada", "DXY"],
+            "terminal": "XAUTERMINAL aide à croiser USD/CAD avec DXY, USOIL, news macro et calendrier US/CA.",
+        },
+        "en": {
+            "name": "US dollar / Canadian dollar",
+            "headline": "Dollar, oil and Canada",
+            "intro": "USD/CAD blends the US dollar, Bank of Canada policy, Canadian data and the CAD's sensitivity to oil.",
+            "role": "Major pair for tracking CAD, oil and Fed/BoC spreads.",
+            "drivers": ["BoC", "Fed", "WTI oil", "Canada jobs", "DXY"],
+            "terminal": "XAUTERMINAL helps compare USD/CAD with DXY, USOIL, macro news and the US/CA calendar.",
+        },
+    },
+    {
+        "slug": "audusd",
+        "pair": "AUD/USD",
+        "rank": 6,
+        "share": "4%+",
+        "tv_symbol": "FX:AUDUSD",
+        "fr": {
+            "name": "Dollar australien / dollar américain",
+            "headline": "La paire cyclique Australie-dollar",
+            "intro": "AUD/USD est sensible au dollar, à la RBA, aux matières premières, à la Chine et au sentiment de risque.",
+            "role": "Paire utile pour lire la croissance globale, la Chine et les devises cycliques.",
+            "drivers": ["RBA", "Chine", "Commodities", "DXY", "Risk sentiment"],
+            "terminal": "Le terminal permet de suivre AUD/USD avec news global macro, calendrier US/AU et drivers risk-on/risk-off.",
+        },
+        "en": {
+            "name": "Australian dollar / US dollar",
+            "headline": "The cyclical Australia-dollar pair",
+            "intro": "AUD/USD is sensitive to the dollar, RBA policy, commodities, China and risk sentiment.",
+            "role": "Useful pair for reading global growth, China and cyclical currencies.",
+            "drivers": ["RBA", "China", "Commodities", "DXY", "Risk sentiment"],
+            "terminal": "The terminal helps follow AUD/USD with global macro news, US/AU calendar and risk-on/risk-off drivers.",
+        },
+    },
+    {
+        "slug": "usdchf",
+        "pair": "USD/CHF",
+        "rank": 7,
+        "share": "3%+",
+        "tv_symbol": "FX:USDCHF",
+        "fr": {
+            "name": "Dollar américain / franc suisse",
+            "headline": "Dollar et devise refuge suisse",
+            "intro": "USD/CHF combine la force du dollar, la politique de la BNS et la demande refuge liée au franc suisse.",
+            "role": "Paire de refuge à surveiller en période de stress ou de repricing dollar.",
+            "drivers": ["BNS", "Fed", "Risk-off", "DXY", "Inflation suisse"],
+            "terminal": "XAUTERMINAL aide à contextualiser USD/CHF avec news risque, DXY, taux et calendrier.",
+        },
+        "en": {
+            "name": "US dollar / Swiss franc",
+            "headline": "Dollar and Swiss safe-haven currency",
+            "intro": "USD/CHF combines dollar strength, Swiss National Bank policy and safe-haven demand around the franc.",
+            "role": "Safe-haven pair to watch during stress or dollar repricing.",
+            "drivers": ["SNB", "Fed", "Risk-off", "DXY", "Swiss inflation"],
+            "terminal": "XAUTERMINAL helps contextualize USD/CHF with risk news, DXY, yields and calendar events.",
+        },
+    },
+    {
+        "slug": "usdhkd",
+        "pair": "USD/HKD",
+        "rank": 8,
+        "share": "3%+",
+        "tv_symbol": "FX_IDC:USDHKD",
+        "fr": {
+            "name": "Dollar américain / dollar de Hong Kong",
+            "headline": "La paire du peg de Hong Kong",
+            "intro": "USD/HKD est particulière car le dollar de Hong Kong évolue dans un régime de change encadré. Elle reste importante dans les volumes FX mondiaux.",
+            "role": "Paire institutionnelle pour suivre le dollar, Hong Kong et les tensions de liquidité régionales.",
+            "drivers": ["Peg HKD", "Liquidité HK", "DXY", "Taux US", "Asie"],
+            "terminal": "La page sert de contexte public; le terminal permet de replacer USD/HKD dans le radar dollar/Asie.",
+        },
+        "en": {
+            "name": "US dollar / Hong Kong dollar",
+            "headline": "The Hong Kong peg pair",
+            "intro": "USD/HKD is special because the Hong Kong dollar trades within a managed exchange-rate regime. It remains important in global FX volumes.",
+            "role": "Institutional pair for tracking the dollar, Hong Kong and regional liquidity stress.",
+            "drivers": ["HKD peg", "HK liquidity", "DXY", "US yields", "Asia"],
+            "terminal": "The page gives public context; the terminal helps place USD/HKD inside the dollar/Asia radar.",
+        },
+    },
+    {
+        "slug": "nzdusd",
+        "pair": "NZD/USD",
+        "rank": 9,
+        "share": "2%+",
+        "tv_symbol": "FX:NZDUSD",
+        "fr": {
+            "name": "Dollar néo-zélandais / dollar américain",
+            "headline": "La paire kiwi-dollar",
+            "intro": "NZD/USD réagit au dollar, à la RBNZ, au risque global, à la Chine et aux matières premières agricoles.",
+            "role": "Paire cyclique plus volatile, utile pour lire le risk appetite en FX.",
+            "drivers": ["RBNZ", "DXY", "Chine", "Risk sentiment", "Données NZ"],
+            "terminal": "Le terminal aide à suivre NZD/USD avec calendrier, news et drivers dollar/risk.",
+        },
+        "en": {
+            "name": "New Zealand dollar / US dollar",
+            "headline": "The kiwi-dollar pair",
+            "intro": "NZD/USD reacts to the dollar, RBNZ policy, global risk, China and agricultural commodities.",
+            "role": "More volatile cyclical pair, useful for reading FX risk appetite.",
+            "drivers": ["RBNZ", "DXY", "China", "Risk sentiment", "NZ data"],
+            "terminal": "The terminal helps follow NZD/USD with calendar, news and dollar/risk drivers.",
+        },
+    },
+    {
+        "slug": "eurjpy",
+        "pair": "EUR/JPY",
+        "rank": 10,
+        "share": "2%+",
+        "tv_symbol": "FX:EURJPY",
+        "fr": {
+            "name": "Euro / yen japonais",
+            "headline": "Cross euro-yen et sentiment global",
+            "intro": "EUR/JPY combine la BCE, la BoJ, les taux européens/japonais et la demande refuge sur le yen.",
+            "role": "Cross majeur pour lire risk appetite, yen et divergence BCE/BoJ.",
+            "drivers": ["BCE", "BoJ", "Risk sentiment", "Taux européens", "JPY refuge"],
+            "terminal": "XAUTERMINAL peut adapter le contexte EUR/JPY et relier le graphique aux news BCE/BoJ.",
+        },
+        "en": {
+            "name": "Euro / Japanese yen",
+            "headline": "Euro-yen cross and global sentiment",
+            "intro": "EUR/JPY combines the ECB, BoJ, European/Japanese yields and safe-haven demand for the yen.",
+            "role": "Major cross for reading risk appetite, yen dynamics and ECB/BoJ divergence.",
+            "drivers": ["ECB", "BoJ", "Risk sentiment", "European yields", "JPY haven"],
+            "terminal": "XAUTERMINAL can adapt EUR/JPY context and link the chart to ECB/BoJ news.",
+        },
+    },
+    {
+        "slug": "eurgbp",
+        "pair": "EUR/GBP",
+        "rank": 11,
+        "share": "2%+",
+        "tv_symbol": "FX:EURGBP",
+        "fr": {
+            "name": "Euro / livre sterling",
+            "headline": "Cross BCE-BoE",
+            "intro": "EUR/GBP se concentre sur la comparaison euro-livre: croissance Europe/UK, inflation, BCE, BoE et flux de session Londres.",
+            "role": "Cross important pour lire la divergence monétaire entre zone euro et Royaume-Uni.",
+            "drivers": ["BCE", "BoE", "Inflation UK/EU", "PMI", "Session Londres"],
+            "terminal": "Le terminal permet de suivre EUR/GBP sans tout ramener au dollar, avec une lecture croisée Europe/UK.",
+        },
+        "en": {
+            "name": "Euro / British pound",
+            "headline": "ECB-BoE cross",
+            "intro": "EUR/GBP focuses on the euro-sterling comparison: Europe/UK growth, inflation, ECB, BoE and London-session flows.",
+            "role": "Important cross for reading monetary divergence between the euro area and the UK.",
+            "drivers": ["ECB", "BoE", "UK/EU inflation", "PMIs", "London session"],
+            "terminal": "The terminal helps follow EUR/GBP without reducing everything to the dollar, with a Europe/UK cross-read.",
+        },
+    },
+    {
+        "slug": "gbpjpy",
+        "pair": "GBP/JPY",
+        "rank": 12,
+        "share": "1%+",
+        "tv_symbol": "FX:GBPJPY",
+        "fr": {
+            "name": "Livre sterling / yen japonais",
+            "headline": "Cross très actif et souvent volatil",
+            "intro": "GBP/JPY attire beaucoup de traders actifs grâce à sa volatilité. La paire combine livre, yen, BoE, BoJ, risk sentiment et mouvements de taux.",
+            "role": "Cross populaire pour la volatilité, mais qui demande une lecture stricte du risque.",
+            "drivers": ["BoE", "BoJ", "Risk sentiment", "Taux UK/JP", "Volatilité"],
+            "terminal": "XAUTERMINAL aide à structurer GBP/JPY avec charting, news, calendrier UK/JP et biais de contexte.",
+        },
+        "en": {
+            "name": "British pound / Japanese yen",
+            "headline": "Very active and often volatile cross",
+            "intro": "GBP/JPY attracts many active traders because of its volatility. The pair combines sterling, yen, BoE, BoJ, risk sentiment and yield moves.",
+            "role": "Popular volatility cross, but it requires strict risk reading.",
+            "drivers": ["BoE", "BoJ", "Risk sentiment", "UK/JP yields", "Volatility"],
+            "terminal": "XAUTERMINAL helps structure GBP/JPY with charting, news, UK/JP calendar and context bias.",
+        },
+    },
+]
+
+FX_MARKET_BY_SLUG = {pair["slug"]: pair for pair in FX_MARKET_PAIRS}
 
 SEO_CONTENT_PAGES = {
     "terminal_xauusd": {
@@ -1080,6 +1362,349 @@ def market_pulse_page(pulse: dict) -> str:
 </html>"""
 
 
+def market_lang_script() -> str:
+    return """    <script>
+    (function () {
+        const copy = window.XT_MARKET_COPY || {};
+        function applyMarketLanguage() {
+            const lang = localStorage.getItem('xt_lang') || 'fr';
+            const current = copy[lang] || copy.fr || {};
+            document.querySelectorAll('[data-market-i18n]').forEach((el) => {
+                const key = el.dataset.marketI18n;
+                if (current[key] !== undefined) el.textContent = current[key];
+            });
+            document.querySelectorAll('[data-market-content]').forEach((el) => {
+                const key = el.dataset.marketContent;
+                if (current[key] !== undefined) el.setAttribute('content', current[key]);
+            });
+            const title = document.querySelector('title[data-market-i18n]');
+            if (title && current[title.dataset.marketI18n]) title.textContent = current[title.dataset.marketI18n];
+        }
+        applyMarketLanguage();
+        document.querySelectorAll('[data-lang-toggle]').forEach((button) => {
+            button.addEventListener('click', () => window.setTimeout(applyMarketLanguage, 0));
+        });
+    })();
+    </script>"""
+
+
+def markets_index_page() -> str:
+    canonical = absolute_url("/marches")
+    title = "Marchés Forex les plus tradés - XAUTERMINAL"
+    description = "Radar des paires Forex les plus tradées au monde: EUR/USD, USD/JPY, GBP/USD, USD/CNY, USD/CAD, AUD/USD, USD/CHF et principaux crosses."
+    cards = "\n".join(
+        f"""            <article class="market-card">
+                <div class="market-card-top">
+                    <span>#{pair["rank"]:02d}</span>
+                    <em>{escape(pair["share"])}</em>
+                </div>
+                <h2>{escape(pair["pair"])}</h2>
+                <strong data-market-i18n="{pair["slug"]}_name">{escape(pair["fr"]["name"])}</strong>
+                <p data-market-i18n="{pair["slug"]}_headline">{escape(pair["fr"]["headline"])}</p>
+                <div class="market-card-actions">
+                    <a class="resource-cta" href="/marches/{escape(pair["slug"], quote=True)}" data-market-i18n="read_market">Lire</a>
+                    <a class="resource-link-button" href="/terminal?symbol={escape(pair["tv_symbol"], quote=True)}" data-market-i18n="open_terminal">Terminal</a>
+                </div>
+            </article>"""
+        for pair in FX_MARKET_PAIRS
+    )
+    copy = {
+        "fr": {
+            "page_title": title,
+            "page_description": description,
+            "kicker": "MARCHÉS FOREX",
+            "h1": "Les paires Forex les plus tradées au monde",
+            "intro": "Ce radar regroupe les paires de devises les plus liquides et les plus surveillées par les traders. Chaque page explique le rôle de la paire, les drivers à suivre et comment XAUTERMINAL peut aider à la replacer dans un contexte macro.",
+            "source_note": "Classement indicatif construit autour des données BIS 2025 et des paires les plus liquides. Les pourcentages sont des ordres de grandeur publics, pas un flux de volume temps réel.",
+            "daily_volume": "9.6T$ / jour",
+            "read_market": "Lire",
+            "open_terminal": "Terminal",
+            "why_title": "Pourquoi créer des pages par paire ?",
+            "why_copy": "Les meilleurs terminaux organisent le marché par instrument: graphique, news, calendrier, drivers et contexte. La page publique donne la carte; le terminal donne la lecture complète.",
+            "cta_title": "Passer du radar public au terminal complet",
+            "cta_copy": "Dans le terminal, les paires peuvent être ouvertes avec le charting, les news, le calendrier, la watchlist et le Bias Desk adapté au symbole.",
+        },
+        "en": {
+            "page_title": "Most traded Forex markets - XAUTERMINAL",
+            "page_description": "Radar of the world's most traded Forex pairs: EUR/USD, USD/JPY, GBP/USD, USD/CNY, USD/CAD, AUD/USD, USD/CHF and major crosses.",
+            "kicker": "FOREX MARKETS",
+            "h1": "The most traded Forex pairs in the world",
+            "intro": "This radar groups the most liquid currency pairs watched by traders. Each page explains the role of the pair, drivers to monitor and how XAUTERMINAL helps place it in macro context.",
+            "source_note": "Indicative ranking built around BIS 2025 data and the most liquid pairs. Percentages are public orders of magnitude, not a real-time volume feed.",
+            "daily_volume": "$9.6T / day",
+            "read_market": "Read",
+            "open_terminal": "Terminal",
+            "why_title": "Why create pages by pair?",
+            "why_copy": "The best terminals organize markets by instrument: chart, news, calendar, drivers and context. The public page gives the map; the terminal gives the complete read.",
+            "cta_title": "Move from public radar to the full terminal",
+            "cta_copy": "Inside the terminal, pairs can be opened with charting, news, calendar, watchlist and symbol-adapted Bias Desk.",
+        },
+    }
+    for pair in FX_MARKET_PAIRS:
+        copy["fr"][f"{pair['slug']}_name"] = pair["fr"]["name"]
+        copy["fr"][f"{pair['slug']}_headline"] = pair["fr"]["headline"]
+        copy["en"][f"{pair['slug']}_name"] = pair["en"]["name"]
+        copy["en"][f"{pair['slug']}_headline"] = pair["en"]["headline"]
+    structured_data = json.dumps({
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": title,
+        "description": description,
+        "url": canonical,
+        "hasPart": [
+            {
+                "@type": "WebPage",
+                "name": f"{pair['pair']} - XAUTERMINAL",
+                "url": absolute_url(f"/marches/{pair['slug']}"),
+            }
+            for pair in FX_MARKET_PAIRS
+        ],
+    }, ensure_ascii=False)
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-market-i18n="page_title">{escape(title)}</title>
+    <meta name="description" content="{escape(description, quote=True)}" data-market-content="page_description">
+    <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="XAUTERMINAL">
+    <meta property="og:title" content="{escape(title, quote=True)}" data-market-content="page_title">
+    <meta property="og:description" content="{escape(description, quote=True)}" data-market-content="page_description">
+    <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
+    <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            {BRAND_MARKUP}
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
+        </nav>
+    </header>
+    <main class="legal-page markets-page">
+        <section class="markets-hero">
+            <div>
+                <div class="landing-kicker" data-market-i18n="kicker">MARCHÉS FOREX</div>
+                <h1 data-market-i18n="h1">Les paires Forex les plus tradées au monde</h1>
+                <p data-market-i18n="intro">Ce radar regroupe les paires de devises les plus liquides et les plus surveillées par les traders. Chaque page explique le rôle de la paire, les drivers à suivre et comment XAUTERMINAL peut aider à la replacer dans un contexte macro.</p>
+                <div class="landing-actions">
+                    <a class="resource-cta" href="/#pricing" data-i18n="footer_trial">Démarrer l'essai</a>
+                    <a class="resource-link-button" href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+                </div>
+            </div>
+            <aside class="markets-source-panel">
+                <span>BIS 2025</span>
+                <strong data-market-i18n="daily_volume">9.6T$ / jour</strong>
+                <p data-market-i18n="source_note">Classement indicatif construit autour des données BIS 2025 et des paires les plus liquides. Les pourcentages sont des ordres de grandeur publics, pas un flux de volume temps réel.</p>
+            </aside>
+        </section>
+        <section class="market-grid">
+{cards}
+        </section>
+        <section class="pulse-workflow markets-explain">
+            <div>
+                <div class="landing-kicker">XAUTERMINAL</div>
+                <h2 data-market-i18n="why_title">Pourquoi créer des pages par paire ?</h2>
+                <p data-market-i18n="why_copy">Les meilleurs terminaux organisent le marché par instrument: graphique, news, calendrier, drivers et contexte. La page publique donne la carte; le terminal donne la lecture complète.</p>
+            </div>
+            <div>
+                <h2 data-market-i18n="cta_title">Passer du radar public au terminal complet</h2>
+                <p data-market-i18n="cta_copy">Dans le terminal, les paires peuvent être ouvertes avec le charting, les news, le calendrier, la watchlist et le Bias Desk adapté au symbole.</p>
+                <div class="landing-actions">
+                    <a class="resource-cta" href="/#pricing" data-i18n="footer_trial">Démarrer l'essai</a>
+                    <a class="resource-link-button" href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+                </div>
+            </div>
+        </section>
+    </main>
+{PUBLIC_FOOTER}
+    <script>window.XT_MARKET_COPY = {json.dumps(copy, ensure_ascii=False)};</script>
+    <script src="/static/landing.js"></script>
+{market_lang_script()}
+</body>
+</html>"""
+
+
+def market_pair_page(slug: str) -> str:
+    pair = FX_MARKET_BY_SLUG[slug]
+    canonical = absolute_url(f"/marches/{slug}")
+    fr = pair["fr"]
+    en = pair["en"]
+    title = f"{pair['pair']} - Analyse de marché Forex - XAUTERMINAL"
+    description = f"Comprendre {pair['pair']}: rôle de la paire, principaux drivers macro, news, calendrier et lecture dans le terminal XAUTERMINAL."
+    driver_tags = "\n".join(
+        f'<span data-market-i18n="driver_{index}">{escape(driver)}</span>'
+        for index, driver in enumerate(fr["drivers"])
+    )
+    related_cards = "\n".join(
+        f"""                <a href="/marches/{escape(item["slug"], quote=True)}">{escape(item["pair"])}</a>"""
+        for item in FX_MARKET_PAIRS
+        if item["slug"] != slug
+    )
+    copy = {
+        "fr": {
+            "page_title": title,
+            "page_description": description,
+            "kicker": "MARCHÉ FOREX",
+            "h1": f"{pair['pair']}: {fr['headline']}",
+            "intro": fr["intro"],
+            "rank_label": "Rang volume FX",
+            "share_label": "Part indicative",
+            "role_title": "Pourquoi cette paire compte",
+            "role_copy": fr["role"],
+            "drivers_title": "Drivers à surveiller",
+            "terminal_title": "Lecture dans XAUTERMINAL",
+            "terminal_copy": fr["terminal"],
+            "public_limit_title": "Ce que la page publique ne donne pas",
+            "public_limit_copy": "La page explique la logique de marché, mais les données live complètes, le Bias Desk, les news filtrées et le calendrier détaillé restent réservés au terminal.",
+            "related_title": "Autres paires liquides",
+            "all_markets": "Voir tous les marchés",
+            "open_terminal": "Ouvrir dans le terminal",
+        },
+        "en": {
+            "page_title": f"{pair['pair']} - Forex market analysis - XAUTERMINAL",
+            "page_description": f"Understand {pair['pair']}: pair role, key macro drivers, news, calendar and XAUTERMINAL terminal read.",
+            "kicker": "FOREX MARKET",
+            "h1": f"{pair['pair']}: {en['headline']}",
+            "intro": en["intro"],
+            "rank_label": "FX volume rank",
+            "share_label": "Indicative share",
+            "role_title": "Why this pair matters",
+            "role_copy": en["role"],
+            "drivers_title": "Drivers to watch",
+            "terminal_title": "Read in XAUTERMINAL",
+            "terminal_copy": en["terminal"],
+            "public_limit_title": "What the public page does not provide",
+            "public_limit_copy": "The page explains the market logic, but complete live data, Bias Desk, filtered news and detailed calendar remain reserved for the terminal.",
+            "related_title": "Other liquid pairs",
+            "all_markets": "View all markets",
+            "open_terminal": "Open in terminal",
+        },
+    }
+    for index, driver in enumerate(fr["drivers"]):
+        copy["fr"][f"driver_{index}"] = driver
+    for index, driver in enumerate(en["drivers"]):
+        copy["en"][f"driver_{index}"] = driver
+    structured_data = json.dumps({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": title,
+        "description": description,
+        "url": canonical,
+        "about": {
+            "@type": "FinancialProduct",
+            "name": pair["pair"],
+            "description": fr["role"],
+        },
+        "isPartOf": {
+            "@type": "WebSite",
+            "name": "XAUTERMINAL",
+            "url": APP_BASE_URL,
+        },
+    }, ensure_ascii=False)
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-market-i18n="page_title">{escape(title)}</title>
+    <meta name="description" content="{escape(description, quote=True)}" data-market-content="page_description">
+    <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="XAUTERMINAL">
+    <meta property="og:title" content="{escape(title, quote=True)}" data-market-content="page_title">
+    <meta property="og:description" content="{escape(description, quote=True)}" data-market-content="page_description">
+    <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
+    <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            {BRAND_MARKUP}
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/marches" data-i18n="nav_markets">Marchés</a>
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
+        </nav>
+    </header>
+    <main class="legal-page markets-page">
+        <section class="markets-hero market-detail-hero">
+            <div>
+                <div class="landing-kicker" data-market-i18n="kicker">MARCHÉ FOREX</div>
+                <h1 data-market-i18n="h1">{escape(pair["pair"])}: {escape(fr["headline"])}</h1>
+                <p data-market-i18n="intro">{escape(fr["intro"])}</p>
+                <div class="landing-actions">
+                    <a class="resource-cta" href="/terminal?symbol={escape(pair["tv_symbol"], quote=True)}" data-market-i18n="open_terminal">Ouvrir dans le terminal</a>
+                    <a class="resource-link-button" href="/marches" data-market-i18n="all_markets">Voir tous les marchés</a>
+                </div>
+            </div>
+            <aside class="markets-source-panel">
+                <span>{escape(pair["pair"])}</span>
+                <strong>#{pair["rank"]:02d}</strong>
+                <p><span data-market-i18n="rank_label">Rang volume FX</span> · <span data-market-i18n="share_label">Part indicative</span> {escape(pair["share"])}</p>
+            </aside>
+        </section>
+        <section class="market-detail-grid">
+            <article class="market-detail-card">
+                <span>01</span>
+                <h2 data-market-i18n="role_title">Pourquoi cette paire compte</h2>
+                <p data-market-i18n="role_copy">{escape(fr["role"])}</p>
+            </article>
+            <article class="market-detail-card">
+                <span>02</span>
+                <h2 data-market-i18n="drivers_title">Drivers à surveiller</h2>
+                <div class="market-driver-tags">{driver_tags}</div>
+            </article>
+            <article class="market-detail-card featured">
+                <span>03</span>
+                <h2 data-market-i18n="terminal_title">Lecture dans XAUTERMINAL</h2>
+                <p data-market-i18n="terminal_copy">{escape(fr["terminal"])}</p>
+                <a class="resource-cta" href="/#pricing" data-i18n="footer_trial">Démarrer l'essai</a>
+            </article>
+            <article class="market-detail-card">
+                <span>04</span>
+                <h2 data-market-i18n="public_limit_title">Ce que la page publique ne donne pas</h2>
+                <p data-market-i18n="public_limit_copy">La page explique la logique de marché, mais les données live complètes, le Bias Desk, les news filtrées et le calendrier détaillé restent réservés au terminal.</p>
+            </article>
+        </section>
+        <section class="pulse-assets">
+            <div class="landing-section-head">
+                <div class="landing-kicker" data-market-i18n="related_title">Autres paires liquides</div>
+                <h2>{escape(pair["pair"])} / Forex radar</h2>
+            </div>
+            <div class="market-related-links">
+{related_cards}
+            </div>
+        </section>
+    </main>
+{PUBLIC_FOOTER}
+    <script>window.XT_MARKET_COPY = {json.dumps(copy, ensure_ascii=False)};</script>
+    <script src="/static/landing.js"></script>
+{market_lang_script()}
+</body>
+</html>"""
+
+
 def support_page() -> str:
     canonical = absolute_url("/support")
     email = LEGAL_CONTACT_EMAIL
@@ -1358,6 +1983,18 @@ async def market_pulse_index_page():
     return HTMLResponse(market_pulse_page(pulse))
 
 
+@router.get("/marches", response_class=HTMLResponse)
+async def markets_index_page_route():
+    return HTMLResponse(markets_index_page())
+
+
+@router.get("/marches/{slug}", response_class=HTMLResponse)
+async def market_pair_page_route(slug: str):
+    if slug not in FX_MARKET_BY_SLUG:
+        return FastAPIResponse(status_code=404, content="Market not found")
+    return HTMLResponse(market_pair_page(slug))
+
+
 @router.get("/support", response_class=HTMLResponse)
 async def support_index_page():
     return HTMLResponse(support_page())
@@ -1465,6 +2102,8 @@ async def sitemap_xml():
         ("/ressources", "weekly", "0.8"),
         ("/guides", "weekly", "0.8"),
         ("/market-pulse", "daily", "0.9"),
+        ("/marches", "weekly", "0.9"),
+        *[(f"/marches/{pair['slug']}", "weekly", "0.8") for pair in FX_MARKET_PAIRS],
         ("/terminal-xauusd", "weekly", "0.8"),
         ("/calendrier-economique-or", "weekly", "0.8"),
         ("/news-forex-or", "weekly", "0.8"),
