@@ -47,6 +47,7 @@ PUBLIC_FOOTER = """    <footer class="landing-footer">
                 <h3 data-i18n="footer_product">Produit</h3>
                 <a href="/#features" data-i18n="nav_tools">Outils</a>
                 <a href="/#profiles" data-i18n="nav_markets">Marchés</a>
+                <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
                 <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
                 <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             </div>
@@ -61,6 +62,7 @@ PUBLIC_FOOTER = """    <footer class="landing-footer">
                 <h3 data-i18n="footer_markets">Marchés et données</h3>
                 <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
                 <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
+                <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
                 <a href="/guides/dxy-taux-us-or" data-i18n="footer_dxy_rates">DXY et taux US</a>
                 <a href="/guides/bias-desk-trading" data-i18n="footer_bias_desk">Bias Desk</a>
             </div>
@@ -564,6 +566,7 @@ def content_page(page_key: str) -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#features" data-i18n="nav_tools">Outils</a>
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
@@ -613,7 +616,15 @@ def content_page(page_key: str) -> str:
 
 def resources_page() -> str:
     canonical = absolute_url("/ressources")
-    rows = "\n".join(
+    pulse_row = """        <article class="resource-row">
+            <div>
+                <span data-i18n="pulse_page_kicker">MARKET PULSE</span>
+                <h2><a href="/market-pulse" data-i18n="pulse_page_h1">Le briefing de marché avant d'ouvrir le terminal</a></h2>
+                <p data-i18n="pulse_page_description">Market Pulse XAUTERMINAL synthétise le contexte macro, les actifs à surveiller, les news importantes et le calendrier économique avant une session de trading.</p>
+            </div>
+            <a class="resource-cta" href="/market-pulse" data-i18n="resources_page_read">Lire</a>
+        </article>"""
+    content_rows = "\n".join(
         f"""        <article class="resource-row">
             <div>
                 <span data-i18n="seo_{key}_kicker">{escape(SEO_CONTENT_PAGES[key]["kicker"])}</span>
@@ -624,6 +635,7 @@ def resources_page() -> str:
         </article>"""
         for key in RESOURCE_PAGE_ORDER
     )
+    rows = f"{pulse_row}\n{content_rows}"
     structured_data = json.dumps(
         {
             "@context": "https://schema.org",
@@ -632,6 +644,12 @@ def resources_page() -> str:
             "description": "Guides publics pour comprendre XAU/USD, les news macro, le calendrier économique et les drivers de l'or.",
             "url": canonical,
             "hasPart": [
+                {
+                    "@type": "WebPage",
+                    "headline": "Market Pulse XAUTERMINAL",
+                    "url": absolute_url("/market-pulse"),
+                }
+            ] + [
                 {
                     "@type": "Article",
                     "headline": SEO_CONTENT_PAGES[key]["h1"],
@@ -669,6 +687,7 @@ def resources_page() -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#features" data-i18n="nav_tools">Outils</a>
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
@@ -756,6 +775,7 @@ def guides_page() -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/ressources" data-i18n="nav_resources">Ressources</a>
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
@@ -783,6 +803,200 @@ def guides_page() -> str:
             <div class="landing-actions">
                 <a class="resource-cta" href="/#pricing" data-i18n="guides_page_trial">Tester XAUTERMINAL</a>
                 <a class="resource-link-button" href="/ressources" data-i18n="guides_page_resources">Voir toutes les ressources</a>
+            </div>
+        </section>
+    </main>
+{PUBLIC_FOOTER}
+    <script src="/static/landing.js"></script>
+</body>
+</html>"""
+
+
+def market_pulse_page() -> str:
+    canonical = absolute_url("/market-pulse")
+    structured_data = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "WebPage",
+                    "name": "Market Pulse XAUTERMINAL",
+                    "description": "Market Pulse XAUTERMINAL synthétise le contexte macro, les actifs à surveiller, les news importantes et le calendrier économique avant une session de trading.",
+                    "url": canonical,
+                    "isPartOf": {
+                        "@type": "WebSite",
+                        "name": LEGAL_BUSINESS_NAME,
+                        "url": APP_BASE_URL,
+                    },
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": LEGAL_BUSINESS_NAME,
+                        "url": APP_BASE_URL,
+                        "logo": absolute_url("/static/icon-192x192.png"),
+                    },
+                    "inLanguage": "fr-FR",
+                },
+                {
+                    "@type": "SoftwareApplication",
+                    "name": "Market Pulse XAUTERMINAL",
+                    "applicationCategory": "FinanceApplication",
+                    "operatingSystem": "Web",
+                    "url": canonical,
+                    "description": "Briefing de marché pour organiser news, calendrier économique, drivers macro, watchlist et biais de contexte.",
+                },
+            ],
+        },
+        ensure_ascii=False,
+    )
+    pulse_cards = [
+        (
+            "pulse_page_card_calendar_title",
+            "Calendrier à risque",
+            "pulse_page_card_calendar_copy",
+            "Repère les publications qui peuvent changer la volatilité: CPI, PCE, NFP, FOMC, PMI ou discours de banques centrales.",
+        ),
+        (
+            "pulse_page_card_news_title",
+            "News qui comptent",
+            "pulse_page_card_news_copy",
+            "Filtre les titres qui influencent vraiment le dollar, les taux, le sentiment de risque ou les actifs de ta watchlist.",
+        ),
+        (
+            "pulse_page_card_drivers_title",
+            "Drivers macro",
+            "pulse_page_card_drivers_copy",
+            "Compare DXY, US10Y, inflation, Fed, stress géopolitique et momentum pour comprendre ce qui domine la séance.",
+        ),
+        (
+            "pulse_page_card_watchlist_title",
+            "Radar actifs",
+            "pulse_page_card_watchlist_copy",
+            "Prépare les marchés à surveiller avant de passer au graphique: XAU/USD, Forex, indices, DXY, taux et crypto.",
+        ),
+    ]
+    card_html = "\n".join(
+        f"""            <article class="pulse-feature-card">
+                <span>0{index}</span>
+                <h2 data-i18n="{title_key}">{escape(title)}</h2>
+                <p data-i18n="{copy_key}">{escape(copy)}</p>
+            </article>"""
+        for index, (title_key, title, copy_key, copy) in enumerate(pulse_cards, start=1)
+    )
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="pulse_page_title">Market Pulse - Analyse marché du jour - XAUTERMINAL</title>
+    <meta name="description" content="Market Pulse XAUTERMINAL synthétise le contexte macro, les actifs à surveiller, les news importantes et le calendrier économique avant une session de trading." data-i18n-content="pulse_page_description">
+    <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="XAUTERMINAL">
+    <meta property="og:title" content="Market Pulse - Analyse marché du jour - XAUTERMINAL" data-i18n-content="pulse_page_title">
+    <meta property="og:description" content="Une synthèse claire du contexte macro, des news, du calendrier et des actifs à surveiller avant d'ouvrir le terminal." data-i18n-content="pulse_page_description">
+    <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
+    <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            {BRAND_MARKUP}
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/#features" data-i18n="nav_tools">Outils</a>
+            <a href="/#profiles" data-i18n="nav_markets">Marchés</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
+        </nav>
+    </header>
+
+    <main class="legal-page market-pulse-page">
+        <section class="pulse-hero">
+            <div class="pulse-hero-copy">
+                <div class="landing-kicker" data-i18n="pulse_page_kicker">MARKET PULSE</div>
+                <h1 data-i18n="pulse_page_h1">Le briefing de marché avant d'ouvrir le terminal</h1>
+                <p data-i18n="pulse_page_intro">Market Pulse rassemble la lecture macro essentielle: calendrier du jour, news qui comptent, actifs à surveiller, niveau de risque et biais de contexte. L'objectif est simple: savoir où regarder avant de prendre une décision.</p>
+                <div class="landing-actions">
+                    <a class="resource-cta" href="/#pricing" data-i18n="pulse_page_trial">Tester XAUTERMINAL</a>
+                    <a class="resource-link-button" href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+                </div>
+            </div>
+            <aside class="pulse-board" aria-label="Aperçu Market Pulse">
+                <div class="pulse-board-top">
+                    <span data-i18n="pulse_board_today">AUJOURD'HUI</span>
+                    <strong data-i18n="pulse_board_risk">Risque élevé</strong>
+                </div>
+                <div class="pulse-score">
+                    <span>72</span>
+                    <p data-i18n="pulse_board_score">Contexte actif avant données US</p>
+                </div>
+                <div class="pulse-mini-grid">
+                    <div>
+                        <span>XAU/USD</span>
+                        <strong>WAIT</strong>
+                    </div>
+                    <div>
+                        <span>DXY</span>
+                        <strong data-i18n="pulse_board_dxy">Fort</strong>
+                    </div>
+                    <div>
+                        <span>US10Y</span>
+                        <strong data-i18n="pulse_board_yields">Pression</strong>
+                    </div>
+                    <div>
+                        <span data-i18n="pulse_board_news_label">News</span>
+                        <strong>3</strong>
+                    </div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="pulse-feature-grid">
+{card_html}
+        </section>
+
+        <section class="pulse-workflow">
+            <div>
+                <div class="landing-kicker" data-i18n="pulse_workflow_kicker">ROUTINE</div>
+                <h2 data-i18n="pulse_workflow_title">Une routine en quatre lectures</h2>
+                <p data-i18n="pulse_workflow_copy">Les meilleurs terminaux ne montrent pas seulement des données: ils aident à décider quelles données méritent ton attention. Market Pulse sert de première couche avant le charting.</p>
+            </div>
+            <ol>
+                <li><strong data-i18n="pulse_step1_title">Calendrier</strong><span data-i18n="pulse_step1_copy">Repérer les horaires à risque et les publications capables de déplacer le dollar, les taux ou les indices.</span></li>
+                <li><strong data-i18n="pulse_step2_title">News</strong><span data-i18n="pulse_step2_copy">Filtrer les titres vraiment liés au thème dominant de la séance.</span></li>
+                <li><strong data-i18n="pulse_step3_title">Drivers</strong><span data-i18n="pulse_step3_copy">Comparer dollar, rendements, sentiment de risque et momentum du prix.</span></li>
+                <li><strong data-i18n="pulse_step4_title">Plan</strong><span data-i18n="pulse_step4_copy">Passer au terminal avec une watchlist claire, pas avec dix onglets ouverts au hasard.</span></li>
+            </ol>
+        </section>
+
+        <section class="pulse-assets">
+            <div class="landing-section-head">
+                <div class="landing-kicker" data-i18n="pulse_assets_kicker">RADAR MARCHÉS</div>
+                <h2 data-i18n="pulse_assets_title">Les marchés qui méritent une lecture dédiée</h2>
+            </div>
+            <div class="pulse-asset-grid">
+                <article><span>XAU/USD</span><strong data-i18n="pulse_asset_gold">Or et macro US</strong></article>
+                <article><span>EUR/USD</span><strong data-i18n="pulse_asset_eurusd">Dollar et BCE</strong></article>
+                <article><span>GBP/JPY</span><strong data-i18n="pulse_asset_gbpjpy">Volatilité FX</strong></article>
+                <article><span>NASDAQ</span><strong data-i18n="pulse_asset_nasdaq">Taux et risk-on</strong></article>
+                <article><span>DXY</span><strong data-i18n="pulse_asset_dxy">Force dollar</strong></article>
+                <article><span>US10Y</span><strong data-i18n="pulse_asset_us10y">Rendements US</strong></article>
+            </div>
+        </section>
+
+        <section class="legal-contact article-cta">
+            <h2 data-i18n="pulse_final_title">Pourquoi ajouter Market Pulse à XAUTERMINAL ?</h2>
+            <p data-i18n="pulse_final_copy">Parce que le vrai problème d'un trader n'est pas seulement de trouver des données, mais de les hiérarchiser. Market Pulse donne une porte d'entrée claire avant le terminal complet, les graphiques et le Bias Desk.</p>
+            <div class="landing-actions">
+                <a class="resource-cta" href="/#pricing" data-i18n="pulse_page_trial">Tester XAUTERMINAL</a>
+                <a class="resource-link-button" href="/guides" data-i18n="nav_guides">Guides</a>
             </div>
         </section>
     </main>
@@ -860,6 +1074,7 @@ def support_page() -> str:
         <nav class="landing-nav-actions" aria-label="Navigation support">
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
             <a href="/account" data-i18n="nav_account">Mon compte</a>
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
             <a href="/ressources" data-i18n="nav_resources">Ressources</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -979,6 +1194,7 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
             {BRAND_MARKUP}
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
@@ -1060,6 +1276,11 @@ async def resources_index_page():
 @router.get("/guides", response_class=HTMLResponse)
 async def guides_index_page():
     return HTMLResponse(guides_page())
+
+
+@router.get("/market-pulse", response_class=HTMLResponse)
+async def market_pulse_index_page():
+    return HTMLResponse(market_pulse_page())
 
 
 @router.get("/support", response_class=HTMLResponse)
@@ -1168,6 +1389,7 @@ async def sitemap_xml():
         ("/support", "weekly", "0.7"),
         ("/ressources", "weekly", "0.8"),
         ("/guides", "weekly", "0.8"),
+        ("/market-pulse", "daily", "0.9"),
         ("/terminal-xauusd", "weekly", "0.8"),
         ("/calendrier-economique-or", "weekly", "0.8"),
         ("/news-forex-or", "weekly", "0.8"),
