@@ -8,6 +8,38 @@
     color: var(--text);
 }
 
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+.landing-section-head,
+.feature-card,
+.learning-card,
+.trust-card,
+.pricing-card,
+.faq-grid article,
+.resource-row,
+.guide-card,
+.support-card,
+.support-process,
+.legal-contact,
+.article-section-card,
+.resource-faq,
+.resource-faq article,
+.pulse-preview-card,
+.pulse-live-panel,
+.pulse-feature-card,
+.pulse-workflow,
+.pulse-assets,
+.markets-hero > div,
+.markets-source-panel,
+.market-card,
+.market-detail-card {
+    overflow-wrap: anywhere;
+}
+
 .landing-nav {
     position: sticky;
     top: 0;
@@ -893,7 +925,7 @@
 }
 
 .pulse-assets {
-    padding: clamp(22px, 4vw, 34px);
+    padding: clamp(24px, 4vw, 38px);
     margin-bottom: 18px;
 }
 
@@ -982,7 +1014,7 @@
     align-content: start;
     gap: 10px;
     min-height: 245px;
-    padding: 18px;
+    padding: clamp(20px, 2.4vw, 26px);
 }
 
 .market-card-top {
@@ -1035,7 +1067,7 @@
 
 .market-detail-card {
     min-height: 230px;
-    padding: 18px;
+    padding: clamp(24px, 3vw, 34px);
 }
 
 .market-detail-card.featured {
@@ -1650,8 +1682,13 @@
 }
 
 .legal-page section {
-    padding: 22px 0;
     border-top: 1px solid var(--border);
+}
+
+.legal-page > section:not(.article-hero):not(.markets-hero):not(.pulse-hero):not(.landing-cta):not(.resource-list):not(.guide-grid):not(.support-grid):not(.market-grid):not(.market-detail-grid):not(.pulse-feature-grid):not(.pulse-live-grid) {
+    padding: clamp(22px, 3vw, 30px);
+    border-right: 1px solid transparent;
+    border-left: 1px solid transparent;
 }
 
 .legal-page h2 {
@@ -1671,6 +1708,7 @@
 }
 
 .legal-contact {
+    padding: clamp(22px, 3vw, 30px);
     border-color: rgba(0, 242, 173, 0.22) !important;
 }
 
