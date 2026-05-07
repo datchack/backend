@@ -520,7 +520,7 @@
 
 .resource-list {
     display: grid;
-    gap: 10px;
+    gap: 12px;
 }
 
 .resource-row {
@@ -530,13 +530,24 @@
     align-items: center;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: var(--card);
-    padding: 18px;
+    background:
+        linear-gradient(135deg, rgba(0, 242, 173, 0.035), rgba(17, 21, 28, 0.94)),
+        var(--card);
+    padding: 20px;
 }
 
 .resource-row h2 {
-    margin: 0 0 8px;
-    font-size: 20px;
+    margin: 8px 0 8px;
+    font-size: clamp(20px, 2.5vw, 28px);
+    line-height: 1.08;
+}
+
+.resource-row span {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
 }
 
 .resource-row h2 a {
@@ -564,6 +575,10 @@
     width: min(1120px, calc(100% - 32px));
 }
 
+.resource-index-page {
+    width: min(1120px, calc(100% - 32px));
+}
+
 .guide-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -575,10 +590,12 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding: 18px;
+    padding: 20px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: var(--card);
+    background:
+        linear-gradient(135deg, rgba(0, 242, 173, 0.035), rgba(17, 21, 28, 0.94)),
+        var(--card);
 }
 
 .guide-card-top {
@@ -598,7 +615,7 @@
 
 .guide-card h2 {
     margin: 0;
-    font-size: 22px;
+    font-size: clamp(22px, 2.5vw, 31px);
     line-height: 1.12;
 }
 
@@ -829,6 +846,181 @@
     padding: clamp(34px, 6vw, 72px) 0;
 }
 
+.article-page {
+    width: min(1180px, calc(100% - 32px));
+}
+
+.article-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.75fr);
+    gap: clamp(18px, 4vw, 46px);
+    align-items: stretch;
+    padding: clamp(28px, 5vw, 58px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background:
+        linear-gradient(135deg, rgba(0, 242, 173, 0.08), rgba(128, 90, 213, 0.05)),
+        #080b10;
+}
+
+.article-hero-copy {
+    display: grid;
+    align-content: center;
+    gap: 14px;
+}
+
+.article-hero h1 {
+    margin: 0;
+    font-size: clamp(36px, 6vw, 72px);
+    line-height: 0.98;
+    letter-spacing: 0;
+}
+
+.article-hero p {
+    max-width: 760px;
+    margin: 0;
+    color: #c7ceda;
+    font-size: clamp(16px, 2vw, 19px);
+    line-height: 1.65;
+}
+
+.article-hero .landing-actions {
+    margin-top: 6px;
+}
+
+.article-hero-panel {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    align-content: end;
+    gap: 10px;
+    min-height: 260px;
+    padding: 20px;
+    border: 1px solid rgba(0, 242, 173, 0.24);
+    border-radius: 6px;
+    background:
+        linear-gradient(180deg, rgba(0, 242, 173, 0.08), rgba(255, 255, 255, 0.02)),
+        rgba(5, 7, 10, 0.72);
+}
+
+.article-hero-panel::before {
+    content: "";
+    position: absolute;
+    inset: 18px 18px auto;
+    height: 118px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background:
+        linear-gradient(90deg, transparent 24%, rgba(0, 242, 173, 0.72) 24% 32%, transparent 32% 44%, rgba(255, 74, 113, 0.72) 44% 52%, transparent 52% 64%, rgba(0, 242, 173, 0.72) 64% 72%, transparent 72%),
+        linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 29px, 42px 100%;
+    opacity: 0.82;
+}
+
+.article-hero-panel > * {
+    position: relative;
+    z-index: 1;
+}
+
+.article-hero-panel span,
+.article-sidebar > span,
+.article-related strong {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.article-hero-panel strong {
+    color: var(--text);
+    font-size: 26px;
+    line-height: 1;
+}
+
+.article-hero-panel p {
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.article-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: clamp(22px, 4vw, 46px);
+    align-items: start;
+    margin-top: 26px;
+}
+
+.article-sidebar {
+    position: sticky;
+    top: 86px;
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(17, 21, 28, 0.78);
+}
+
+.article-sidebar nav,
+.article-related {
+    display: grid;
+    gap: 9px;
+}
+
+.article-sidebar nav a,
+.article-related a {
+    color: #aeb6c5;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.35;
+    text-decoration: none;
+}
+
+.article-sidebar nav a:hover,
+.article-related a:hover {
+    color: var(--buy);
+}
+
+.article-related {
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+
+.article-content {
+    display: grid;
+    gap: 14px;
+}
+
+.article-section-card {
+    padding: clamp(18px, 3vw, 28px);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+}
+
+.article-section-card span {
+    display: inline-flex;
+    margin-bottom: 18px;
+    color: var(--accent);
+    font-family: "Courier New", monospace;
+    font-weight: 900;
+}
+
+.article-section-card h2 {
+    margin: 0 0 12px;
+    font-size: clamp(22px, 3vw, 34px);
+    line-height: 1.08;
+}
+
+.article-section-card p {
+    margin: 0;
+    color: #c7ceda;
+    font-size: 16px;
+    line-height: 1.75;
+}
+
 .legal-page h1 {
     margin: 10px 0 8px;
     font-size: clamp(34px, 6vw, 64px);
@@ -871,10 +1063,14 @@
 .resource-faq {
     display: grid;
     gap: 14px;
+    padding: clamp(18px, 3vw, 28px) !important;
+    border: 1px solid rgba(0, 242, 173, 0.18) !important;
+    border-radius: 6px;
+    background: rgba(0, 242, 173, 0.035);
 }
 
 .resource-faq article {
-    padding: 14px;
+    padding: 16px;
     border: 1px solid var(--border);
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.025);
@@ -1287,7 +1483,9 @@
 @media (max-width: 700px) {
     .learning-grid,
     .landing-footer,
-    .footer-grid {
+    .footer-grid,
+    .article-hero,
+    .article-layout {
         grid-template-columns: 1fr;
     }
 
@@ -1297,6 +1495,22 @@
 
     .footer-grid {
         gap: 22px;
+    }
+
+    .article-hero {
+        padding: 22px;
+    }
+
+    .article-hero-panel {
+        min-height: auto;
+    }
+
+    .article-hero-panel::before {
+        display: none;
+    }
+
+    .article-sidebar {
+        position: static;
     }
 
     .account-hero,

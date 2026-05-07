@@ -33,6 +33,56 @@ FAVICON_LINKS = """    <link rel="icon" href="/static/favicon.ico" sizes="any">
 BRAND_MARKUP = """<img class="brand-logo" src="/static/xauterminal-logo.png" alt="" width="36" height="36">
             <span>XAUTERMINAL</span>"""
 
+PUBLIC_FOOTER = """    <footer class="landing-footer">
+        <div class="footer-brand">
+            <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+                <img class="brand-logo" src="/static/xauterminal-logo.png" alt="" width="36" height="36">
+                <span>XAUTERMINAL</span>
+            </a>
+            <p data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</p>
+            <a class="resource-cta" href="/#pricing" data-i18n="footer_trial">Démarrer l'essai</a>
+        </div>
+        <nav class="footer-grid" aria-label="Plan du site">
+            <div class="footer-column">
+                <h3 data-i18n="footer_product">Produit</h3>
+                <a href="/#features" data-i18n="nav_tools">Outils</a>
+                <a href="/#profiles" data-i18n="nav_markets">Marchés</a>
+                <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+                <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+            </div>
+            <div class="footer-column">
+                <h3 data-i18n="footer_learn">Apprendre</h3>
+                <a href="/guides" data-i18n="nav_guides">Guides</a>
+                <a href="/ressources" data-i18n="nav_resources">Ressources</a>
+                <a href="/terminal-xauusd" data-i18n="resource_terminal_short">XAU/USD</a>
+                <a href="/guide/trading-or-macro" data-i18n="resource_guide_short">Guide macro</a>
+            </div>
+            <div class="footer-column">
+                <h3 data-i18n="footer_markets">Marchés et données</h3>
+                <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
+                <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
+                <a href="/guides/dxy-taux-us-or" data-i18n="footer_dxy_rates">DXY et taux US</a>
+                <a href="/guides/bias-desk-trading" data-i18n="footer_bias_desk">Bias Desk</a>
+            </div>
+            <div class="footer-column">
+                <h3 data-i18n="footer_account">Compte</h3>
+                <a href="/account" data-i18n="nav_account">Mon compte</a>
+                <a href="/support" data-i18n="nav_support">Support</a>
+                <a href="/#pricing" data-i18n="footer_subscriptions">Abonnements</a>
+                <a href="mailto:mdtrading@xauterminal.com" data-i18n="footer_contact">Contact</a>
+            </div>
+            <div class="footer-column">
+                <h3 data-i18n="footer_legal">Légal</h3>
+                <a href="/terms" data-i18n="terms_kicker">CGU</a>
+                <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
+                <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
+            </div>
+        </nav>
+        <div class="footer-risk" data-i18n="footer_risk">
+            Le trading comporte un risque de perte. XAUTERMINAL fournit des informations de marché et des outils d'organisation, sans conseil financier personnalisé.
+        </div>
+    </footer>"""
+
 LEGAL_PAGE_META = {
     "terms_title": {
         "title": "Conditions générales d'utilisation",
@@ -409,27 +459,36 @@ def content_page(page_key: str) -> str:
     escaped_h1 = escape(page["h1"])
     escaped_intro = escape(page["intro"])
     sections = "\n".join(
-        f"""        <section>
-            <h2 data-i18n="{prefix}_section{index}_title">{escape(title)}</h2>
-            <p data-i18n="{prefix}_section{index}_copy">{escape(copy)}</p>
-        </section>"""
+        f"""                <section class="article-section-card" id="section-{index}">
+                    <span>{index:02d}</span>
+                    <h2 data-i18n="{prefix}_section{index}_title">{escape(title)}</h2>
+                    <p data-i18n="{prefix}_section{index}_copy">{escape(copy)}</p>
+                </section>"""
         for index, (title, copy) in enumerate(page["sections"], start=1)
+    )
+    section_nav = "\n".join(
+        f"""                    <a href="#section-{index}" data-i18n="{prefix}_section{index}_title">{escape(title)}</a>"""
+        for index, (title, _) in enumerate(page["sections"], start=1)
     )
     faqs = page.get("faqs", [])
     faq_html = "\n".join(
-        f"""            <article>
+        f"""                    <article>
                 <h3 data-i18n="{prefix}_faq{index}_question">{escape(question)}</h3>
                 <p data-i18n="{prefix}_faq{index}_answer">{escape(answer)}</p>
-            </article>"""
+                    </article>"""
         for index, (question, answer) in enumerate(faqs, start=1)
     )
-    faq_section = f"""        <section class="resource-faq">
-            <div class="landing-kicker" data-i18n="seo_faq_kicker">FAQ</div>
-            <h2 data-i18n="seo_faq_title">Questions fréquentes</h2>
+    faq_section = f"""                <section class="resource-faq">
+                    <div class="landing-kicker" data-i18n="seo_faq_kicker">FAQ</div>
+                    <h2 data-i18n="seo_faq_title">Questions fréquentes</h2>
 {faq_html}
-        </section>""" if faq_html else ""
+                </section>""" if faq_html else ""
     links = "\n".join(
         f'<a class="resource-link-button" href="{escape(href, quote=True)}" data-i18n="{prefix}_link{index}">{escape(label)}</a>'
+        for index, (href, label) in enumerate(page["links"], start=1)
+    )
+    featured_links = "\n".join(
+        f"""                    <a href="{escape(href, quote=True)}" data-i18n="{prefix}_link{index}">{escape(label)}</a>"""
         for index, (href, label) in enumerate(page["links"], start=1)
     )
     related_links = ", ".join(label for _, label in page["links"])
@@ -510,31 +569,43 @@ def content_page(page_key: str) -> str:
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
     </header>
-    <main class="legal-page">
-        <div class="landing-kicker" data-i18n="{prefix}_kicker">{escape(page["kicker"])}</div>
-        <h1 data-i18n="{prefix}_h1">{escaped_h1}</h1>
-        <p data-i18n="{prefix}_intro">{escaped_intro}</p>
+    <main class="legal-page article-page">
+        <section class="article-hero">
+            <div class="article-hero-copy">
+                <div class="landing-kicker" data-i18n="{prefix}_kicker">{escape(page["kicker"])}</div>
+                <h1 data-i18n="{prefix}_h1">{escaped_h1}</h1>
+                <p data-i18n="{prefix}_intro">{escaped_intro}</p>
+                <div class="landing-actions">{links}</div>
+            </div>
+            <aside class="article-hero-panel" aria-label="Résumé">
+                <span data-i18n="article_panel_kicker">À LIRE AVEC</span>
+                <strong>XAUTERMINAL</strong>
+                <p data-i18n="article_panel_copy">Utilise cette ressource avec le calendrier, les news, les graphiques et le Bias Desk pour garder une lecture de marché structurée.</p>
+            </aside>
+        </section>
+        <div class="article-layout">
+            <aside class="article-sidebar" aria-label="Sommaire">
+                <span data-i18n="article_summary">Sommaire</span>
+                <nav>
+{section_nav}
+                </nav>
+                <div class="article-related">
+                    <strong data-i18n="article_related">Liens utiles</strong>
+{featured_links}
+                </div>
+            </aside>
+            <div class="article-content">
 {sections}
 {faq_section}
-        <section class="legal-contact">
-            <h2 data-i18n="seo_continue_title">Continuer avec XAUTERMINAL</h2>
-            <p data-i18n="seo_continue_copy">Ces ressources sont pensées pour être utilisées ensemble: contexte macro, calendrier économique, news filtrées et charting. Pour tester l'espace complet, reviens sur la landing et démarre l'essai depuis le parcours officiel.</p>
-            <div class="landing-actions">{links}</div>
-        </section>
-    </main>
-    <footer class="landing-footer">
-        <div>
-            <strong>XAUTERMINAL</strong>
-            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+                <section class="legal-contact article-cta">
+                    <h2 data-i18n="seo_continue_title">Continuer avec XAUTERMINAL</h2>
+                    <p data-i18n="seo_continue_copy">Ces ressources sont pensées pour être utilisées ensemble: contexte macro, calendrier économique, news filtrées et charting. Pour tester l'espace complet, reviens sur la landing et démarre l'essai depuis le parcours officiel.</p>
+                    <div class="landing-actions">{links}</div>
+                </section>
+            </div>
         </div>
-        <nav aria-label="Ressources">
-            <a href="/guides" data-i18n="nav_guides">Guides</a>
-            <a href="/terminal-xauusd" data-i18n="resource_terminal_short">XAU/USD</a>
-            <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
-            <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
-            <a href="/guide/trading-or-macro" data-i18n="resource_guide_short">Guide macro</a>
-        </nav>
-    </footer>
+    </main>
+{PUBLIC_FOOTER}
     <script src="/static/landing.js"></script>
 </body>
 </html>"""
@@ -545,6 +616,7 @@ def resources_page() -> str:
     rows = "\n".join(
         f"""        <article class="resource-row">
             <div>
+                <span data-i18n="seo_{key}_kicker">{escape(SEO_CONTENT_PAGES[key]["kicker"])}</span>
                 <h2><a href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}" data-i18n="seo_{key}_h1">{escape(SEO_CONTENT_PAGES[key]["h1"])}</a></h2>
                 <p data-i18n="seo_{key}_description">{escape(SEO_CONTENT_PAGES[key]["description"])}</p>
             </div>
@@ -602,26 +674,24 @@ def resources_page() -> str:
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
     </header>
-    <main class="legal-page">
-        <div class="landing-kicker" data-i18n="resources_kicker">RESSOURCES</div>
-        <h1 data-i18n="resources_page_h1">Ressources trading macro, XAU/USD et calendrier économique</h1>
-        <p data-i18n="resources_page_intro">Ces pages expliquent les concepts réellement liés à XAUTERMINAL: lecture macro de l'or, événements économiques, news Forex et organisation d'une routine de marché. Elles servent à comprendre le produit avant de l'utiliser dans le terminal.</p>
+    <main class="legal-page resource-index-page">
+        <section class="article-hero resource-index-hero">
+            <div class="article-hero-copy">
+                <div class="landing-kicker" data-i18n="resources_kicker">RESSOURCES</div>
+                <h1 data-i18n="resources_page_h1">Ressources trading macro, XAU/USD et calendrier économique</h1>
+                <p data-i18n="resources_page_intro">Ces pages expliquent les concepts réellement liés à XAUTERMINAL: lecture macro de l'or, événements économiques, news Forex et organisation d'une routine de marché. Elles servent à comprendre le produit avant de l'utiliser dans le terminal.</p>
+            </div>
+            <aside class="article-hero-panel" aria-label="Ressources">
+                <span data-i18n="resources_panel_kicker">HUB PUBLIC</span>
+                <strong data-i18n="resources_panel_title">Comprendre avant d'agir</strong>
+                <p data-i18n="resources_panel_copy">Chaque page relie une notion de marché à l'usage concret du terminal: news, calendrier, drivers et graphique.</p>
+            </aside>
+        </section>
         <section class="resource-list">
 {rows}
         </section>
     </main>
-    <footer class="landing-footer">
-        <div>
-            <strong>XAUTERMINAL</strong>
-            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
-        </div>
-        <nav aria-label="Documents légaux">
-            <a href="/support" data-i18n="nav_support">Support</a>
-            <a href="/terms" data-i18n="terms_kicker">CGU</a>
-            <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
-            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
-        </nav>
-    </footer>
+{PUBLIC_FOOTER}
     <script src="/static/landing.js"></script>
 </body>
 </html>"""
@@ -692,9 +762,18 @@ def guides_page() -> str:
         </nav>
     </header>
     <main class="legal-page guide-index-page">
-        <div class="landing-kicker" data-i18n="guides_page_kicker">GUIDES TRADING</div>
-        <h1 data-i18n="guides_page_h1">Guides trading XAU/USD, macro et Bias Desk</h1>
-        <p data-i18n="guides_page_intro">Ces guides servent à construire une routine claire autour du terminal: préparer une session, lire DXY et les taux US, filtrer les news et utiliser le Bias Desk sans le confondre avec un signal automatique.</p>
+        <section class="article-hero resource-index-hero">
+            <div class="article-hero-copy">
+                <div class="landing-kicker" data-i18n="guides_page_kicker">GUIDES TRADING</div>
+                <h1 data-i18n="guides_page_h1">Guides trading XAU/USD, macro et Bias Desk</h1>
+                <p data-i18n="guides_page_intro">Ces guides servent à construire une routine claire autour du terminal: préparer une session, lire DXY et les taux US, filtrer les news et utiliser le Bias Desk sans le confondre avec un signal automatique.</p>
+            </div>
+            <aside class="article-hero-panel" aria-label="Guides">
+                <span data-i18n="guides_panel_kicker">ROUTINE</span>
+                <strong data-i18n="guides_panel_title">Passer du bruit au plan</strong>
+                <p data-i18n="guides_panel_copy">Les guides sont pensés comme des points d'entrée rapides avant d'ouvrir le terminal et d'observer les drivers réels.</p>
+            </aside>
+        </section>
         <section class="guide-grid">
 {rows}
         </section>
@@ -707,18 +786,7 @@ def guides_page() -> str:
             </div>
         </section>
     </main>
-    <footer class="landing-footer">
-        <div>
-            <strong>XAUTERMINAL</strong>
-            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
-        </div>
-        <nav aria-label="Guides et ressources">
-            <a href="/guides" data-i18n="nav_guides">Guides</a>
-            <a href="/ressources" data-i18n="nav_resources">Ressources</a>
-            <a href="/support" data-i18n="nav_support">Support</a>
-            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
-        </nav>
-    </footer>
+{PUBLIC_FOOTER}
     <script src="/static/landing.js"></script>
 </body>
 </html>"""
