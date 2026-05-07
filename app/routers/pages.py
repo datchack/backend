@@ -248,12 +248,154 @@ SEO_CONTENT_PAGES = {
             ),
         ],
     },
+    "routine_trading_xauusd": {
+        "path": "/guides/routine-trading-xauusd",
+        "title": "Routine trading XAU/USD: préparer une session avec méthode",
+        "description": "Méthode concrète pour préparer une session XAU/USD avec calendrier économique, news macro, DXY, taux US, Bias Desk et niveaux de risque.",
+        "kicker": "ROUTINE XAU/USD",
+        "h1": "Routine trading XAU/USD: préparer une session sans se disperser",
+        "intro": "Une routine de marché sert à réduire le bruit avant d'ouvrir un graphique. Sur XAU/USD, l'objectif est de comprendre le thème dominant de la séance: dollar, taux, inflation, Fed, stress de marché ou simple momentum technique.",
+        "sections": [
+            (
+                "Commencer par le calendrier",
+                "Avant de regarder le prix, vérifie les annonces à venir: CPI, PCE, NFP, chômage, PMI, ventes au détail, FOMC et discours de la Fed. Une statistique majeure peut rendre un setup propre beaucoup moins lisible quelques minutes plus tard.",
+            ),
+            (
+                "Identifier le thème macro du jour",
+                "Lis les news prioritaires et cherche le fil conducteur: Fed plus restrictive, dollar sous pression, rendements en hausse, stress géopolitique ou absence de catalyseur clair. Une séance sans thème dominant demande souvent plus de patience.",
+            ),
+            (
+                "Comparer XAU/USD avec DXY et US10Y",
+                "Si l'or monte pendant que DXY et les taux baissent, le mouvement est plus cohérent. Si les signaux divergent, il vaut mieux éviter de conclure trop vite. Le but est de savoir si le prix est porté ou contrarié par ses drivers principaux.",
+            ),
+            (
+                "Utiliser le Bias Desk comme synthèse",
+                "Le Bias Desk n'est pas un signal automatique. Il aide à regrouper momentum, macro, risk tone et risque événementiel. S'il affiche WAIT, cela peut simplement signifier que les conditions ne sont pas assez alignées.",
+            ),
+            (
+                "Finir par le plan de risque",
+                "Une fois le contexte compris, le graphique sert à définir le timing, l'invalidation et la taille. La meilleure lecture macro ne protège pas d'une mauvaise exécution ou d'un risque trop grand.",
+            ),
+        ],
+        "links": [
+            ("/#pricing", "Tester le terminal complet"),
+            ("/calendrier-economique-or", "Lire le calendrier économique"),
+            ("/news-forex-or", "Filtrer les news macro"),
+        ],
+        "faqs": [
+            (
+                "Combien de temps doit durer une routine XAU/USD ?",
+                "Une routine utile peut durer quelques minutes si elle est structurée: calendrier, news, DXY, US10Y, Bias Desk puis graphique. L'important est la régularité, pas la durée.",
+            ),
+            (
+                "Faut-il suivre toutes les news avant de trader ?",
+                "Non. Il faut surtout repérer les thèmes capables de changer le dollar, les taux, la demande refuge ou la volatilité. Lire trop de sources peut créer plus de confusion que de clarté.",
+            ),
+        ],
+    },
+    "dxy_taux_or": {
+        "path": "/guides/dxy-taux-us-or",
+        "title": "DXY, taux US et or: comprendre les relations avec XAU/USD",
+        "description": "Guide XAUTERMINAL pour comprendre comment le dollar, les rendements US, la Fed et le sentiment de risque influencent l'or et XAU/USD.",
+        "kicker": "DXY ET TAUX US",
+        "h1": "DXY, taux US et or: comprendre les relations avec XAU/USD",
+        "intro": "L'or ne bouge pas dans le vide. Même quand le graphique semble clair, XAU/USD reste influencé par le dollar américain, les rendements obligataires, les anticipations de taux et le niveau de stress de marché.",
+        "sections": [
+            (
+                "Pourquoi le dollar compte autant",
+                "XAU/USD est coté en dollars. Un dollar fort peut rendre l'or plus cher pour les acheteurs hors dollar et peser sur le prix. Un dollar plus faible peut au contraire soutenir le métal, surtout si les autres facteurs ne s'y opposent pas.",
+            ),
+            (
+                "Le rôle des taux US",
+                "L'or ne verse pas de rendement. Quand les rendements US montent, les actifs rémunérés deviennent plus compétitifs. Quand ils baissent, l'or peut retrouver de l'attrait, notamment si le marché anticipe une Fed moins restrictive.",
+            ),
+            (
+                "Quand DXY et taux ne racontent pas la même histoire",
+                "Il arrive que le dollar monte alors que les taux baissent, ou l'inverse. Dans ce cas, la lecture devient moins directe. Le trader doit chercher quel driver domine réellement le mouvement de XAU/USD.",
+            ),
+            (
+                "Ajouter le sentiment de risque",
+                "En période de stress, l'or peut être soutenu même si certains drivers semblent défavorables. À l'inverse, une séance très risk-on peut réduire la demande refuge. C'est pour cela qu'une lecture multi-facteurs est nécessaire.",
+            ),
+            (
+                "Comment XAUTERMINAL organise cette lecture",
+                "Le terminal regroupe DXY, US10Y, news macro, calendrier économique et Bias Desk. L'idée est de vérifier rapidement si les mouvements se confirment ou se contredisent avant de prendre une décision.",
+            ),
+        ],
+        "links": [
+            ("/terminal-xauusd", "Voir l'approche XAU/USD"),
+            ("/guide/trading-or-macro", "Lire le guide macro"),
+            ("/#pricing", "Essayer XAUTERMINAL"),
+        ],
+        "faqs": [
+            (
+                "XAU/USD baisse-t-il toujours quand DXY monte ?",
+                "Non. C'est une relation fréquente mais pas mécanique. Les taux, la Fed, le risque géopolitique et le momentum peuvent modifier ou retarder la réaction.",
+            ),
+            (
+                "Les taux US sont-ils plus importants que le dollar ?",
+                "Cela dépend du contexte. Certaines séances sont dominées par le dollar, d'autres par les rendements, la Fed ou le sentiment de risque. L'intérêt est de comparer ces forces ensemble.",
+            ),
+        ],
+    },
+    "bias_desk": {
+        "path": "/guides/bias-desk-trading",
+        "title": "Bias Desk trading: lire les drivers sans confondre outil et signal",
+        "description": "Comprendre comment utiliser un Bias Desk pour organiser les drivers de marché sans transformer une synthèse macro en signal de trading automatique.",
+        "kicker": "BIAS DESK",
+        "h1": "Bias Desk trading: lire les drivers sans confondre outil et signal",
+        "intro": "Un Bias Desk sert à résumer une lecture de marché: momentum, macro, risque événementiel, sentiment et drivers principaux. Il ne remplace pas une stratégie, mais il peut aider à éviter les décisions prises sur une seule information.",
+        "sections": [
+            (
+                "Ce qu'un bias veut dire",
+                "Un bias est une orientation de contexte, pas une certitude. Bullish signifie que plusieurs éléments soutiennent plutôt la hausse. Bearish signifie que les pressions baissières dominent. Neutral ou WAIT indique souvent un manque d'alignement.",
+            ),
+            (
+                "Pourquoi les drivers sont plus utiles que le score seul",
+                "Le score donne une synthèse rapide, mais les raisons sont plus importantes. Un trader doit savoir si le bias vient du dollar, des taux, du momentum, d'une news ou d'un risque événementiel.",
+            ),
+            (
+                "Lire le risque événementiel",
+                "Un contexte favorable peut devenir dangereux juste avant une annonce majeure. Si le calendrier indique un risque élevé, la bonne décision peut être d'attendre, même si le reste du marché semble aligné.",
+            ),
+            (
+                "Utiliser le bias avec le graphique",
+                "Le graphique reste indispensable pour le timing. Le bias aide à préparer le scénario; le prix aide à décider si ce scénario mérite d'être exécuté, invalidé ou simplement observé.",
+            ),
+            (
+                "Les limites d'une synthèse automatique",
+                "Aucun outil ne peut comprendre parfaitement chaque nuance de marché. Le Bias Desk doit être traité comme une aide à la lecture, avec une vérification humaine et une gestion du risque indépendante.",
+            ),
+        ],
+        "links": [
+            ("/terminal-xauusd", "Voir le terminal XAU/USD"),
+            ("/guides/routine-trading-xauusd", "Construire une routine"),
+            ("/risk-disclaimer", "Lire le disclaimer trading"),
+        ],
+        "faqs": [
+            (
+                "Le Bias Desk donne-t-il des signaux d'achat ou de vente ?",
+                "Non. Il organise les drivers de marché. La décision d'entrer, sortir ou rester à l'écart doit venir de ta stratégie, de ton timing et de ta gestion du risque.",
+            ),
+            (
+                "Pourquoi le Bias Desk affiche parfois WAIT ?",
+                "WAIT apparaît quand les drivers sont mixtes, quand la confiance est insuffisante ou quand un risque événementiel rend la lecture trop instable.",
+            ),
+        ],
+    },
 }
 
 RESOURCE_PAGE_ORDER = [
     "terminal_xauusd",
     "calendrier_or",
     "news_forex_or",
+    "guide_trading_or_macro",
+]
+
+GUIDE_PAGE_ORDER = [
+    "routine_trading_xauusd",
+    "dxy_taux_or",
+    "bias_desk",
     "guide_trading_or_macro",
 ]
 
@@ -386,6 +528,7 @@ def content_page(page_key: str) -> str:
             <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
         </div>
         <nav aria-label="Ressources">
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/terminal-xauusd" data-i18n="resource_terminal_short">XAU/USD</a>
             <a href="/calendrier-economique-or" data-i18n="resource_calendar_short">Calendrier or</a>
             <a href="/news-forex-or" data-i18n="resource_news_short">News forex</a>
@@ -476,6 +619,103 @@ def resources_page() -> str:
             <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terms" data-i18n="terms_kicker">CGU</a>
             <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
+            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
+        </nav>
+    </footer>
+    <script src="/static/landing.js"></script>
+</body>
+</html>"""
+
+
+def guides_page() -> str:
+    canonical = absolute_url("/guides")
+    rows = "\n".join(
+        f"""        <article class="guide-card">
+            <div class="guide-card-top">
+                <span data-i18n="seo_{key}_kicker">{escape(SEO_CONTENT_PAGES[key]["kicker"])}</span>
+                <a class="resource-link-button" href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}" data-i18n="resources_page_read">Lire</a>
+            </div>
+            <h2><a href="{escape(SEO_CONTENT_PAGES[key]["path"], quote=True)}" data-i18n="seo_{key}_h1">{escape(SEO_CONTENT_PAGES[key]["h1"])}</a></h2>
+            <p data-i18n="seo_{key}_description">{escape(SEO_CONTENT_PAGES[key]["description"])}</p>
+        </article>"""
+        for key in GUIDE_PAGE_ORDER
+    )
+    structured_data = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": "Guides trading XAUTERMINAL",
+            "description": "Guides pratiques pour préparer une session XAU/USD, comprendre DXY, les taux US, les news macro et le Bias Desk.",
+            "url": canonical,
+            "hasPart": [
+                {
+                    "@type": "Article",
+                    "headline": SEO_CONTENT_PAGES[key]["h1"],
+                    "description": SEO_CONTENT_PAGES[key]["description"],
+                    "url": absolute_url(SEO_CONTENT_PAGES[key]["path"]),
+                }
+                for key in GUIDE_PAGE_ORDER
+            ],
+        },
+        ensure_ascii=False,
+    )
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="guides_page_title">Guides trading XAU/USD, macro et Bias Desk - XAUTERMINAL</title>
+    <meta name="description" content="Guides XAUTERMINAL pour préparer une session XAU/USD, comprendre DXY, les taux US, les news macro et utiliser un Bias Desk." data-i18n-content="guides_page_description">
+    <link rel="canonical" href="{canonical}">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="XAUTERMINAL">
+    <meta property="og:title" content="Guides trading XAU/USD, macro et Bias Desk" data-i18n-content="guides_page_title">
+    <meta property="og:description" content="Guides pratiques pour mieux préparer une session de trading avec le terminal XAUTERMINAL." data-i18n-content="guides_page_description">
+    <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
+    <meta name="twitter:card" content="summary">
+{FAVICON_LINKS}
+    <link rel="stylesheet" href="/static/styles.css">
+    <script type="application/ld+json">{structured_data}</script>
+</head>
+<body class="legal-body">
+    <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="XAUTERMINAL">
+            {BRAND_MARKUP}
+        </a>
+        <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/ressources" data-i18n="nav_resources">Ressources</a>
+            <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
+            <button type="button" class="landing-lang" data-lang-toggle>EN</button>
+        </nav>
+    </header>
+    <main class="legal-page guide-index-page">
+        <div class="landing-kicker" data-i18n="guides_page_kicker">GUIDES TRADING</div>
+        <h1 data-i18n="guides_page_h1">Guides trading XAU/USD, macro et Bias Desk</h1>
+        <p data-i18n="guides_page_intro">Ces guides servent à construire une routine claire autour du terminal: préparer une session, lire DXY et les taux US, filtrer les news et utiliser le Bias Desk sans le confondre avec un signal automatique.</p>
+        <section class="guide-grid">
+{rows}
+        </section>
+        <section class="legal-contact">
+            <h2 data-i18n="guides_page_next_title">Utiliser les guides avec le terminal</h2>
+            <p data-i18n="guides_page_next_copy">Commence par comprendre la routine, puis ouvre le terminal pour vérifier le calendrier, les news, le graphique et les drivers en conditions réelles.</p>
+            <div class="landing-actions">
+                <a class="resource-cta" href="/#pricing" data-i18n="guides_page_trial">Tester XAUTERMINAL</a>
+                <a class="resource-link-button" href="/ressources" data-i18n="guides_page_resources">Voir toutes les ressources</a>
+            </div>
+        </section>
+    </main>
+    <footer class="landing-footer">
+        <div>
+            <strong>XAUTERMINAL</strong>
+            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
+        </div>
+        <nav aria-label="Guides et ressources">
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
+            <a href="/ressources" data-i18n="nav_resources">Ressources</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
         </nav>
     </footer>
@@ -724,6 +964,11 @@ async def resources_index_page():
     return HTMLResponse(resources_page())
 
 
+@router.get("/guides", response_class=HTMLResponse)
+async def guides_index_page():
+    return HTMLResponse(guides_page())
+
+
 @router.get("/support", response_class=HTMLResponse)
 async def support_index_page():
     return HTMLResponse(support_page())
@@ -747,6 +992,21 @@ async def news_forex_or_page():
 @router.get("/guide/trading-or-macro", response_class=HTMLResponse)
 async def guide_trading_or_macro_page():
     return HTMLResponse(content_page("guide_trading_or_macro"))
+
+
+@router.get("/guides/routine-trading-xauusd", response_class=HTMLResponse)
+async def routine_trading_xauusd_page():
+    return HTMLResponse(content_page("routine_trading_xauusd"))
+
+
+@router.get("/guides/dxy-taux-us-or", response_class=HTMLResponse)
+async def dxy_taux_us_or_page():
+    return HTMLResponse(content_page("dxy_taux_or"))
+
+
+@router.get("/guides/bias-desk-trading", response_class=HTMLResponse)
+async def bias_desk_trading_page():
+    return HTMLResponse(content_page("bias_desk"))
 
 
 @router.get("/terms", response_class=HTMLResponse)
@@ -809,10 +1069,14 @@ async def sitemap_xml():
         ("/", "daily", "1.0"),
         ("/support", "weekly", "0.7"),
         ("/ressources", "weekly", "0.8"),
+        ("/guides", "weekly", "0.8"),
         ("/terminal-xauusd", "weekly", "0.8"),
         ("/calendrier-economique-or", "weekly", "0.8"),
         ("/news-forex-or", "weekly", "0.8"),
         ("/guide/trading-or-macro", "weekly", "0.8"),
+        ("/guides/routine-trading-xauusd", "weekly", "0.8"),
+        ("/guides/dxy-taux-us-or", "weekly", "0.8"),
+        ("/guides/bias-desk-trading", "weekly", "0.8"),
         ("/terms", "monthly", "0.5"),
         ("/privacy", "monthly", "0.5"),
         ("/risk-disclaimer", "monthly", "0.5"),
