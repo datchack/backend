@@ -17,18 +17,18 @@ from app.services.quotes import fetch_market_snapshot
 _context_cache: dict[str, dict] = {}
 CONTEXT_CACHE_TTL = 30
 MARKET_SYMBOLS = {
-    "gold": {"symbol": "GC=F", "label": "GOLD"},
-    "silver": {"symbol": "SI=F", "label": "SILVER"},
-    "dxy": {"symbol": "DX-Y.NYB", "label": "DXY"},
-    "us10y": {"symbol": "^TNX", "label": "US10Y"},
-    "oil": {"symbol": "CL=F", "label": "WTI"},
-    "spy": {"symbol": "SPY", "label": "SPY"},
-    "qqq": {"symbol": "QQQ", "label": "QQQ"},
-    "tlt": {"symbol": "TLT", "label": "TLT"},
-    "eurusd": {"symbol": "EURUSD=X", "label": "EUR/USD"},
-    "gbpusd": {"symbol": "GBPUSD=X", "label": "GBP/USD"},
-    "usdjpy": {"symbol": "JPY=X", "label": "USD/JPY"},
-    "btc": {"symbol": "BTC-USD", "label": "BTC"},
+    "gold": {"symbol": "GC=F", "tv_symbol": "OANDA:XAUUSD", "label": "GOLD"},
+    "silver": {"symbol": "SI=F", "tv_symbol": "OANDA:XAGUSD", "label": "SILVER"},
+    "dxy": {"symbol": "DX-Y.NYB", "tv_symbol": "CAPITALCOM:DXY", "label": "DXY"},
+    "us10y": {"symbol": "^TNX", "tv_symbol": "TVC:US10Y", "label": "US10Y"},
+    "oil": {"symbol": "CL=F", "tv_symbol": "TVC:USOIL", "label": "WTI"},
+    "spy": {"symbol": "SPY", "tv_symbol": "AMEX:SPY", "label": "SPY"},
+    "qqq": {"symbol": "QQQ", "tv_symbol": "NASDAQ:QQQ", "label": "QQQ"},
+    "tlt": {"symbol": "TLT", "tv_symbol": "NASDAQ:TLT", "label": "TLT"},
+    "eurusd": {"symbol": "EURUSD=X", "tv_symbol": "FX:EURUSD", "label": "EUR/USD"},
+    "gbpusd": {"symbol": "GBPUSD=X", "tv_symbol": "FX:GBPUSD", "label": "GBP/USD"},
+    "usdjpy": {"symbol": "JPY=X", "tv_symbol": "FX:USDJPY", "label": "USD/JPY"},
+    "btc": {"symbol": "BTC-USD", "tv_symbol": "BITSTAMP:BTCUSD", "label": "BTC"},
 }
 
 CURRENCY_COUNTRIES = {

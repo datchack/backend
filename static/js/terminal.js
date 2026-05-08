@@ -48,7 +48,7 @@ import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
 import { bindMarketSelector, renderCompactProfileSelect } from './terminal-market-selector.js';
 import { renderNewsError, renderNewsFeed } from './terminal-news.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
-import { bindQuoteCards, startQuotesRefresh } from './terminal-quotes.js';
+import { bindQuoteCards, renderQuoteRadar, startQuotesRefresh } from './terminal-quotes.js';
 import {
     beep as playNotificationSound,
     bindSoundPicker as bindSoundPickerControl,
@@ -521,6 +521,7 @@ async function fetchContext(scheduleNext = true) {
     try {
         const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery(), currentSymbol);
         contextState = payload;
+        renderQuoteRadar(payload, { currentSymbol, selectedKeys: customWatchlistKeys });
         renderMarketContext(payload, { selectedKeys: customWatchlistKeys, onSymbolSelect: changeChart });
         renderCustomizePanel();
         updateClocks();

@@ -16,6 +16,8 @@ PREFS_ALLOWED_KEYS = {
     "watchlistKeys",
     "widgets",
     "layout",
+    "marketFavorites",
+    "marketRecents",
 }
 
 

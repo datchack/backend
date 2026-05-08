@@ -6,6 +6,18 @@ let quotesRefreshTimer = null;
 let quoteSocket = null;
 let quoteSocketReconnectTimer = null;
 
+function quoteSymbol(quote, fallback = '') {
+    return quote?.tv_symbol || quote?.symbol || fallback;
+}
+
+function quoteKey(quote) {
+    return String(quote?.key || quote?.label || quoteSymbol(quote)).toLowerCase().replace(/[^a-z0-9_]/g, '');
+}
+
+function quoteName(quote) {
+    return quote?.name || quote?.label || quoteSymbol(quote);
+}
+
 function getQuoteSocketUrl() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${window.location.host}/ws/market-quotes`;
@@ -33,14 +45,14 @@ function renderQuoteCards(items = [], currentSymbol = '') {
             }, 0);
         }
         card.dataset.price = Number.isFinite(nextPrice) ? String(nextPrice) : '';
-        card.dataset.symbol = quote.tv_symbol || card.dataset.symbol;
+        card.dataset.symbol = quoteSymbol(quote, card.dataset.symbol);
         card.classList.toggle('active', card.dataset.symbol === currentSymbol);
         card.innerHTML = `
             <span class="quote-accent"></span>
             <span class="quote-card-head">
                 <span>
                     <strong>${quote.label || quote.symbol}</strong>
-                    <em>${quote.name || ''}</em>
+                    <em>${quoteName(quote)}</em>
                 </span>
                 <span class="quote-source">${quote.source || 'FMP'}</span>
             </span>
@@ -48,6 +60,42 @@ function renderQuoteCards(items = [], currentSymbol = '') {
             <span class="quote-change">${formatQuoteChange(quote.change, quote.change_pct)}</span>
         `;
     });
+}
+
+export function renderQuoteRadar(context, { currentSymbol = '', selectedKeys = null } = {}) {
+    const header = document.querySelector('.header');
+    if (!header || !context) return;
+
+    const available = context.available_watchlist || context.watchlist || [];
+    const selected = Array.isArray(selectedKeys) && selectedKeys.length
+        ? available.filter((item) => selectedKeys.includes(item.key))
+        : (context.watchlist || available);
+    const items = selected.slice(0, 8);
+
+    if (!items.length) return;
+
+    header.innerHTML = items.map((quote, index) => {
+        const key = quoteKey(quote);
+        const symbol = quoteSymbol(quote);
+        const price = Number(quote.price);
+        const change = Number(quote.change || 0);
+        const tone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+        const isActive = symbol === currentSymbol || (!index && !currentSymbol);
+        return `
+            <button type="button" class="qcard ${tone} ${isActive ? 'active' : ''}" data-symbol="${symbol}" data-quote-key="${key}" data-price="${Number.isFinite(price) ? price : ''}">
+                <span class="quote-accent"></span>
+                <span class="quote-card-head">
+                    <span>
+                        <strong>${quote.label || symbol}</strong>
+                        <em>${quoteName(quote)}</em>
+                    </span>
+                    <span class="quote-source">${quote.source || 'LIVE'}</span>
+                </span>
+                <span class="quote-price">${formatQuotePrice(quote.price, quote.decimals ?? 2)}</span>
+                <span class="quote-change">${formatQuoteChange(quote.change, quote.change_pct)}</span>
+            </button>
+        `;
+    }).join('');
 }
 
 function connectQuoteStream({ hasAccess, getCurrentSymbol }) {
