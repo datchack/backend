@@ -4,9 +4,13 @@ function normalize(value) {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function normalizeSymbol(value) {
+    return normalize(String(value || '').split(':').pop());
+}
+
 function profileMatches(profile, query) {
     if (!query) return true;
-    const haystack = normalize(`${profile.label} ${profile.symbol} ${profile.description || ''}`);
+    const haystack = normalize(`${profile.label} ${String(profile.symbol || '').split(':').pop()} ${profile.description || ''}`);
     return haystack.includes(normalize(query));
 }
 
@@ -105,7 +109,7 @@ export function bindMarketSelector({
             return matchesCategory && profileMatches(profile, query);
         });
         const customSymbol = buildCustomSymbol(query);
-        const hasExactProfile = customSymbol && Object.values(profiles).some((profile) => normalize(profile.symbol) === normalize(customSymbol));
+        const hasExactProfile = customSymbol && Object.values(profiles).some((profile) => normalizeSymbol(profile.symbol) === normalizeSymbol(customSymbol));
         const showCustom = !!customSymbol && activeCategory !== 'favorites' && !hasExactProfile;
         const resultCount = items.length + (showCustom ? 1 : 0);
 

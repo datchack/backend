@@ -46,6 +46,23 @@ CURRENCY_COUNTRIES = {
 
 CRYPTO_SYMBOLS = {"BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC"}
 EQUITY_EXCHANGES = {"NASDAQ", "NYSE", "AMEX", "NASDAQGM", "NASDAQGS"}
+SPECIAL_CONTEXT_SYMBOLS = {
+    "XPTUSD": ("xptusd", "PL=F", "XPT/USD", "metal"),
+    "XPDUSD": ("xpdusd", "PA=F", "XPD/USD", "metal"),
+    "SPX": ("spx", "^GSPC", "S&P 500", "index"),
+    "DJI": ("dow", "^DJI", "Dow Jones", "index"),
+    "RUT": ("russell", "^RUT", "Russell 2000", "index"),
+    "DAX": ("dax", "^GDAXI", "DAX 40", "index"),
+    "PX1": ("cac", "^FCHI", "CAC 40", "index"),
+    "UKX": ("ftse", "^FTSE", "FTSE 100", "index"),
+    "NI225": ("nikkei", "^N225", "Nikkei 225", "index"),
+    "HSI": ("hsi", "^HSI", "Hang Seng", "index"),
+    "VIX": ("vix", "^VIX", "VIX", "volatility"),
+    "USOIL": ("usoil", "CL=F", "WTI Oil", "commodity"),
+    "UKOIL": ("ukoil", "BZ=F", "Brent Oil", "commodity"),
+    "NATGAS": ("natgas", "NG=F", "Natural Gas", "commodity"),
+    "HG1": ("copper", "HG=F", "Copper", "commodity"),
+}
 
 BIAS_PROFILES = {
     "xauusd": {
@@ -793,23 +810,26 @@ def dynamic_forex_context_config(symbol: str | None) -> tuple[str, dict] | None:
     return pair_key, config
 
 
-def generic_yahoo_symbol(symbol: str | None) -> tuple[str, str, str] | None:
+def generic_yahoo_symbol(symbol: str | None) -> tuple[str, str, str, str] | None:
     raw_symbol = (symbol or "").strip().upper()
     exchange = raw_symbol.split(":", 1)[0] if ":" in raw_symbol else ""
     normalized = normalize_tradingview_symbol(symbol)
     if not normalized:
         return None
 
+    if normalized in SPECIAL_CONTEXT_SYMBOLS:
+        return SPECIAL_CONTEXT_SYMBOLS[normalized]
+
     if normalized.endswith("USDT") and normalized[:-4] in CRYPTO_SYMBOLS:
         base = normalized[:-4]
-        return f"{base.lower()}usd", f"{base}-USD", f"{base}/USD"
+        return f"{base.lower()}usd", f"{base}-USD", f"{base}/USD", "crypto"
 
     if normalized.endswith("USD") and normalized[:-3] in CRYPTO_SYMBOLS:
         base = normalized[:-3]
-        return f"{base.lower()}usd", f"{base}-USD", f"{base}/USD"
+        return f"{base.lower()}usd", f"{base}-USD", f"{base}/USD", "crypto"
 
     if (exchange in EQUITY_EXCHANGES or not exchange) and 1 <= len(normalized) <= 8:
-        return f"eq_{normalized.lower()}", normalized.replace(".", "-"), normalized
+        return f"eq_{normalized.lower()}", normalized.replace(".", "-"), normalized, "equity"
 
     return None
 
@@ -819,11 +839,13 @@ def generic_symbol_context_config(symbol: str | None) -> tuple[str, dict] | None
     if not parsed:
         return None
 
-    target_key, yahoo_symbol, label = parsed
+    target_key, yahoo_symbol, label, kind = parsed
     normalized = normalize_tradingview_symbol(symbol)
     raw_symbol = (symbol or "").strip().upper()
     tv_symbol = raw_symbol if ":" in raw_symbol else normalized
-    is_crypto = yahoo_symbol.endswith("-USD")
+    is_crypto = kind == "crypto"
+    beta_key = "btc" if is_crypto else "gold" if kind == "metal" else "oil" if kind == "commodity" else "spy"
+    beta_label = "Crypto beta" if is_crypto else "Metals beta" if kind == "metal" else "Commodity beta" if kind == "commodity" else "Equity beta"
 
     symbols = {
         target_key: {"symbol": yahoo_symbol, "tv_symbol": tv_symbol, "label": label},
@@ -843,8 +865,8 @@ def generic_symbol_context_config(symbol: str | None) -> tuple[str, dict] | None
             "neutral": f"{label} momentum undecided",
         },
         {
-            "key": "qqq" if not is_crypto else "btc",
-            "label": "Crypto beta" if is_crypto else "Tech beta",
+            "key": beta_key,
+            "label": beta_label,
             "bullish_when": "up",
             "weight": 1.4,
             "strong": 1.20 if is_crypto else 0.90,
