@@ -24,6 +24,7 @@ from app.services.quotes import (
     _quote_latest_by_key,
     _quote_ws_clients,
     _quotes_cache,
+    fetch_custom_quote_cards,
     fetch_quote_cards,
     public_quote_snapshot,
 )
@@ -37,8 +38,18 @@ async def market_profiles(request: Request):
 
 
 @router.get("/api/market-quotes")
-async def market_quotes(request: Request):
+async def market_quotes(request: Request, symbols: Optional[str] = None):
     require_terminal_access(request)
+    if symbols:
+        requested_symbols = [symbol.strip() for symbol in symbols.split(",") if symbol.strip()]
+        quotes = await fetch_custom_quote_cards(requested_symbols)
+        return {
+            "items": quotes,
+            "count": len(quotes),
+            "cached": False,
+            "age": 0,
+        }
+
     quotes = await fetch_quote_cards()
     return {
         "items": quotes,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 from typing import Any
 
@@ -29,6 +30,101 @@ QUOTE_CARDS = [
 ]
 QUOTE_CARD_BY_KEY = {card["key"]: card for card in QUOTE_CARDS}
 QUOTE_CARD_BY_WS = {card["ws_symbol"]: card for card in QUOTE_CARDS if card.get("ws_symbol")}
+QUOTE_CARD_BY_TV = {
+    re.sub(r"[^A-Z0-9]", "", card["tv_symbol"].split(":")[-1].upper()): card
+    for card in QUOTE_CARDS
+}
+
+CUSTOM_SYMBOLS = {
+    "XAUUSD": {"symbol": "GC=F", "tv_symbol": "OANDA:XAUUSD", "label": "XAU/USD", "decimals": 2},
+    "XAGUSD": {"symbol": "SI=F", "tv_symbol": "OANDA:XAGUSD", "label": "XAG/USD", "decimals": 4},
+    "DXY": {"symbol": "DX-Y.NYB", "tv_symbol": "CAPITALCOM:DXY", "label": "DXY", "decimals": 3},
+    "US10Y": {"symbol": "^TNX", "tv_symbol": "TVC:US10Y", "label": "US10Y", "decimals": 3},
+    "USOIL": {"symbol": "CL=F", "tv_symbol": "TVC:USOIL", "label": "WTI", "decimals": 2},
+    "UKOIL": {"symbol": "BZ=F", "tv_symbol": "TVC:UKOIL", "label": "BRENT", "decimals": 2},
+    "NATGAS": {"symbol": "NG=F", "tv_symbol": "TVC:NATGAS", "label": "NATGAS", "decimals": 3},
+    "BTCUSD": {"symbol": "BTC-USD", "tv_symbol": "BITSTAMP:BTCUSD", "label": "BTC/USD", "decimals": 2},
+    "ETHUSD": {"symbol": "ETH-USD", "tv_symbol": "BITSTAMP:ETHUSD", "label": "ETH/USD", "decimals": 2},
+}
+
+CURRENCY_CODES = {"USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD", "CNY", "HKD"}
+CRYPTO_CODES = {"BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC"}
+
+
+def normalize_custom_symbol(symbol: str) -> str:
+    return re.sub(r"[^A-Z0-9]", "", str(symbol or "").split(":")[-1].upper())
+
+
+def forex_yahoo_symbol(base: str, quote: str) -> str:
+    if base == "USD":
+        return f"{quote}=X"
+    return f"{base}{quote}=X"
+
+
+def format_custom_label(normalized: str) -> str:
+    if len(normalized) == 6 and normalized[:3] in CURRENCY_CODES and normalized[3:] in CURRENCY_CODES:
+        return f"{normalized[:3]}/{normalized[3:]}"
+    if normalized.endswith("USD") and normalized[:-3] in CRYPTO_CODES:
+        return f"{normalized[:-3]}/USD"
+    return normalized
+
+
+def custom_quote_card(symbol: str) -> dict | None:
+    raw_symbol = str(symbol or "").strip().upper()
+    normalized = normalize_custom_symbol(raw_symbol)
+    if not normalized:
+        return None
+
+    known = QUOTE_CARD_BY_TV.get(normalized)
+    if known:
+        return known
+
+    special = CUSTOM_SYMBOLS.get(normalized)
+    if special:
+        return {
+            "key": f"custom_{normalized.lower()}",
+            "name": special["label"],
+            "fallback_symbol": special["symbol"],
+            **special,
+        }
+
+    if len(normalized) == 6 and normalized[:3] in CURRENCY_CODES and normalized[3:] in CURRENCY_CODES:
+        base = normalized[:3]
+        quote = normalized[3:]
+        return {
+            "key": f"custom_{normalized.lower()}",
+            "label": f"{base}/{quote}",
+            "name": "FOREX",
+            "symbol": forex_yahoo_symbol(base, quote),
+            "fallback_symbol": forex_yahoo_symbol(base, quote),
+            "tv_symbol": raw_symbol if ":" in raw_symbol else f"FX:{normalized}",
+            "decimals": 5,
+        }
+
+    if normalized.endswith("USDT") and normalized[:-4] in CRYPTO_CODES:
+        normalized = f"{normalized[:-4]}USD"
+
+    if normalized.endswith("USD") and normalized[:-3] in CRYPTO_CODES:
+        base = normalized[:-3]
+        return {
+            "key": f"custom_{normalized.lower()}",
+            "label": f"{base}/USD",
+            "name": "CRYPTO",
+            "symbol": f"{base}-USD",
+            "fallback_symbol": f"{base}-USD",
+            "tv_symbol": raw_symbol if ":" in raw_symbol else f"BITSTAMP:{normalized}",
+            "decimals": 2,
+        }
+
+    return {
+        "key": f"custom_{normalized.lower()}",
+        "label": format_custom_label(normalized),
+        "name": "CUSTOM",
+        "symbol": normalized.replace(".", "-"),
+        "fallback_symbol": normalized.replace(".", "-"),
+        "tv_symbol": raw_symbol if ":" in raw_symbol else normalized,
+        "decimals": 2,
+    }
 
 
 async def fetch_market_snapshot(session: aiohttp.ClientSession, symbol: str) -> dict | None:
@@ -249,7 +345,7 @@ async def fetch_fmp_quote(session: aiohttp.ClientSession, card: dict) -> dict | 
 
 
 async def fetch_quote_card(session: aiohttp.ClientSession, card: dict) -> dict:
-    fmp_quote = await fetch_fmp_quote(session, card)
+    fmp_quote = await fetch_fmp_quote(session, card) if card.get("fmp_symbol") else None
     if fmp_quote:
         return fmp_quote
 
@@ -273,6 +369,25 @@ async def fetch_quote_card(session: aiohttp.ClientSession, card: dict) -> dict:
         "time": None,
         "source": "UNAVAILABLE",
     }
+
+
+async def fetch_custom_quote_cards(symbols: list[str]) -> list[dict]:
+    cards = []
+    seen = set()
+    for symbol in symbols[:8]:
+        card = custom_quote_card(symbol)
+        if not card:
+            continue
+        key = card["key"]
+        if key in seen:
+            continue
+        seen.add(key)
+        cards.append(card)
+
+    async with aiohttp.ClientSession(headers={"User-Agent": "Mozilla/5.0 TradingTerminal"}) as session:
+        quotes = await asyncio.gather(*(fetch_quote_card(session, card) for card in cards))
+
+    return [public_quote_snapshot(quote) for quote in quotes]
 
 
 async def fetch_quote_cards() -> list[dict]:

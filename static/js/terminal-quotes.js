@@ -2,9 +2,14 @@ import { QUOTES_REFRESH_MS } from './terminal-config.js';
 import { formatQuoteChange, formatQuotePrice } from './terminal-formatters.js';
 import { fetchMarketQuotes } from './terminal-market-api.js';
 
+const QUOTE_SLOT_COUNT = 8;
+
 let quotesRefreshTimer = null;
-let quoteSocket = null;
-let quoteSocketReconnectTimer = null;
+let latestQuotes = [];
+
+function normalizeSymbol(symbol) {
+    return String(symbol || '').trim().toUpperCase();
+}
 
 function quoteSymbol(quote, fallback = '') {
     return quote?.tv_symbol || quote?.symbol || fallback;
@@ -22,152 +27,158 @@ function quoteSource(quote) {
     return quote?.source || 'YAHOO';
 }
 
-function getQuoteSocketUrl() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${window.location.host}/ws/market-quotes`;
+function cardFromSymbol(symbol) {
+    const normalized = normalizeSymbol(symbol);
+    if (!normalized) return null;
+    return {
+        symbol: normalized,
+        label: normalized.split(':').pop().replace(/[^A-Z0-9]/g, ''),
+    };
 }
 
-function renderQuoteCards(items = [], currentSymbol = '') {
-    const byKey = new Map(items.map((item) => [item.key, item]));
-    document.querySelectorAll('.qcard').forEach((card) => {
-        const quote = byKey.get(card.dataset.quoteKey);
-        if (!quote) return;
+function cleanCards(cards = []) {
+    const seen = new Set();
+    return cards
+        .map((card) => cardFromSymbol(card?.symbol || card))
+        .filter(Boolean)
+        .filter((card) => {
+            const key = card.symbol.split(':').pop().replace(/[^A-Z0-9]/g, '');
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .slice(0, QUOTE_SLOT_COUNT);
+}
 
-        const change = Number(quote.change || 0);
-        const nextPrice = Number(quote.price);
-        const prevPrice = Number(card.dataset.price);
-        const tickTone = Number.isFinite(prevPrice) && Number.isFinite(nextPrice) && nextPrice !== prevPrice
-            ? nextPrice > prevPrice ? 'tick-up' : 'tick-down'
-            : '';
-        const tone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
-        card.classList.remove('loading', 'up', 'down', 'flat', 'tick-up', 'tick-down');
-        card.classList.add(tone);
-        if (tickTone) {
-            window.setTimeout(() => {
-                card.classList.remove('tick-up', 'tick-down');
-                card.classList.add(tickTone);
-            }, 0);
-        }
-        card.dataset.price = Number.isFinite(nextPrice) ? String(nextPrice) : '';
-        card.dataset.symbol = quoteSymbol(quote, card.dataset.symbol);
-        card.classList.toggle('active', card.dataset.symbol === currentSymbol);
-        card.innerHTML = `
+function renderEmptyCard(index) {
+    return `
+        <button type="button" class="qcard qcard-empty" data-quote-empty="${index}" aria-label="Ajouter une carte marche">
+            <span class="quote-plus">+</span>
+        </button>
+    `;
+}
+
+function renderFilledCard(card, quote, currentSymbol) {
+    const symbol = quoteSymbol(quote, card.symbol);
+    const key = quoteKey(quote || card);
+    const price = Number(quote?.price);
+    const previousPrice = Number(card.price);
+    const change = Number(quote?.change || 0);
+    const tone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
+    const tickTone = Number.isFinite(previousPrice) && Number.isFinite(price) && price !== previousPrice
+        ? price > previousPrice ? 'tick-up' : 'tick-down'
+        : '';
+    const active = symbol === currentSymbol ? 'active' : '';
+    const loading = quote ? '' : 'loading';
+    const classes = ['qcard', tone, active, loading, tickTone].filter(Boolean).join(' ');
+
+    return `
+        <button type="button" class="${classes}" data-symbol="${symbol}" data-quote-card-symbol="${card.symbol}" data-quote-key="${key}" data-price="${Number.isFinite(price) ? price : ''}">
             <span class="quote-accent"></span>
             <span class="quote-card-head">
                 <span>
-                    <strong>${quote.label || quote.symbol}</strong>
-                    <em>${quoteName(quote)}</em>
+                    <strong>${quote?.label || card.label || symbol}</strong>
+                    <em>${quote ? quoteName(quote) : 'Chargement'}</em>
                 </span>
-                <span class="quote-source">${quoteSource(quote)}</span>
+                <span class="quote-source">${quote ? quoteSource(quote) : '...'}</span>
             </span>
-            <span class="quote-price">${formatQuotePrice(quote.price, quote.decimals ?? 2)}</span>
-            <span class="quote-change">${formatQuoteChange(quote.change, quote.change_pct)}</span>
-        `;
-    });
+            <span class="quote-price">${quote ? formatQuotePrice(quote.price, quote.decimals ?? 2) : '--'}</span>
+            <span class="quote-change">${quote ? formatQuoteChange(quote.change, quote.change_pct) : '--'}</span>
+            <span class="quote-remove" data-quote-remove="${card.symbol}" aria-label="Retirer cette carte">x</span>
+        </button>
+    `;
 }
 
-export function renderQuoteRadar(context, { currentSymbol = '', selectedKeys = null } = {}) {
+function renderQuoteSlots({ cards = [], quotes = [], currentSymbol = '' } = {}) {
     const header = document.querySelector('.header');
-    if (!header || !context) return;
+    if (!header) return;
 
-    const available = context.available_watchlist || context.watchlist || [];
-    const selected = Array.isArray(selectedKeys) && selectedKeys.length
-        ? available.filter((item) => selectedKeys.includes(item.key))
-        : (context.watchlist || available);
-    const items = selected.slice(0, 8);
+    const clean = cleanCards(cards);
+    const bySymbol = new Map();
+    const byKey = new Map();
+    quotes.forEach((quote) => {
+        bySymbol.set(normalizeSymbol(quoteSymbol(quote)), quote);
+        bySymbol.set(normalizeSymbol(quote.symbol), quote);
+        byKey.set(quoteKey(quote), quote);
+    });
 
-    if (!items.length) return;
-
-    header.innerHTML = items.map((quote, index) => {
-        const key = quoteKey(quote);
-        const symbol = quoteSymbol(quote);
-        const price = Number(quote.price);
-        const change = Number(quote.change || 0);
-        const tone = change > 0 ? 'up' : change < 0 ? 'down' : 'flat';
-        const isActive = symbol === currentSymbol || (!index && !currentSymbol);
-        return `
-            <button type="button" class="qcard ${tone} ${isActive ? 'active' : ''}" data-symbol="${symbol}" data-quote-key="${key}" data-price="${Number.isFinite(price) ? price : ''}">
-                <span class="quote-accent"></span>
-                <span class="quote-card-head">
-                    <span>
-                        <strong>${quote.label || symbol}</strong>
-                        <em>${quoteName(quote)}</em>
-                    </span>
-                    <span class="quote-source">${quoteSource(quote)}</span>
-                </span>
-                <span class="quote-price">${formatQuotePrice(quote.price, quote.decimals ?? 2)}</span>
-                <span class="quote-change">${formatQuoteChange(quote.change, quote.change_pct)}</span>
-            </button>
-        `;
-    }).join('');
-}
-
-function connectQuoteStream({ hasAccess, getCurrentSymbol }) {
-    if (!hasAccess() || quoteSocket?.readyState === WebSocket.OPEN || quoteSocket?.readyState === WebSocket.CONNECTING) {
-        return;
+    const slots = [];
+    for (let index = 0; index < QUOTE_SLOT_COUNT; index += 1) {
+        const card = clean[index];
+        if (!card) {
+            slots.push(renderEmptyCard(index));
+            continue;
+        }
+        const quote = bySymbol.get(normalizeSymbol(card.symbol)) || byKey.get(quoteKey(card));
+        slots.push(renderFilledCard(card, quote, currentSymbol));
     }
-
-    window.clearTimeout(quoteSocketReconnectTimer);
-    quoteSocket = new WebSocket(getQuoteSocketUrl());
-
-    quoteSocket.addEventListener('message', (event) => {
-        try {
-            const payload = JSON.parse(event.data);
-            if (payload.type === 'snapshot') {
-                renderQuoteCards(payload.items || [], getCurrentSymbol());
-            } else if (payload.type === 'quote' && payload.item) {
-                renderQuoteCards([payload.item], getCurrentSymbol());
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    });
-
-    quoteSocket.addEventListener('close', () => {
-        quoteSocket = null;
-        if (hasAccess()) {
-            quoteSocketReconnectTimer = window.setTimeout(() => connectQuoteStream({ hasAccess, getCurrentSymbol }), 3000);
-        }
-    });
-
-    quoteSocket.addEventListener('error', () => {
-        quoteSocket?.close();
-    });
+    header.innerHTML = slots.join('');
 }
 
-async function getMarketQuotes({ hasAccess, getCurrentSymbol }) {
+async function refreshQuotes({ hasAccess, getCurrentSymbol, getQuoteCards }) {
     if (!hasAccess()) return;
 
+    const cards = cleanCards(getQuoteCards?.() || []);
+    renderQuoteSlots({ cards, quotes: latestQuotes, currentSymbol: getCurrentSymbol() });
+    if (!cards.length) return;
+
     try {
-        const payload = await fetchMarketQuotes();
-        renderQuoteCards(payload.items || [], getCurrentSymbol());
+        const payload = await fetchMarketQuotes(cards.map((card) => card.symbol));
+        latestQuotes = payload.items || [];
+        renderQuoteSlots({
+            cards,
+            quotes: latestQuotes,
+            currentSymbol: getCurrentSymbol(),
+        });
     } catch (error) {
         console.error(error);
-        document.querySelectorAll('.qcard.loading').forEach((card) => {
-            card.innerHTML = `<span class="quote-loading">${card.dataset.quoteKey || 'QUOTE'} indisponible</span>`;
-        });
     }
 }
 
 export function startQuotesRefresh(options) {
     window.clearInterval(quotesRefreshTimer);
-    getMarketQuotes(options);
-    connectQuoteStream(options);
-    quotesRefreshTimer = window.setInterval(() => {
-        getMarketQuotes(options);
-        connectQuoteStream(options);
-    }, QUOTES_REFRESH_MS);
+    refreshQuotes(options);
+    quotesRefreshTimer = window.setInterval(() => refreshQuotes(options), QUOTES_REFRESH_MS);
 }
 
-export function bindQuoteCards(changeChart) {
+export function renderPersonalQuoteCards(cards, currentSymbol = '') {
+    renderQuoteSlots({ cards, currentSymbol });
+}
+
+export function bindQuoteCards({ onSymbolSelect, getCurrentSymbol, getQuoteCards, setQuoteCards, savePrefs, refreshQuotesNow }) {
     const header = document.querySelector('.header');
     if (!header) return;
 
     header.addEventListener('click', (event) => {
-        const card = event.target.closest('.qcard');
+        const removeButton = event.target.closest('[data-quote-remove]');
+        if (removeButton) {
+            event.stopPropagation();
+            const symbol = removeButton.dataset.quoteRemove;
+            const nextCards = cleanCards(getQuoteCards()).filter((card) => card.symbol !== symbol);
+            setQuoteCards(nextCards);
+            savePrefs({ quoteCards: nextCards });
+            renderQuoteSlots({ cards: nextCards, currentSymbol: getCurrentSymbol?.() || '' });
+            refreshQuotesNow?.();
+            return;
+        }
+
+        const emptyCard = event.target.closest('[data-quote-empty]');
+        if (emptyCard) {
+            const value = window.prompt('Symbole de la carte (ex: EURUSD, CAPITALCOM:DXY, NASDAQ:QQQ)');
+            const nextCard = cardFromSymbol(value);
+            if (!nextCard) return;
+            const nextCards = cleanCards([...getQuoteCards(), nextCard]);
+            setQuoteCards(nextCards);
+            savePrefs({ quoteCards: nextCards });
+            renderQuoteSlots({ cards: nextCards, currentSymbol: getCurrentSymbol?.() || '' });
+            refreshQuotesNow?.();
+            return;
+        }
+
+        const card = event.target.closest('.qcard[data-symbol]');
         const symbol = card?.dataset.symbol;
         if (symbol) {
-            changeChart(symbol);
+            onSymbolSelect(symbol);
         }
     });
 }

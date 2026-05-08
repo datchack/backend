@@ -6,8 +6,11 @@ async function readJsonResponse(response, fallbackMessage) {
     return payload;
 }
 
-export async function fetchMarketQuotes() {
-    const response = await fetch('/api/market-quotes', { cache: 'no-store' });
+export async function fetchMarketQuotes(symbols = []) {
+    const query = Array.isArray(symbols) && symbols.length
+        ? `?symbols=${encodeURIComponent(symbols.join(','))}`
+        : '';
+    const response = await fetch(`/api/market-quotes${query}`, { cache: 'no-store' });
     return readJsonResponse(response, 'Quotes unavailable');
 }
 

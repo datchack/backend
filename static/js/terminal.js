@@ -48,7 +48,7 @@ import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
 import { bindMarketSelector, renderCompactProfileSelect } from './terminal-market-selector.js';
 import { renderNewsError, renderNewsFeed } from './terminal-news.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
-import { bindQuoteCards, renderQuoteRadar, startQuotesRefresh } from './terminal-quotes.js';
+import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh } from './terminal-quotes.js';
 import {
     beep as playNotificationSound,
     bindSoundPicker as bindSoundPickerControl,
@@ -79,6 +79,7 @@ let soundType = PREFS.soundType || 'chime';
 let currentCenterTab = PREFS.centerTab || 'bias';
 let customCalendarCountries = Array.isArray(PREFS.calendarCountries) ? PREFS.calendarCountries : null;
 let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKeys : null;
+let quoteCards = Array.isArray(PREFS.quoteCards) ? PREFS.quoteCards : [];
 let marketFavorites = Array.isArray(PREFS.marketFavorites) ? PREFS.marketFavorites : ['xauusd', 'eurusd', 'usdjpy', 'gbpjpy'];
 let marketRecents = Array.isArray(PREFS.marketRecents) ? PREFS.marketRecents : [];
 let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
@@ -111,6 +112,7 @@ function getClientPrefsSnapshot() {
         impactFilters: calendarController?.getImpactFilters() || [],
         calendarCountries: getCalendarCountries(),
         watchlistKeys: customWatchlistKeys,
+        quoteCards,
         marketFavorites,
         marketRecents,
         widgets: widgetVisibility,
@@ -150,6 +152,7 @@ function applyLoadedPrefs(prefs = {}) {
     currentCenterTab = prefs.centerTab || currentCenterTab;
     customCalendarCountries = Array.isArray(prefs.calendarCountries) ? prefs.calendarCountries : customCalendarCountries;
     customWatchlistKeys = Array.isArray(prefs.watchlistKeys) ? prefs.watchlistKeys : customWatchlistKeys;
+    quoteCards = Array.isArray(prefs.quoteCards) ? prefs.quoteCards : quoteCards;
     marketFavorites = Array.isArray(prefs.marketFavorites) ? prefs.marketFavorites : marketFavorites;
     marketRecents = Array.isArray(prefs.marketRecents) ? prefs.marketRecents : marketRecents;
     widgetVisibility = { ...DEFAULT_WIDGETS, ...(prefs.widgets || widgetVisibility) };
@@ -171,6 +174,7 @@ function applyLoadedPrefs(prefs = {}) {
     syncCommandSymbol(currentSymbol);
     renderMarketProfileSelect();
     renderCustomizePanel();
+    renderPersonalQuoteCards(quoteCards, currentSymbol);
     applyWidgetVisibility(widgetVisibility);
     setCenterTab(currentCenterTab);
     applyLayoutState(layoutState);
@@ -196,6 +200,7 @@ function bootTerminalApp() {
     startQuotesRefresh({
         hasAccess: hasTerminalAccess,
         getCurrentSymbol: () => currentSymbol,
+        getQuoteCards: () => quoteCards,
     });
     getNews();
     fetchCalendar();
@@ -415,6 +420,14 @@ function bindMarketProfileControls() {
     });
 }
 
+function refreshQuoteCards() {
+    startQuotesRefresh({
+        hasAccess: hasTerminalAccess,
+        getCurrentSymbol: () => currentSymbol,
+        getQuoteCards: () => quoteCards,
+    });
+}
+
 function bindLayoutControls() {
     bindLayoutControlsModule({
         getLayoutState: () => layoutState,
@@ -469,6 +482,7 @@ function changeChart(symbol, options = {}) {
         rememberProfile(matchedProfileId);
     }
     changeChartView(symbol);
+    renderPersonalQuoteCards(quoteCards, currentSymbol);
     if (options.save !== false) {
         savePrefs({ symbol, marketProfile: currentMarketProfile, marketRecents, calendarCountries: customCalendarCountries });
     }
@@ -532,7 +546,6 @@ async function fetchContext(scheduleNext = true) {
     try {
         const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery(), getContextSymbol());
         contextState = payload;
-        renderQuoteRadar(payload, { currentSymbol, selectedKeys: customWatchlistKeys });
         renderMarketContext(payload, { selectedKeys: customWatchlistKeys, onSymbolSelect: changeChart });
         renderCustomizePanel();
         updateClocks();
@@ -605,7 +618,17 @@ function init() {
     applyWidgetVisibility(widgetVisibility);
     renderCustomizePanel();
     bindMarketProfileControls();
-    bindQuoteCards(changeChart);
+    renderPersonalQuoteCards(quoteCards, currentSymbol);
+    bindQuoteCards({
+        onSymbolSelect: changeChart,
+        getCurrentSymbol: () => currentSymbol,
+        getQuoteCards: () => quoteCards,
+        setQuoteCards: (nextQuoteCards) => {
+            quoteCards = nextQuoteCards;
+        },
+        savePrefs,
+        refreshQuotesNow: refreshQuoteCards,
+    });
     bindAccountControls();
     bindLayoutControls();
     bindResizers();

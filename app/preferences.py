@@ -18,6 +18,7 @@ PREFS_ALLOWED_KEYS = {
     "layout",
     "marketFavorites",
     "marketRecents",
+    "quoteCards",
 }
 
 

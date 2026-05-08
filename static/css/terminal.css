@@ -278,6 +278,30 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 
 .qcard:hover { border-color: var(--border-hot); }
 
+.qcard-empty {
+    place-items: center;
+    border-style: dashed;
+    background: rgba(255, 255, 255, 0.015);
+    color: var(--muted);
+}
+
+.qcard-empty:hover {
+    color: var(--accent);
+    background: rgba(162, 89, 255, 0.05);
+}
+
+.quote-plus {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+}
+
 .qcard.active {
     border-color: var(--accent);
     box-shadow: 0 0 10px rgba(162, 89, 255, 0.2);
@@ -858,6 +882,32 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     overflow: visible;
     padding: 12px 20px 14px;
     border-bottom: 1px solid var(--border);
+}
+
+.quote-remove {
+    position: absolute;
+    right: 7px;
+    bottom: 6px;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.qcard:hover .quote-remove {
+    opacity: 1;
+}
+
+.quote-remove:hover {
+    color: var(--sell);
+    border-color: rgba(255, 77, 109, 0.45);
 }
 
 .market-filter {
