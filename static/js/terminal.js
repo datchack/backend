@@ -4,6 +4,7 @@ import {
     DEFAULT_MARKET_PROFILE,
     DEFAULT_WIDGETS,
     MARKETS,
+    MARKET_CATEGORIES,
     MARKET_PROFILES,
     NEWS_REFRESH_MS,
     PREFS_KEY,
@@ -27,7 +28,6 @@ import {
     bindMarketProfileControls as bindMarketProfileControlsModule,
     changeChart as changeChartView,
     initChart as initChartView,
-    renderMarketProfileSelect as renderMarketProfileSelectView,
     setCenterTab as setCenterTabView,
     syncCommandSymbol,
 } from './terminal-chart.js';
@@ -45,6 +45,7 @@ import {
     loadLayoutPrefs,
 } from './terminal-layout.js';
 import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
+import { bindMarketSelector, renderCompactProfileSelect } from './terminal-market-selector.js';
 import { renderNewsError, renderNewsFeed } from './terminal-news.js';
 import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
 import { bindQuoteCards, startQuotesRefresh } from './terminal-quotes.js';
@@ -69,13 +70,15 @@ function savePrefs(patch) {
 }
 
 const PREFS = loadPrefs();
-let currentMarketProfile = PREFS.marketProfile || DEFAULT_MARKET_PROFILE;
-let currentSymbol = PREFS.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || MARKET_PROFILES[DEFAULT_MARKET_PROFILE].symbol;
+const INITIAL_URL_SYMBOL = new URLSearchParams(window.location.search).get('symbol');
+let currentMarketProfile = getProfileIdFromSymbol(INITIAL_URL_SYMBOL) || PREFS.marketProfile || DEFAULT_MARKET_PROFILE;
+let currentSymbol = INITIAL_URL_SYMBOL || PREFS.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || MARKET_PROFILES[DEFAULT_MARKET_PROFILE].symbol;
 let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let currentCenterTab = PREFS.centerTab || 'bias';
 let customCalendarCountries = Array.isArray(PREFS.calendarCountries) ? PREFS.calendarCountries : null;
 let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKeys : null;
+let marketFavorites = Array.isArray(PREFS.marketFavorites) ? PREFS.marketFavorites : ['xauusd', 'eurusd', 'usdjpy', 'gbpjpy'];
 let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
 let layoutState = loadLayoutPrefs(PREFS.layout);
 let accountMode = DEFAULT_ACCOUNT_MODE;
@@ -106,6 +109,7 @@ function getClientPrefsSnapshot() {
         impactFilters: calendarController?.getImpactFilters() || [],
         calendarCountries: getCalendarCountries(),
         watchlistKeys: customWatchlistKeys,
+        marketFavorites,
         widgets: widgetVisibility,
         layout: layoutState,
     };
@@ -136,13 +140,14 @@ function applyLoadedPrefs(prefs = {}) {
 
     writeStoredPrefs(PREFS_KEY, prefs);
 
-    currentMarketProfile = prefs.marketProfile || currentMarketProfile;
-    currentSymbol = prefs.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || currentSymbol;
+    currentMarketProfile = getProfileIdFromSymbol(INITIAL_URL_SYMBOL) || prefs.marketProfile || currentMarketProfile;
+    currentSymbol = INITIAL_URL_SYMBOL || prefs.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || currentSymbol;
     soundEnabled = typeof prefs.soundEnabled === 'boolean' ? prefs.soundEnabled : soundEnabled;
     soundType = prefs.soundType || soundType;
     currentCenterTab = prefs.centerTab || currentCenterTab;
     customCalendarCountries = Array.isArray(prefs.calendarCountries) ? prefs.calendarCountries : customCalendarCountries;
     customWatchlistKeys = Array.isArray(prefs.watchlistKeys) ? prefs.watchlistKeys : customWatchlistKeys;
+    marketFavorites = Array.isArray(prefs.marketFavorites) ? prefs.marketFavorites : marketFavorites;
     widgetVisibility = { ...DEFAULT_WIDGETS, ...(prefs.widgets || widgetVisibility) };
     layoutState = {
         ...layoutState,
@@ -198,6 +203,16 @@ function getActiveMarketProfile() {
     return MARKET_PROFILES[currentMarketProfile] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
 }
 
+function normalizeTradingViewSymbol(symbol) {
+    return String(symbol || '').split(':').pop().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function getProfileIdFromSymbol(symbol) {
+    const normalized = normalizeTradingViewSymbol(symbol);
+    if (!normalized) return null;
+    return Object.values(MARKET_PROFILES).find((profile) => normalizeTradingViewSymbol(profile.symbol) === normalized)?.id || null;
+}
+
 const CURRENCY_COUNTRIES = {
     USD: 'US',
     EUR: 'EU',
@@ -208,6 +223,7 @@ const CURRENCY_COUNTRIES = {
     CHF: 'CH',
     NZD: 'NZ',
     CNY: 'CN',
+    HKD: 'HK',
 };
 
 function parseForexSymbol(symbol) {
@@ -246,7 +262,7 @@ calendarController = createCalendarController({
 });
 
 function renderMarketProfileSelect() {
-    renderMarketProfileSelectView(MARKET_PROFILES, currentMarketProfile);
+    renderCompactProfileSelect(MARKET_PROFILES, currentMarketProfile);
 }
 
 function setMarketProfile(profileId) {
@@ -254,11 +270,13 @@ function setMarketProfile(profileId) {
     currentMarketProfile = profile.id;
     currentSymbol = profile.symbol;
     suppressNextNewsFresh = true;
+    customCalendarCountries = null;
 
     syncCommandSymbol(currentSymbol);
 
     changeChart(currentSymbol, { save: false, refresh: false });
-    savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol });
+    renderMarketProfileSelect();
+    savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol, calendarCountries: null });
     renderCustomizePanel();
     getNews();
     fetchCalendar(false);
@@ -339,6 +357,18 @@ function bindMarketProfileControls() {
         renderSelect: renderMarketProfileSelect,
         onChange: setMarketProfile,
     });
+
+    bindMarketSelector({
+        profiles: MARKET_PROFILES,
+        categories: MARKET_CATEGORIES,
+        getCurrentProfile: () => currentMarketProfile,
+        getFavorites: () => marketFavorites,
+        setFavorites: (favorites) => {
+            marketFavorites = favorites;
+            savePrefs({ marketFavorites });
+        },
+        onSelect: setMarketProfile,
+    });
 }
 
 function bindLayoutControls() {
@@ -378,9 +408,17 @@ function initChart(symbol) {
 
 function changeChart(symbol, options = {}) {
     currentSymbol = symbol;
+    const matchedProfileId = getProfileIdFromSymbol(symbol);
+    if (matchedProfileId && matchedProfileId !== currentMarketProfile) {
+        currentMarketProfile = matchedProfileId;
+        customCalendarCountries = null;
+        suppressNextNewsFresh = true;
+        renderMarketProfileSelect();
+        getNews();
+    }
     changeChartView(symbol);
     if (options.save !== false) {
-        savePrefs({ symbol, marketProfile: currentMarketProfile });
+        savePrefs({ symbol, marketProfile: currentMarketProfile, calendarCountries: customCalendarCountries });
     }
     if (options.refresh !== false) {
         fetchCalendar(false);

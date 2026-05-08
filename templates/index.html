@@ -61,6 +61,7 @@
         <div class="cmd-bar">
             <span class="prompt">&gt;</span>
             <select id="market-profile" class="market-profile-select" title="Profil de marché"></select>
+            <button type="button" id="market-selector-open" class="market-selector-open" title="Ouvrir le sélecteur de marchés">MARKETS</button>
             <input id="cmd" type="text" placeholder="Saisir un symbole (ex: OANDA:XAUUSD, CAPITALCOM:DXY, AMEX:SPY) puis Entrée..." autocomplete="off" spellcheck="false" aria-label="Charger un symbole dans le graphique">
             <span class="hint">Entrée pour charger</span>
         </div>
@@ -279,6 +280,24 @@
                 <button type="button" id="account-toggle" class="status-item status-button" title="Espace compte">MON COMPTE</button>
             </div>
             <span id="status-clock" class="status-item status-clock">--:--:--</span>
+        </div>
+    </div>
+
+    <div id="market-selector" class="market-selector-overlay hidden" aria-hidden="true">
+        <div class="market-selector-panel" role="dialog" aria-modal="true" aria-labelledby="market-selector-title">
+            <div class="market-selector-head">
+                <div>
+                    <span>MARKET DIRECTORY</span>
+                    <h2 id="market-selector-title">Sélectionner un marché</h2>
+                </div>
+                <button type="button" id="market-selector-close" class="panel-btn" title="Fermer">x</button>
+            </div>
+            <div class="market-selector-tools">
+                <input id="market-selector-search" type="search" placeholder="Rechercher EUR/USD, GBP/JPY, BTC..." autocomplete="off" spellcheck="false">
+                <span id="market-selector-count" class="desk-pill">0 marché</span>
+            </div>
+            <div id="market-selector-categories" class="market-selector-categories" aria-label="Catégories de marchés"></div>
+            <div id="market-selector-grid" class="market-selector-grid"></div>
         </div>
     </div>
 

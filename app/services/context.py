@@ -41,6 +41,7 @@ CURRENCY_COUNTRIES = {
     "CHF": "CH",
     "NZD": "NZ",
     "CNY": "CN",
+    "HKD": "HK",
 }
 
 CRYPTO_SYMBOLS = {"BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC"}
@@ -892,7 +893,7 @@ async def fetch_market_context(profile_id: Optional[str] = None, countries: Opti
     profile = get_market_profile(profile_id)
     dynamic_config = None
     symbol_profile_id = known_profile_from_symbol(symbol)
-    if symbol_profile_id:
+    if symbol_profile_id and symbol_profile_id in BIAS_PROFILES:
         bias_profile_id = symbol_profile_id
     else:
         dynamic = dynamic_forex_context_config(symbol)
