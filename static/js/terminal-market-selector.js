@@ -204,7 +204,7 @@ export function bindMarketSelector({
                     <span>${kicker}</span>
                     <h3>${title}</h3>
                 </div>
-                <div class="market-selector-grid">${cards}</div>
+                <div class="market-selector-cards">${cards}</div>
             </section>`;
     }
 
@@ -292,7 +292,7 @@ export function bindMarketSelector({
         }
 
         gridRoot.innerHTML = profileCards || customCard
-            ? `<div class="market-selector-grid">${profileCards}${customCard}</div>`
+            ? `<div class="market-selector-cards">${profileCards}${customCard}</div>`
             : '<div class="market-selector-empty">Aucun marché trouvé. Essaie un symbole TradingView comme FX:GBPJPY, XAG/USD ou NASDAQ:AAPL.</div>';
 
         bindRenderedActions();

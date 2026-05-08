@@ -896,9 +896,9 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 
 .market-selector-section-head {
     display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 12px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
     margin-bottom: 10px;
 }
 
@@ -918,17 +918,16 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     letter-spacing: 0;
 }
 
-.market-selector-section .market-selector-grid,
-#market-selector-grid > .market-selector-grid {
+.market-selector-cards {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 10px;
     padding: 0;
     overflow: visible;
 }
 
-.market-selector-section.compact .market-selector-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+.market-selector-section.compact .market-selector-cards {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .market-select-card {
@@ -952,7 +951,7 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 .market-select-main {
     appearance: none;
     width: 100%;
-    min-height: 168px;
+    min-height: 162px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -966,9 +965,14 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 }
 
 .market-select-main span {
+    display: block;
+    max-width: calc(100% - 28px);
     color: var(--accent);
-    font-size: 20px;
+    font-size: clamp(17px, 1.7vw, 20px);
     font-weight: 900;
+    line-height: 1.1;
+    overflow-wrap: normal;
+    word-break: keep-all;
 }
 
 .market-select-main strong {
@@ -977,6 +981,7 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     font-family: "Courier New", monospace;
     font-size: 11px;
     overflow-wrap: anywhere;
+    word-break: normal;
 }
 
 .market-select-main em {
@@ -2248,9 +2253,8 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
         padding: 14px;
     }
 
-    .market-selector-section .market-selector-grid,
-    #market-selector-grid > .market-selector-grid,
-    .market-selector-section.compact .market-selector-grid {
+    .market-selector-cards,
+    .market-selector-section.compact .market-selector-cards {
         grid-template-columns: 1fr;
         padding: 0;
     }
