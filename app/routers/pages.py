@@ -47,7 +47,7 @@ PUBLIC_FOOTER = """    <footer class="landing-footer">
             <div class="footer-column">
                 <h3 data-i18n="footer_product">Produit</h3>
                 <a href="/#features" data-i18n="nav_tools">Outils</a>
-                <a href="/#profiles" data-i18n="nav_markets">Marchés</a>
+                <a href="/marches" data-i18n="nav_markets">Marchés</a>
                 <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
                 <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
                 <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
@@ -849,8 +849,11 @@ def content_page(page_key: str) -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#features" data-i18n="nav_tools">Outils</a>
+            <a href="/marches" data-i18n="nav_markets">Marchés</a>
             <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -970,8 +973,11 @@ def resources_page() -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#features" data-i18n="nav_tools">Outils</a>
+            <a href="/marches" data-i18n="nav_markets">Marchés</a>
             <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -1058,8 +1064,10 @@ def guides_page() -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/ressources" data-i18n="nav_resources">Ressources</a>
+            <a href="/marches" data-i18n="nav_markets">Marchés</a>
             <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -1237,9 +1245,10 @@ def market_pulse_page(pulse: dict) -> str:
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/#features" data-i18n="nav_tools">Outils</a>
-            <a href="/#profiles" data-i18n="nav_markets">Marchés</a>
+            <a href="/marches" data-i18n="nav_markets">Marchés</a>
             <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -1489,6 +1498,7 @@ def markets_index_page() -> str:
             <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
             <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -1642,7 +1652,9 @@ def market_pair_page(slug: str) -> str:
         <nav class="landing-nav-actions" aria-label="Navigation principale">
             <a href="/marches" data-i18n="nav_markets">Marchés</a>
             <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -1771,10 +1783,11 @@ def support_page() -> str:
             {BRAND_MARKUP}
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation support">
+            <a href="/marches" data-i18n="nav_markets">Marchés</a>
+            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
             <a href="/account" data-i18n="nav_account">Mon compte</a>
-            <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
-            <a href="/ressources" data-i18n="nav_resources">Ressources</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
     </header>
@@ -1809,19 +1822,7 @@ def support_page() -> str:
         </section>
     </main>
 
-    <footer class="landing-footer">
-        <div>
-            <strong>XAUTERMINAL</strong>
-            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
-        </div>
-        <nav aria-label="Support et documents">
-            <a href="/support" data-i18n="nav_support">Support</a>
-            <a href="/ressources" data-i18n="nav_resources">Ressources</a>
-            <a href="/terms" data-i18n="terms_kicker">CGU</a>
-            <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
-            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
-        </nav>
-    </footer>
+{PUBLIC_FOOTER}
     <script src="/static/landing.js"></script>
 </body>
 </html>"""
@@ -1893,8 +1894,11 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
             {BRAND_MARKUP}
         </a>
         <nav class="landing-nav-actions" aria-label="Navigation principale">
+            <a href="/marches" data-i18n="nav_markets">Marchés</a>
             <a href="/market-pulse" data-i18n="nav_pulse">Market Pulse</a>
+            <a href="/guides" data-i18n="nav_guides">Guides</a>
             <a href="/#pricing" data-i18n="nav_pricing">Formules</a>
+            <a href="/support" data-i18n="nav_support">Support</a>
             <a href="/terminal" data-i18n="nav_terminal">Ouvrir le terminal</a>
             <button type="button" class="landing-lang" data-lang-toggle>EN</button>
         </nav>
@@ -1920,18 +1924,7 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
             <p><span data-i18n="legal_contact_copy">Pour toute question relative aux conditions d'utilisation, à la confidentialité ou aux risques liés au trading, vous pouvez nous contacter à</span> <a href="mailto:{email}">{email}</a>.</p>
         </section>
     </main>
-    <footer class="landing-footer">
-        <div>
-            <strong>{business_name}</strong>
-            <span data-i18n="footer_tagline">Terminal macro et trading professionnel. Outil d'information, pas un conseil financier.</span>
-        </div>
-        <nav aria-label="Documents légaux">
-            <a href="/support" data-i18n="nav_support">Support</a>
-            <a href="/terms" data-i18n="terms_kicker">CGU</a>
-            <a href="/privacy" data-i18n="privacy_kicker">Confidentialité</a>
-            <a href="/risk-disclaimer" data-i18n="risk_footer_link">Disclaimer trading</a>
-        </nav>
-    </footer>
+{PUBLIC_FOOTER}
     <script src="/static/landing.js"></script>
 </body>
 </html>"""

@@ -996,10 +996,13 @@ function applyLandingLanguage() {
         el.setAttribute('content', t(el.dataset.i18nContent));
     });
 
-    const title = document.querySelector('title');
+    const title = document.querySelector('title[data-i18n]');
     if (title) {
         const titleKey = title.dataset.i18n || 'meta_title';
-        title.textContent = titleKey === 'meta_title' ? t('meta_title') : `${t(titleKey)} - XAUTERMINAL`;
+        const translatedTitle = t(titleKey);
+        title.textContent = titleKey === 'meta_title' || /xauterminal/i.test(translatedTitle)
+            ? translatedTitle
+            : `${translatedTitle} - XAUTERMINAL`;
     }
 
     const toggle = document.querySelector('[data-lang-toggle]');
