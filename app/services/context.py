@@ -64,6 +64,22 @@ BIAS_PROFILES = {
             {"key": "oil", "label": "WTI", "bullish_when": "up", "weight": 1.0, "strong": 1.20, "medium": 0.50, "layer": "macro", "bullish": "Energy stress can lift XAU", "bearish": "Oil easing cools stress bid", "neutral": "Oil impact limited"},
         ],
     },
+    "xagusd": {
+        "title": "XAG/USD",
+        "target_key": "silver",
+        "target_label": "XAG",
+        "momentum_key": "silver_momo",
+        "bias_name": "XAG",
+        "bullish_action": "LONG XAG",
+        "bearish_action": "SHORT XAG",
+        "drivers": [
+            {"key": "silver", "driver_key": "silver_momo", "label": "Silver", "bullish_when": "up", "weight": 2.4, "strong": 1.00, "medium": 0.40, "layer": "momentum", "bullish": "XAG momentum confirms buyers", "bearish": "XAG momentum confirms sellers", "neutral": "XAG momentum undecided"},
+            {"key": "gold", "label": "Gold", "bullish_when": "up", "weight": 1.8, "strong": 0.90, "medium": 0.35, "layer": "momentum", "bullish": "Gold confirms metals bid", "bearish": "Gold weakness weighs on metals", "neutral": "Gold confirmation limited"},
+            {"key": "dxy", "label": "Dollar", "bullish_when": "down", "weight": 2.6, "strong": 0.25, "medium": 0.10, "layer": "macro", "bullish": "Dollar softness supports XAG", "bearish": "Dollar strength pressures XAG", "neutral": "Dollar impact limited"},
+            {"key": "us10y", "label": "US10Y", "bullish_when": "down", "weight": 2.2, "strong": 0.30, "medium": 0.12, "layer": "macro", "bullish": "Yields easing supports precious metals", "bearish": "Yields rising pressures XAG", "neutral": "Yield signal mixed"},
+            {"key": "spy", "label": "Risk", "bullish_when": "up", "weight": 1.0, "strong": 0.90, "medium": 0.35, "layer": "risk", "bullish": "Risk appetite supports industrial metals tone", "bearish": "Risk-off weakens silver beta", "neutral": "Risk tone mixed"},
+        ],
+    },
     "usdjpy": {
         "title": "USD/JPY",
         "target_key": "usdjpy",

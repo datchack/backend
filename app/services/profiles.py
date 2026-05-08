@@ -10,6 +10,14 @@ MARKET_PROFILES = {
         "keywords": ["gold", "xau", "bullion", "fed", "fomc", "powell", "cpi", "inflation", "nfp", "yields", "dollar", "dxy", "war"],
         "tags": ["XAU", "FED", "MACRO", "GEO", "OFFICIAL"],
     },
+    "xagusd": {
+        "id": "xagusd",
+        "label": "XAG/USD",
+        "symbol": "OANDA:XAGUSD",
+        "calendar_countries": ["US"],
+        "keywords": ["silver", "xag", "metals", "gold", "fed", "fomc", "powell", "cpi", "inflation", "yields", "dollar", "dxy"],
+        "tags": ["XAU", "FED", "MACRO", "MARKETS", "OFFICIAL"],
+    },
     "usdjpy": {
         "id": "usdjpy",
         "label": "USD/JPY",

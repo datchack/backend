@@ -900,6 +900,11 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     background: rgba(0, 242, 173, 0.07);
 }
 
+.market-select-card.custom {
+    border-color: rgba(162, 89, 255, 0.42);
+    background: rgba(162, 89, 255, 0.08);
+}
+
 .market-select-main {
     appearance: none;
     width: 100%;

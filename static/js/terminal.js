@@ -368,6 +368,10 @@ function bindMarketProfileControls() {
             savePrefs({ marketFavorites });
         },
         onSelect: setMarketProfile,
+        onCustomSymbol: (symbol) => {
+            syncCommandSymbol(symbol);
+            changeChart(symbol);
+        },
     });
 }
 

@@ -14,6 +14,25 @@ function profileCategory(profile) {
     return profile.category || 'forex_major';
 }
 
+function formatSymbolLabel(symbol) {
+    const clean = String(symbol || '').split(':').pop().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (clean.length === 6 && /^[A-Z]{6}$/.test(clean)) {
+        return `${clean.slice(0, 3)}/${clean.slice(3)}`;
+    }
+    return clean || symbol;
+}
+
+function buildCustomSymbol(query) {
+    const raw = String(query || '').trim().toUpperCase();
+    const clean = raw.replace(/[^A-Z0-9]/g, '');
+    if (!clean || clean.length < 2) return null;
+    if (raw.includes(':')) return raw;
+    if (['XAUUSD', 'XAGUSD'].includes(clean)) return `OANDA:${clean}`;
+    if (/^[A-Z]{6}$/.test(clean)) return `FX:${clean}`;
+    if (['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD'].includes(clean)) return `BITSTAMP:${clean}`;
+    return clean;
+}
+
 export function renderCompactProfileSelect(profiles, currentMarketProfile) {
     const select = document.getElementById('market-profile');
     if (!select) return;
@@ -36,6 +55,7 @@ export function bindMarketSelector({
     getFavorites,
     setFavorites,
     onSelect,
+    onCustomSymbol,
 }) {
     const openButton = document.getElementById('market-selector-open');
     const overlay = document.getElementById('market-selector');
@@ -84,13 +104,16 @@ export function bindMarketSelector({
                 || (activeCategory === 'favorites' ? favorites.has(profile.id) : profileCategory(profile) === activeCategory);
             return matchesCategory && profileMatches(profile, query);
         });
+        const customSymbol = buildCustomSymbol(query);
+        const hasExactProfile = customSymbol && Object.values(profiles).some((profile) => normalize(profile.symbol) === normalize(customSymbol));
+        const showCustom = !!customSymbol && activeCategory !== 'favorites' && !hasExactProfile;
+        const resultCount = items.length + (showCustom ? 1 : 0);
 
         if (countEl) {
-            countEl.textContent = `${items.length} marché${items.length > 1 ? 's' : ''}`;
+            countEl.textContent = `${resultCount} marché${resultCount > 1 ? 's' : ''}`;
         }
 
-        gridRoot.innerHTML = items.length
-            ? items.map((profile) => {
+        const profileCards = items.map((profile) => {
                 const isActive = profile.id === currentProfile;
                 const isFavorite = favorites.has(profile.id);
                 return `
@@ -102,14 +125,35 @@ export function bindMarketSelector({
                             <em>${profile.description || 'Market profile'}</em>
                         </button>
                     </article>`;
-            }).join('')
-            : '<div class="market-selector-empty">Aucun marché trouvé.</div>';
+            }).join('');
+        const customCard = showCustom
+            ? `
+                <article class="market-select-card custom">
+                    <button type="button" class="market-select-main" data-market-custom-symbol="${customSymbol}">
+                        <span>${formatSymbolLabel(customSymbol)}</span>
+                        <strong>${customSymbol}</strong>
+                        <em>Charger ce symbole TradingView et générer un Bias dynamique quand les données sont disponibles.</em>
+                    </button>
+                </article>`
+            : '';
+        gridRoot.innerHTML = profileCards || customCard
+            ? `${profileCards}${customCard}`
+            : '<div class="market-selector-empty">Aucun marché trouvé. Essaie un symbole TradingView comme FX:GBPJPY ou NASDAQ:AAPL.</div>';
 
         gridRoot.querySelectorAll('[data-market-select]').forEach((button) => {
             button.addEventListener('click', () => {
                 const profileId = button.dataset.marketSelect;
                 if (!profileId) return;
                 onSelect(profileId);
+                close();
+            });
+        });
+
+        gridRoot.querySelectorAll('[data-market-custom-symbol]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const symbol = button.dataset.marketCustomSymbol;
+                if (!symbol) return;
+                onCustomSymbol?.(symbol);
                 close();
             });
         });

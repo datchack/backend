@@ -9,6 +9,7 @@ export const DEFAULT_MARKET_PROFILE = 'xauusd';
 
 export const MARKET_PROFILES = {
     xauusd: { id: 'xauusd', label: 'XAU/USD', symbol: 'OANDA:XAUUSD', countries: ['US'], category: 'metals', featured: true, description: 'Gold macro profile' },
+    xagusd: { id: 'xagusd', label: 'XAG/USD', symbol: 'OANDA:XAGUSD', countries: ['US'], category: 'metals', description: 'Silver macro profile' },
     eurusd: { id: 'eurusd', label: 'EUR/USD', symbol: 'FX:EURUSD', countries: ['US', 'EU'], category: 'forex_major', featured: true, description: 'Euro dollar benchmark' },
     usdjpy: { id: 'usdjpy', label: 'USD/JPY', symbol: 'FX:USDJPY', countries: ['US', 'JP'], category: 'forex_major', featured: true, description: 'US yields and yen risk' },
     gbpusd: { id: 'gbpusd', label: 'GBP/USD', symbol: 'FX:GBPUSD', countries: ['US', 'GB'], category: 'forex_major', featured: true, description: 'Sterling and dollar profile' },
