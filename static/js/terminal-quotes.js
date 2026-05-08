@@ -18,6 +18,10 @@ function quoteName(quote) {
     return quote?.name || quote?.label || quoteSymbol(quote);
 }
 
+function quoteSource(quote) {
+    return quote?.source || 'YAHOO';
+}
+
 function getQuoteSocketUrl() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${window.location.host}/ws/market-quotes`;
@@ -54,7 +58,7 @@ function renderQuoteCards(items = [], currentSymbol = '') {
                     <strong>${quote.label || quote.symbol}</strong>
                     <em>${quoteName(quote)}</em>
                 </span>
-                <span class="quote-source">${quote.source || 'FMP'}</span>
+                <span class="quote-source">${quoteSource(quote)}</span>
             </span>
             <span class="quote-price">${formatQuotePrice(quote.price, quote.decimals ?? 2)}</span>
             <span class="quote-change">${formatQuoteChange(quote.change, quote.change_pct)}</span>
@@ -89,7 +93,7 @@ export function renderQuoteRadar(context, { currentSymbol = '', selectedKeys = n
                         <strong>${quote.label || symbol}</strong>
                         <em>${quoteName(quote)}</em>
                     </span>
-                    <span class="quote-source">${quote.source || 'LIVE'}</span>
+                    <span class="quote-source">${quoteSource(quote)}</span>
                 </span>
                 <span class="quote-price">${formatQuotePrice(quote.price, quote.decimals ?? 2)}</span>
                 <span class="quote-change">${formatQuoteChange(quote.change, quote.change_pct)}</span>

@@ -64,6 +64,7 @@ async def fetch_market_snapshot(session: aiohttp.ClientSession, symbol: str) -> 
         "high": meta.get("regularMarketDayHigh"),
         "low": meta.get("regularMarketDayLow"),
         "time": meta.get("regularMarketTime"),
+        "source": "YAHOO",
     }
 
 

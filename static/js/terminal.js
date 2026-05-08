@@ -73,6 +73,7 @@ const PREFS = loadPrefs();
 const INITIAL_URL_SYMBOL = new URLSearchParams(window.location.search).get('symbol');
 let currentMarketProfile = getProfileIdFromSymbol(INITIAL_URL_SYMBOL) || PREFS.marketProfile || DEFAULT_MARKET_PROFILE;
 let currentSymbol = INITIAL_URL_SYMBOL || PREFS.symbol || MARKET_PROFILES[currentMarketProfile]?.symbol || MARKET_PROFILES[DEFAULT_MARKET_PROFILE].symbol;
+let customContextSymbol = null;
 let soundEnabled = !!PREFS.soundEnabled;
 let soundType = PREFS.soundType || 'chime';
 let currentCenterTab = PREFS.centerTab || 'bias';
@@ -206,6 +207,10 @@ function getActiveMarketProfile() {
     return MARKET_PROFILES[currentMarketProfile] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
 }
 
+function getContextSymbol() {
+    return customContextSymbol || getActiveMarketProfile().symbol;
+}
+
 function normalizeTradingViewSymbol(symbol) {
     return String(symbol || '').split(':').pop().toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
@@ -244,7 +249,7 @@ function getProfileQuery() {
 
 function getCalendarCountries() {
     const profileCountries = getActiveMarketProfile().countries || ['US'];
-    const forex = parseForexSymbol(currentSymbol);
+    const forex = parseForexSymbol(getContextSymbol());
     const symbolCountries = forex
         ? [CURRENCY_COUNTRIES[forex.base], CURRENCY_COUNTRIES[forex.quote], 'US'].filter(Boolean)
         : profileCountries;
@@ -299,6 +304,7 @@ function setMarketProfile(profileId) {
     const profile = MARKET_PROFILES[profileId] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
     currentMarketProfile = profile.id;
     currentSymbol = profile.symbol;
+    customContextSymbol = null;
     suppressNextNewsFresh = true;
     customCalendarCountries = null;
 
@@ -404,7 +410,7 @@ function bindMarketProfileControls() {
             syncCommandSymbol(symbol);
             const nextRecents = rememberCustomSymbol(symbol);
             savePrefs({ marketRecents: nextRecents });
-            changeChart(symbol);
+            changeChart(symbol, { contextMode: 'symbol' });
         },
     });
 }
@@ -447,8 +453,13 @@ function initChart(symbol) {
 function changeChart(symbol, options = {}) {
     currentSymbol = symbol;
     const matchedProfileId = getProfileIdFromSymbol(symbol);
-    if (matchedProfileId && matchedProfileId !== currentMarketProfile) {
+    const shouldUseSymbolContext = options.contextMode === 'symbol';
+    if (shouldUseSymbolContext) {
+        customContextSymbol = symbol;
+    }
+    if (matchedProfileId && matchedProfileId !== currentMarketProfile && shouldUseSymbolContext) {
         currentMarketProfile = matchedProfileId;
+        customContextSymbol = null;
         customCalendarCountries = null;
         suppressNextNewsFresh = true;
         renderMarketProfileSelect();
@@ -519,7 +530,7 @@ function bindCustomizeControls() {
 
 async function fetchContext(scheduleNext = true) {
     try {
-        const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery(), currentSymbol);
+        const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery(), getContextSymbol());
         contextState = payload;
         renderQuoteRadar(payload, { currentSymbol, selectedKeys: customWatchlistKeys });
         renderMarketContext(payload, { selectedKeys: customWatchlistKeys, onSymbolSelect: changeChart });
@@ -562,7 +573,7 @@ async function getNews() {
 function bindCommandInput() {
     bindCommandInputModule({
         getCurrentSymbol: () => currentSymbol,
-        onChange: changeChart,
+        onChange: (symbol) => changeChart(symbol, { contextMode: 'symbol' }),
     });
 }
 
