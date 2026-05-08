@@ -79,6 +79,7 @@ let currentCenterTab = PREFS.centerTab || 'bias';
 let customCalendarCountries = Array.isArray(PREFS.calendarCountries) ? PREFS.calendarCountries : null;
 let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKeys : null;
 let marketFavorites = Array.isArray(PREFS.marketFavorites) ? PREFS.marketFavorites : ['xauusd', 'eurusd', 'usdjpy', 'gbpjpy'];
+let marketRecents = Array.isArray(PREFS.marketRecents) ? PREFS.marketRecents : [];
 let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
 let layoutState = loadLayoutPrefs(PREFS.layout);
 let accountMode = DEFAULT_ACCOUNT_MODE;
@@ -110,6 +111,7 @@ function getClientPrefsSnapshot() {
         calendarCountries: getCalendarCountries(),
         watchlistKeys: customWatchlistKeys,
         marketFavorites,
+        marketRecents,
         widgets: widgetVisibility,
         layout: layoutState,
     };
@@ -148,6 +150,7 @@ function applyLoadedPrefs(prefs = {}) {
     customCalendarCountries = Array.isArray(prefs.calendarCountries) ? prefs.calendarCountries : customCalendarCountries;
     customWatchlistKeys = Array.isArray(prefs.watchlistKeys) ? prefs.watchlistKeys : customWatchlistKeys;
     marketFavorites = Array.isArray(prefs.marketFavorites) ? prefs.marketFavorites : marketFavorites;
+    marketRecents = Array.isArray(prefs.marketRecents) ? prefs.marketRecents : marketRecents;
     widgetVisibility = { ...DEFAULT_WIDGETS, ...(prefs.widgets || widgetVisibility) };
     layoutState = {
         ...layoutState,
@@ -265,6 +268,33 @@ function renderMarketProfileSelect() {
     renderCompactProfileSelect(MARKET_PROFILES, currentMarketProfile);
 }
 
+function normalizeRecentSymbol(symbol) {
+    return String(symbol || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function withRecentMarket(nextItem) {
+    const normalizedNext = nextItem.type === 'symbol'
+        ? normalizeRecentSymbol(nextItem.symbol)
+        : nextItem.id;
+    marketRecents = [
+        nextItem,
+        ...marketRecents.filter((item) => {
+            const type = item?.type || (typeof item === 'string' ? 'profile' : null);
+            const value = type === 'symbol' ? normalizeRecentSymbol(item.symbol) : (item?.id || item);
+            return !(type === nextItem.type && value === normalizedNext);
+        }),
+    ].slice(0, 8);
+    return marketRecents;
+}
+
+function rememberProfile(profileId) {
+    return withRecentMarket({ type: 'profile', id: profileId });
+}
+
+function rememberCustomSymbol(symbol) {
+    return withRecentMarket({ type: 'symbol', symbol });
+}
+
 function setMarketProfile(profileId) {
     const profile = MARKET_PROFILES[profileId] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
     currentMarketProfile = profile.id;
@@ -276,7 +306,8 @@ function setMarketProfile(profileId) {
 
     changeChart(currentSymbol, { save: false, refresh: false });
     renderMarketProfileSelect();
-    savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol, calendarCountries: null });
+    const nextRecents = rememberProfile(profile.id);
+    savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol, calendarCountries: null, marketRecents: nextRecents });
     renderCustomizePanel();
     getNews();
     fetchCalendar(false);
@@ -363,6 +394,7 @@ function bindMarketProfileControls() {
         categories: MARKET_CATEGORIES,
         getCurrentProfile: () => currentMarketProfile,
         getFavorites: () => marketFavorites,
+        getRecents: () => marketRecents,
         setFavorites: (favorites) => {
             marketFavorites = favorites;
             savePrefs({ marketFavorites });
@@ -370,6 +402,8 @@ function bindMarketProfileControls() {
         onSelect: setMarketProfile,
         onCustomSymbol: (symbol) => {
             syncCommandSymbol(symbol);
+            const nextRecents = rememberCustomSymbol(symbol);
+            savePrefs({ marketRecents: nextRecents });
             changeChart(symbol);
         },
     });
@@ -420,9 +454,12 @@ function changeChart(symbol, options = {}) {
         renderMarketProfileSelect();
         getNews();
     }
+    if (matchedProfileId) {
+        rememberProfile(matchedProfileId);
+    }
     changeChartView(symbol);
     if (options.save !== false) {
-        savePrefs({ symbol, marketProfile: currentMarketProfile, calendarCountries: customCalendarCountries });
+        savePrefs({ symbol, marketProfile: currentMarketProfile, marketRecents, calendarCountries: customCalendarCountries });
     }
     if (options.refresh !== false) {
         fetchCalendar(false);
