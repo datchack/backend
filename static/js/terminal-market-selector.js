@@ -150,6 +150,7 @@ export function bindMarketSelector({
         categoryRoot.querySelectorAll('[data-market-category]').forEach((button) => {
             button.addEventListener('click', () => {
                 activeCategory = button.dataset.marketCategory || CATEGORY_ALL;
+                renderCategories();
                 render();
             });
         });
