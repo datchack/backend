@@ -280,6 +280,7 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 
 .qcard-empty {
     place-items: center;
+    align-content: center;
     border-style: dashed;
     background: rgba(255, 255, 255, 0.015);
     color: var(--muted);
@@ -300,6 +301,14 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     font-size: 24px;
     font-weight: 700;
     line-height: 1;
+}
+
+.quote-empty-label {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
 }
 
 .qcard.active {
@@ -352,6 +361,7 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 .qcard.up .quote-accent { background: var(--buy); }
 .qcard.down .quote-accent { background: var(--sell); }
 .qcard.active .quote-accent { background: var(--accent); }
+.qcard.unavailable .quote-accent { background: var(--muted); }
 
 .quote-card-head {
     display: flex;
@@ -446,6 +456,10 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 .qcard.down .quote-change { color: var(--sell); }
 .qcard.tick-up .quote-price { color: var(--buy); }
 .qcard.tick-down .quote-price { color: var(--sell); }
+.qcard.unavailable .quote-price,
+.qcard.unavailable .quote-change {
+    color: var(--muted);
+}
 
 .quote-loading {
     align-self: center;
@@ -468,6 +482,198 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 
 @keyframes quoteSkeleton {
     100% { transform: translateX(100%); }
+}
+
+.quote-card-actions {
+    position: absolute;
+    right: 7px;
+    bottom: 6px;
+    display: inline-flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.qcard:hover .quote-card-actions {
+    opacity: 1;
+}
+
+.quote-replace,
+.quote-remove {
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.20);
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1;
+}
+
+.quote-replace:hover {
+    color: var(--accent);
+    border-color: rgba(162, 89, 255, 0.45);
+}
+
+.quote-remove:hover {
+    color: var(--sell);
+    border-color: rgba(255, 77, 109, 0.45);
+}
+
+.quote-picker-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(14px, 3vw, 28px);
+    background: rgba(0, 0, 0, 0.68);
+    backdrop-filter: blur(12px);
+}
+
+.quote-picker-overlay.hidden {
+    display: none;
+}
+
+.quote-picker-panel {
+    width: min(820px, 100%);
+    max-height: min(720px, 88vh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: linear-gradient(180deg, #111820, #080b0f);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.quote-picker-head,
+.quote-picker-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.quote-picker-head span {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.quote-picker-head h2 {
+    margin: 4px 0 0;
+    font-size: 22px;
+    letter-spacing: 0;
+}
+
+.quote-picker-tools input {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #0b0f15;
+    color: var(--text);
+    padding: 0 12px;
+    outline: none;
+    font: inherit;
+}
+
+.quote-picker-tools input:focus {
+    border-color: rgba(162, 89, 255, 0.72);
+    box-shadow: 0 0 0 2px rgba(162, 89, 255, 0.14);
+}
+
+.quote-picker-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 20px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.quote-picker-results {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.quote-picker-card {
+    appearance: none;
+    min-height: 126px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--text);
+    padding: 16px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.quote-picker-card:hover,
+.quote-picker-card.selected {
+    border-color: rgba(0, 242, 173, 0.42);
+    background: rgba(0, 242, 173, 0.07);
+}
+
+.quote-picker-card.custom {
+    border-color: rgba(162, 89, 255, 0.38);
+    background: rgba(162, 89, 255, 0.08);
+}
+
+.quote-picker-card span,
+.quote-picker-card strong,
+.quote-picker-card em,
+.quote-picker-card small,
+.quote-picker-card b {
+    display: block;
+    max-width: 100%;
+}
+
+.quote-picker-card strong {
+    color: var(--accent);
+    font-size: 19px;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.quote-picker-card em {
+    margin-top: 4px;
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    font-style: normal;
+    overflow-wrap: anywhere;
+}
+
+.quote-picker-card small {
+    color: var(--text-soft);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.quote-picker-card b {
+    margin-top: auto;
+    color: var(--accent);
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
 }
 
 .click-overlay {
@@ -882,32 +1088,6 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     overflow: visible;
     padding: 12px 20px 14px;
     border-bottom: 1px solid var(--border);
-}
-
-.quote-remove {
-    position: absolute;
-    right: 7px;
-    bottom: 6px;
-    width: 18px;
-    height: 18px;
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 50%;
-    color: var(--muted);
-    font-size: 11px;
-    line-height: 1;
-    opacity: 0;
-    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.qcard:hover .quote-remove {
-    opacity: 1;
-}
-
-.quote-remove:hover {
-    color: var(--sell);
-    border-color: rgba(255, 77, 109, 0.45);
 }
 
 .market-filter {
@@ -2176,6 +2356,29 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
 
     .quote-price {
         font-size: clamp(18px, 7vw, 22px);
+    }
+
+    .quote-card-actions {
+        opacity: 1;
+    }
+
+    .quote-picker-panel {
+        max-height: 92dvh;
+    }
+
+    .quote-picker-head,
+    .quote-picker-tools {
+        padding: 14px;
+    }
+
+    .quote-picker-tools {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .quote-picker-results {
+        grid-template-columns: 1fr;
+        padding: 14px;
     }
 
     .main-layout {

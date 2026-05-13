@@ -38,11 +38,23 @@ QUOTE_CARD_BY_TV = {
 CUSTOM_SYMBOLS = {
     "XAUUSD": {"symbol": "GC=F", "tv_symbol": "OANDA:XAUUSD", "label": "XAU/USD", "decimals": 2},
     "XAGUSD": {"symbol": "SI=F", "tv_symbol": "OANDA:XAGUSD", "label": "XAG/USD", "decimals": 4},
+    "XPTUSD": {"symbol": "PL=F", "tv_symbol": "OANDA:XPTUSD", "label": "XPT/USD", "decimals": 2},
+    "XPDUSD": {"symbol": "PA=F", "tv_symbol": "OANDA:XPDUSD", "label": "XPD/USD", "decimals": 2},
     "DXY": {"symbol": "DX-Y.NYB", "tv_symbol": "CAPITALCOM:DXY", "label": "DXY", "decimals": 3},
     "US10Y": {"symbol": "^TNX", "tv_symbol": "TVC:US10Y", "label": "US10Y", "decimals": 3},
+    "SPX": {"symbol": "^GSPC", "tv_symbol": "SP:SPX", "label": "S&P 500", "decimals": 2},
+    "DJI": {"symbol": "^DJI", "tv_symbol": "DJ:DJI", "label": "DOW", "decimals": 2},
+    "RUT": {"symbol": "^RUT", "tv_symbol": "TVC:RUT", "label": "RUSSELL", "decimals": 2},
+    "DAX": {"symbol": "^GDAXI", "tv_symbol": "XETR:DAX", "label": "DAX 40", "decimals": 2},
+    "PX1": {"symbol": "^FCHI", "tv_symbol": "EURONEXT:PX1", "label": "CAC 40", "decimals": 2},
+    "UKX": {"symbol": "^FTSE", "tv_symbol": "TVC:UKX", "label": "FTSE 100", "decimals": 2},
+    "NI225": {"symbol": "^N225", "tv_symbol": "TVC:NI225", "label": "NIKKEI", "decimals": 2},
+    "HSI": {"symbol": "^HSI", "tv_symbol": "HSI:HSI", "label": "HANG SENG", "decimals": 2},
+    "VIX": {"symbol": "^VIX", "tv_symbol": "TVC:VIX", "label": "VIX", "decimals": 2},
     "USOIL": {"symbol": "CL=F", "tv_symbol": "TVC:USOIL", "label": "WTI", "decimals": 2},
     "UKOIL": {"symbol": "BZ=F", "tv_symbol": "TVC:UKOIL", "label": "BRENT", "decimals": 2},
     "NATGAS": {"symbol": "NG=F", "tv_symbol": "TVC:NATGAS", "label": "NATGAS", "decimals": 3},
+    "HG1": {"symbol": "HG=F", "tv_symbol": "COMEX:HG1!", "label": "COPPER", "decimals": 4},
     "BTCUSD": {"symbol": "BTC-USD", "tv_symbol": "BITSTAMP:BTCUSD", "label": "BTC/USD", "decimals": 2},
     "ETHUSD": {"symbol": "ETH-USD", "tv_symbol": "BITSTAMP:ETHUSD", "label": "ETH/USD", "decimals": 2},
 }
@@ -359,7 +371,7 @@ async def fetch_quote_card(session: aiohttp.ClientSession, card: dict) -> dict:
 
     return {
         **card,
-        "symbol": card["fmp_symbol"],
+        "symbol": card.get("fmp_symbol") or card.get("symbol") or card.get("fallback_symbol"),
         "price": None,
         "previous_close": None,
         "change": 0,
