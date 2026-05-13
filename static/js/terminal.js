@@ -8,20 +8,20 @@ import {
     MARKET_PROFILES,
     NEWS_REFRESH_MS,
     PREFS_KEY,
-} from './terminal-config.js';
-import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js';
+} from './terminal-config.js?v=20260513-quote-picker';
+import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js?v=20260513-quote-picker';
 import {
     fetchAccountState as fetchAccountStateAction,
     submitAccessAuthForm as submitAccessAuthFormAction,
-} from './terminal-account-actions.js';
+} from './terminal-account-actions.js?v=20260513-quote-picker';
 import {
     bindAccountControls as bindAccountControlsModule,
     hasTerminalAccess as accountHasTerminalAccess,
     renderAccessGate as renderAccessGateView,
     renderAccountState as renderAccountStateView,
     setAccessAuthMessage,
-} from './terminal-account-ui.js';
-import { createCalendarController } from './terminal-calendar.js';
+} from './terminal-account-ui.js?v=20260513-quote-picker';
+import { createCalendarController } from './terminal-calendar.js?v=20260513-quote-picker';
 import {
     bindCenterTabs as bindCenterTabsModule,
     bindCommandInput as bindCommandInputModule,
@@ -30,25 +30,25 @@ import {
     initChart as initChartView,
     setCenterTab as setCenterTabView,
     syncCommandSymbol,
-} from './terminal-chart.js';
-import { updateClocks as updateClocksView } from './terminal-clocks.js';
-import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js';
+} from './terminal-chart.js?v=20260513-quote-picker';
+import { updateClocks as updateClocksView } from './terminal-clocks.js?v=20260513-quote-picker';
+import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js?v=20260513-quote-picker';
 import {
     bindCustomizeControls as bindCustomizeControlsModule,
     renderCustomizePanel as renderCustomizePanelView,
-} from './terminal-customize.js';
+} from './terminal-customize.js?v=20260513-quote-picker';
 import {
     applyLayoutState,
     applyWidgetVisibility,
     bindLayoutControls as bindLayoutControlsModule,
     bindResizers as bindResizersModule,
     loadLayoutPrefs,
-} from './terminal-layout.js';
-import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js';
-import { bindMarketSelector, renderCompactProfileSelect } from './terminal-market-selector.js';
-import { renderNewsError, renderNewsFeed } from './terminal-news.js';
-import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js';
-import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh } from './terminal-quotes.js';
+} from './terminal-layout.js?v=20260513-quote-picker';
+import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js?v=20260513-quote-picker';
+import { bindMarketSelector, renderCompactProfileSelect } from './terminal-market-selector.js?v=20260513-quote-picker';
+import { renderNewsError, renderNewsFeed } from './terminal-news.js?v=20260513-quote-picker';
+import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js?v=20260513-quote-picker';
+import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh } from './terminal-quotes.js?v=20260513-quote-picker';
 import {
     beep as playNotificationSound,
     bindSoundPicker as bindSoundPickerControl,
@@ -56,7 +56,7 @@ import {
     ensureAudio,
     renderSoundToggle as renderSoundToggleControl,
     syncSoundPicker,
-} from './terminal-sound.js';
+} from './terminal-sound.js?v=20260513-quote-picker';
 
 function loadPrefs() {
     return loadStoredPrefs(PREFS_KEY);
