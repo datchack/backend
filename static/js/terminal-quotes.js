@@ -235,7 +235,16 @@ export function startQuotesRefresh(options) {
 }
 
 export function renderPersonalQuoteCards(cards, currentSymbol = '') {
-    renderQuoteSlots({ cards, currentSymbol });
+    renderQuoteSlots({ cards, quotes: latestQuotes, currentSymbol });
+}
+
+export function syncActiveQuoteCard(currentSymbol = '') {
+    const activeSymbol = normalizeSymbol(currentSymbol);
+    document.querySelectorAll('.qcard[data-symbol]').forEach((card) => {
+        const symbol = normalizeSymbol(card.dataset.symbol);
+        const cardSymbol = normalizeSymbol(card.dataset.quoteCardSymbol);
+        card.classList.toggle('active', symbol === activeSymbol || cardSymbol === activeSymbol);
+    });
 }
 
 export function bindQuoteCards({ onSymbolSelect, getCurrentSymbol, getQuoteCards, setQuoteCards, savePrefs, refreshQuotesNow }) {
