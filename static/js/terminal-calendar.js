@@ -1,11 +1,11 @@
-import { CALENDAR_REFRESH_MS, IMPACT_LEVELS } from './terminal-config.js?v=20260514-workspace-presets';
+import { CALENDAR_REFRESH_MS, IMPACT_LEVELS } from './terminal-config.js?v=20260514-market-universe';
 import {
     formatValue,
     getActualVsPreviousTone,
     getCalendarBiasClass,
     getDateKeyFromTs,
-} from './terminal-formatters.js?v=20260514-workspace-presets';
-import { fetchCalendarFeed } from './terminal-market-api.js?v=20260514-workspace-presets';
+} from './terminal-formatters.js?v=20260514-market-universe';
+import { fetchCalendarFeed } from './terminal-market-api.js?v=20260514-market-universe';
 
 function renderCalendarValue(label, value, unit = '', tone = '') {
     return `

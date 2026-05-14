@@ -44,9 +44,15 @@ CURRENCY_COUNTRIES = {
     "HKD": "HK",
 }
 
-CRYPTO_SYMBOLS = {"BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC"}
+CRYPTO_SYMBOLS = {
+    "BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC",
+    "DOT", "BCH", "UNI", "AAVE", "NEAR", "ATOM", "TRX",
+}
 EQUITY_EXCHANGES = {"NASDAQ", "NYSE", "AMEX", "NASDAQGM", "NASDAQGS"}
 SPECIAL_CONTEXT_SYMBOLS = {
+    "DXY": ("dxy", "DX-Y.NYB", "DXY", "macro"),
+    "US02Y": ("us02y", "^IRX", "US02Y", "rates"),
+    "US10Y": ("us10y", "^TNX", "US10Y", "rates"),
     "XPTUSD": ("xptusd", "PL=F", "XPT/USD", "metal"),
     "XPDUSD": ("xpdusd", "PA=F", "XPD/USD", "metal"),
     "SPX": ("spx", "^GSPC", "S&P 500", "index"),
@@ -58,10 +64,17 @@ SPECIAL_CONTEXT_SYMBOLS = {
     "NI225": ("nikkei", "^N225", "Nikkei 225", "index"),
     "HSI": ("hsi", "^HSI", "Hang Seng", "index"),
     "VIX": ("vix", "^VIX", "VIX", "volatility"),
+    "SX5E": ("stoxx50", "^STOXX50E", "Euro Stoxx 50", "index"),
+    "XJO": ("asx200", "^AXJO", "ASX 200", "index"),
+    "TSX": ("tsx", "^GSPTSE", "TSX", "index"),
     "USOIL": ("usoil", "CL=F", "WTI Oil", "commodity"),
     "UKOIL": ("ukoil", "BZ=F", "Brent Oil", "commodity"),
     "NATGAS": ("natgas", "NG=F", "Natural Gas", "commodity"),
     "HG1": ("copper", "HG=F", "Copper", "commodity"),
+    "ZC1": ("corn", "ZC=F", "Corn", "commodity"),
+    "ZW1": ("wheat", "ZW=F", "Wheat", "commodity"),
+    "ZS1": ("soybeans", "ZS=F", "Soybeans", "commodity"),
+    "RB1": ("gasoline", "RB=F", "Gasoline", "commodity"),
 }
 
 BIAS_PROFILES = {

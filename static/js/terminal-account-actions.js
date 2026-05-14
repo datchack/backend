@@ -1,5 +1,5 @@
-import { confirmAccountEmail, fetchAccount, submitAccountAuth } from './terminal-account-api.js?v=20260514-workspace-presets';
-import { setAccessAuthMessage } from './terminal-account-ui.js?v=20260514-workspace-presets';
+import { confirmAccountEmail, fetchAccount, submitAccountAuth } from './terminal-account-api.js?v=20260514-market-universe';
+import { setAccessAuthMessage } from './terminal-account-ui.js?v=20260514-market-universe';
 
 function readCredentials(emailId, passwordId) {
     const emailEl = document.getElementById(emailId);

@@ -1,4 +1,4 @@
-import { DEFAULT_LAYOUT } from './terminal-config.js?v=20260514-workspace-presets';
+import { DEFAULT_LAYOUT } from './terminal-config.js?v=20260514-market-universe';
 
 export function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);

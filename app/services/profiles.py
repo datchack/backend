@@ -133,6 +133,30 @@ MARKET_PROFILES = {
 }
 
 MARKET_PROFILES.update({
+    "dxy": {
+        "id": "dxy",
+        "label": "DXY",
+        "symbol": "CAPITALCOM:DXY",
+        "calendar_countries": ["US"],
+        "keywords": ["dxy", "dollar index", "usd", "fed", "rates", "treasury", "inflation"],
+        "tags": ["FED", "MACRO", "MARKETS", "OFFICIAL"],
+    },
+    "us10y": {
+        "id": "us10y",
+        "label": "US10Y",
+        "symbol": "TVC:US10Y",
+        "calendar_countries": ["US"],
+        "keywords": ["us10y", "treasury", "10 year", "yields", "fed", "rates", "bonds"],
+        "tags": ["FED", "MACRO", "MARKETS", "OFFICIAL"],
+    },
+    "us02y": {
+        "id": "us02y",
+        "label": "US02Y",
+        "symbol": "TVC:US02Y",
+        "calendar_countries": ["US"],
+        "keywords": ["us02y", "treasury", "2 year", "front end", "fed pricing", "rates"],
+        "tags": ["FED", "MACRO", "MARKETS", "OFFICIAL"],
+    },
     "xptusd": {
         "id": "xptusd",
         "label": "XPT/USD",
@@ -287,6 +311,53 @@ MARKET_PROFILES.update({
     },
 })
 
+for fx_id, label, countries, keywords in [
+    ("eurcad", "EUR/CAD", ["EU", "CA"], ["euro", "cad", "ecb", "boc", "oil"]),
+    ("eurchf", "EUR/CHF", ["EU", "CH"], ["euro", "chf", "ecb", "snb", "safe haven"]),
+    ("euraud", "EUR/AUD", ["EU", "AU"], ["euro", "aud", "ecb", "rba", "china"]),
+    ("eurnzd", "EUR/NZD", ["EU", "NZ"], ["euro", "nzd", "ecb", "rbnz", "risk"]),
+    ("gbpchf", "GBP/CHF", ["GB", "CH"], ["gbp", "chf", "boe", "snb", "safe haven"]),
+    ("gbpaud", "GBP/AUD", ["GB", "AU"], ["gbp", "aud", "boe", "rba", "risk"]),
+    ("gbpcad", "GBP/CAD", ["GB", "CA"], ["gbp", "cad", "boe", "boc", "oil"]),
+    ("audjpy", "AUD/JPY", ["AU", "JP"], ["aud", "jpy", "rba", "boj", "carry", "risk"]),
+    ("audnzd", "AUD/NZD", ["AU", "NZ"], ["aud", "nzd", "rba", "rbnz"]),
+    ("audcad", "AUD/CAD", ["AU", "CA"], ["aud", "cad", "commodities", "oil"]),
+    ("cadjpy", "CAD/JPY", ["CA", "JP"], ["cad", "jpy", "oil", "boc", "boj"]),
+    ("chfjpy", "CHF/JPY", ["CH", "JP"], ["chf", "jpy", "safe haven", "snb", "boj"]),
+    ("nzdjpy", "NZD/JPY", ["NZ", "JP"], ["nzd", "jpy", "risk", "carry", "rbnz", "boj"]),
+]:
+    MARKET_PROFILES[fx_id] = {
+        "id": fx_id,
+        "label": label,
+        "symbol": f"FX:{label.replace('/', '')}",
+        "calendar_countries": countries,
+        "keywords": keywords + ["forex", "macro", "rates"],
+        "tags": ["MACRO", "MARKETS", "OFFICIAL"],
+    }
+
+for profile_id, label, symbol, countries, keywords in [
+    ("stoxx50", "Euro Stoxx 50", "TVC:SX5E", ["EU", "DE", "FR"], ["eurostoxx", "europe", "ecb", "stocks"]),
+    ("asx200", "ASX 200", "ASX:XJO", ["AU", "CN"], ["asx", "australia", "rba", "china", "stocks"]),
+    ("tsx", "TSX", "TSX:TSX", ["CA", "US"], ["tsx", "canada", "boc", "oil", "stocks"]),
+    ("mstr", "MSTR", "NASDAQ:MSTR", ["US"], ["microstrategy", "bitcoin", "btc", "crypto", "equity"]),
+    ("nvda", "NVDA", "NASDAQ:NVDA", ["US"], ["nvidia", "ai", "semiconductor", "earnings", "nasdaq"]),
+    ("dia", "DIA", "AMEX:DIA", ["US"], ["dow", "dia", "industrials", "stocks"]),
+    ("gld", "GLD", "AMEX:GLD", ["US"], ["gold", "gld", "bullion", "etf"]),
+    ("slv", "SLV", "AMEX:SLV", ["US"], ["silver", "slv", "metals", "etf"]),
+    ("corn", "Corn", "CBOT:ZC1!", ["US"], ["corn", "grain", "agriculture", "commodities"]),
+    ("wheat", "Wheat", "CBOT:ZW1!", ["US"], ["wheat", "grain", "agriculture", "commodities"]),
+    ("soybeans", "Soybeans", "CBOT:ZS1!", ["US", "CN"], ["soybeans", "china", "agriculture", "commodities"]),
+    ("gasoline", "Gasoline", "NYMEX:RB1!", ["US"], ["gasoline", "rbob", "energy", "oil"]),
+]:
+    MARKET_PROFILES[profile_id] = {
+        "id": profile_id,
+        "label": label,
+        "symbol": symbol,
+        "calendar_countries": countries,
+        "keywords": keywords + ["macro", "markets"],
+        "tags": ["MACRO", "MARKETS"],
+    }
+
 for crypto_id, label, symbol, name in [
     ("ethusd", "ETH/USD", "BITSTAMP:ETHUSD", "ethereum"),
     ("solusd", "SOL/USD", "COINBASE:SOLUSD", "solana"),
@@ -297,6 +368,13 @@ for crypto_id, label, symbol, name in [
     ("avaxusd", "AVAX/USD", "COINBASE:AVAXUSD", "avalanche"),
     ("linkusd", "LINK/USD", "COINBASE:LINKUSD", "chainlink"),
     ("ltcusd", "LTC/USD", "COINBASE:LTCUSD", "litecoin"),
+    ("dotusd", "DOT/USD", "COINBASE:DOTUSD", "polkadot"),
+    ("bchusd", "BCH/USD", "COINBASE:BCHUSD", "bitcoin cash"),
+    ("uniusd", "UNI/USD", "COINBASE:UNIUSD", "uniswap"),
+    ("aaveusd", "AAVE/USD", "COINBASE:AAVEUSD", "aave"),
+    ("nearusd", "NEAR/USD", "COINBASE:NEARUSD", "near"),
+    ("atomusd", "ATOM/USD", "COINBASE:ATOMUSD", "cosmos"),
+    ("trxusd", "TRX/USD", "BINANCE:TRXUSD", "tron"),
 ]:
     MARKET_PROFILES[crypto_id] = {
         "id": crypto_id,

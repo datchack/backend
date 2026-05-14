@@ -1,4 +1,4 @@
-import { CALENDAR_COUNTRY_OPTIONS, DEFAULT_WIDGETS, WIDGET_OPTIONS } from './terminal-config.js?v=20260514-workspace-presets';
+import { CALENDAR_COUNTRY_OPTIONS, DEFAULT_WIDGETS, WIDGET_OPTIONS } from './terminal-config.js?v=20260514-market-universe';
 
 export function toggleCustomizePanel(open = null, renderPanel = null) {
     const panel = document.getElementById('customize-panel');

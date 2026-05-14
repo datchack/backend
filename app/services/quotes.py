@@ -57,10 +57,21 @@ CUSTOM_SYMBOLS = {
     "HG1": {"symbol": "HG=F", "tv_symbol": "COMEX:HG1!", "label": "COPPER", "decimals": 4},
     "BTCUSD": {"symbol": "BTC-USD", "tv_symbol": "BITSTAMP:BTCUSD", "label": "BTC/USD", "decimals": 2},
     "ETHUSD": {"symbol": "ETH-USD", "tv_symbol": "BITSTAMP:ETHUSD", "label": "ETH/USD", "decimals": 2},
+    "US02Y": {"symbol": "^IRX", "tv_symbol": "TVC:US02Y", "label": "US02Y", "decimals": 3},
+    "SX5E": {"symbol": "^STOXX50E", "tv_symbol": "TVC:SX5E", "label": "EURO STOXX", "decimals": 2},
+    "XJO": {"symbol": "^AXJO", "tv_symbol": "ASX:XJO", "label": "ASX 200", "decimals": 2},
+    "TSX": {"symbol": "^GSPTSE", "tv_symbol": "TSX:TSX", "label": "TSX", "decimals": 2},
+    "ZC1": {"symbol": "ZC=F", "tv_symbol": "CBOT:ZC1!", "label": "CORN", "decimals": 2},
+    "ZW1": {"symbol": "ZW=F", "tv_symbol": "CBOT:ZW1!", "label": "WHEAT", "decimals": 2},
+    "ZS1": {"symbol": "ZS=F", "tv_symbol": "CBOT:ZS1!", "label": "SOYBEANS", "decimals": 2},
+    "RB1": {"symbol": "RB=F", "tv_symbol": "NYMEX:RB1!", "label": "GASOLINE", "decimals": 4},
 }
 
 CURRENCY_CODES = {"USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD", "CNY", "HKD"}
-CRYPTO_CODES = {"BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC"}
+CRYPTO_CODES = {
+    "BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "LINK", "LTC",
+    "DOT", "BCH", "UNI", "AAVE", "NEAR", "ATOM", "TRX",
+}
 
 
 def normalize_custom_symbol(symbol: str) -> str:

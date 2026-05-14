@@ -1,4 +1,4 @@
-import { formatLayerScore, formatSignedPercent, formatValue } from './terminal-formatters.js?v=20260514-workspace-presets';
+import { formatLayerScore, formatSignedPercent, formatValue } from './terminal-formatters.js?v=20260514-market-universe';
 
 export function renderBiasCard(context) {
     const card = document.getElementById('bias-card');

@@ -9,20 +9,20 @@ import {
     NEWS_REFRESH_MS,
     PREFS_KEY,
     WORKSPACE_PRESETS,
-} from './terminal-config.js?v=20260514-workspace-presets';
-import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js?v=20260514-workspace-presets';
+} from './terminal-config.js?v=20260514-market-universe';
+import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js?v=20260514-market-universe';
 import {
     fetchAccountState as fetchAccountStateAction,
     submitAccessAuthForm as submitAccessAuthFormAction,
-} from './terminal-account-actions.js?v=20260514-workspace-presets';
+} from './terminal-account-actions.js?v=20260514-market-universe';
 import {
     bindAccountControls as bindAccountControlsModule,
     hasTerminalAccess as accountHasTerminalAccess,
     renderAccessGate as renderAccessGateView,
     renderAccountState as renderAccountStateView,
     setAccessAuthMessage,
-} from './terminal-account-ui.js?v=20260514-workspace-presets';
-import { createCalendarController } from './terminal-calendar.js?v=20260514-workspace-presets';
+} from './terminal-account-ui.js?v=20260514-market-universe';
+import { createCalendarController } from './terminal-calendar.js?v=20260514-market-universe';
 import {
     bindCenterTabs as bindCenterTabsModule,
     bindCommandInput as bindCommandInputModule,
@@ -31,25 +31,25 @@ import {
     initChart as initChartView,
     setCenterTab as setCenterTabView,
     syncCommandSymbol,
-} from './terminal-chart.js?v=20260514-workspace-presets';
-import { updateClocks as updateClocksView } from './terminal-clocks.js?v=20260514-workspace-presets';
-import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js?v=20260514-workspace-presets';
+} from './terminal-chart.js?v=20260514-market-universe';
+import { updateClocks as updateClocksView } from './terminal-clocks.js?v=20260514-market-universe';
+import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js?v=20260514-market-universe';
 import {
     bindCustomizeControls as bindCustomizeControlsModule,
     renderCustomizePanel as renderCustomizePanelView,
-} from './terminal-customize.js?v=20260514-workspace-presets';
+} from './terminal-customize.js?v=20260514-market-universe';
 import {
     applyLayoutState,
     applyWidgetVisibility,
     bindLayoutControls as bindLayoutControlsModule,
     bindResizers as bindResizersModule,
     loadLayoutPrefs,
-} from './terminal-layout.js?v=20260514-workspace-presets';
-import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js?v=20260514-workspace-presets';
-import { bindMarketSelector, renderWorkspacePresetSelect } from './terminal-market-selector.js?v=20260514-workspace-presets';
-import { renderNewsError, renderNewsFeed } from './terminal-news.js?v=20260514-workspace-presets';
-import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js?v=20260514-workspace-presets';
-import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh, syncActiveQuoteCard } from './terminal-quotes.js?v=20260514-workspace-presets';
+} from './terminal-layout.js?v=20260514-market-universe';
+import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js?v=20260514-market-universe';
+import { bindMarketSelector, renderWorkspacePresetSelect } from './terminal-market-selector.js?v=20260514-market-universe';
+import { renderNewsError, renderNewsFeed } from './terminal-news.js?v=20260514-market-universe';
+import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js?v=20260514-market-universe';
+import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh, syncActiveQuoteCard } from './terminal-quotes.js?v=20260514-market-universe';
 import {
     beep as playNotificationSound,
     bindSoundPicker as bindSoundPickerControl,
@@ -57,7 +57,7 @@ import {
     ensureAudio,
     renderSoundToggle as renderSoundToggleControl,
     syncSoundPicker,
-} from './terminal-sound.js?v=20260514-workspace-presets';
+} from './terminal-sound.js?v=20260514-market-universe';
 
 function loadPrefs() {
     return loadStoredPrefs(PREFS_KEY);
