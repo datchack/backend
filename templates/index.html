@@ -15,7 +15,7 @@
     <meta property="og:image" content="https://xauterminal.com/static/icon-192x192.png">
     <meta name="twitter:card" content="summary">
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <link rel="stylesheet" href="/static/styles.css?v=20260514-market-universe">
+    <link rel="stylesheet" href="/static/styles.css?v=20260514-custom-presets">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" sizes="48x48" href="/static/favicon-48x48.png">
     <link rel="apple-touch-icon" href="/static/apple-icon-180x180.png">
@@ -260,6 +260,15 @@
                         <span class="customize-label">Modules visibles</span>
                         <div id="customize-widgets" class="customize-grid"></div>
                     </div>
+                    <div class="customize-section">
+                        <span class="customize-label">Preset personnel</span>
+                        <div class="custom-preset-row">
+                            <input id="custom-workspace-name" type="text" placeholder="Nom du preset" autocomplete="off" spellcheck="false">
+                            <button type="button" class="panel-btn panel-btn-primary" id="custom-workspace-save">SAVE PRESET</button>
+                        </div>
+                        <div id="custom-workspace-list" class="custom-workspace-list"></div>
+                        <span id="custom-workspace-status" class="custom-workspace-status"></span>
+                    </div>
                     <div class="customize-actions">
                         <button type="button" class="panel-btn" id="customize-reset">RESET</button>
                     </div>
@@ -290,6 +299,6 @@
         </div>
     </div>
 
-    <script src="/static/app.js?v=20260514-market-universe"></script>
+    <script src="/static/app.js?v=20260514-custom-presets"></script>
 </body>
 </html>

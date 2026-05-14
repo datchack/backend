@@ -9,20 +9,20 @@ import {
     NEWS_REFRESH_MS,
     PREFS_KEY,
     WORKSPACE_PRESETS,
-} from './terminal-config.js?v=20260514-market-universe';
-import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js?v=20260514-market-universe';
+} from './terminal-config.js?v=20260514-custom-presets';
+import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js?v=20260514-custom-presets';
 import {
     fetchAccountState as fetchAccountStateAction,
     submitAccessAuthForm as submitAccessAuthFormAction,
-} from './terminal-account-actions.js?v=20260514-market-universe';
+} from './terminal-account-actions.js?v=20260514-custom-presets';
 import {
     bindAccountControls as bindAccountControlsModule,
     hasTerminalAccess as accountHasTerminalAccess,
     renderAccessGate as renderAccessGateView,
     renderAccountState as renderAccountStateView,
     setAccessAuthMessage,
-} from './terminal-account-ui.js?v=20260514-market-universe';
-import { createCalendarController } from './terminal-calendar.js?v=20260514-market-universe';
+} from './terminal-account-ui.js?v=20260514-custom-presets';
+import { createCalendarController } from './terminal-calendar.js?v=20260514-custom-presets';
 import {
     bindCenterTabs as bindCenterTabsModule,
     bindCommandInput as bindCommandInputModule,
@@ -31,25 +31,25 @@ import {
     initChart as initChartView,
     setCenterTab as setCenterTabView,
     syncCommandSymbol,
-} from './terminal-chart.js?v=20260514-market-universe';
-import { updateClocks as updateClocksView } from './terminal-clocks.js?v=20260514-market-universe';
-import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js?v=20260514-market-universe';
+} from './terminal-chart.js?v=20260514-custom-presets';
+import { updateClocks as updateClocksView } from './terminal-clocks.js?v=20260514-custom-presets';
+import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js?v=20260514-custom-presets';
 import {
     bindCustomizeControls as bindCustomizeControlsModule,
     renderCustomizePanel as renderCustomizePanelView,
-} from './terminal-customize.js?v=20260514-market-universe';
+} from './terminal-customize.js?v=20260514-custom-presets';
 import {
     applyLayoutState,
     applyWidgetVisibility,
     bindLayoutControls as bindLayoutControlsModule,
     bindResizers as bindResizersModule,
     loadLayoutPrefs,
-} from './terminal-layout.js?v=20260514-market-universe';
-import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js?v=20260514-market-universe';
-import { bindMarketSelector, renderWorkspacePresetSelect } from './terminal-market-selector.js?v=20260514-market-universe';
-import { renderNewsError, renderNewsFeed } from './terminal-news.js?v=20260514-market-universe';
-import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js?v=20260514-market-universe';
-import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh, syncActiveQuoteCard } from './terminal-quotes.js?v=20260514-market-universe';
+} from './terminal-layout.js?v=20260514-custom-presets';
+import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js?v=20260514-custom-presets';
+import { bindMarketSelector, renderWorkspacePresetSelect } from './terminal-market-selector.js?v=20260514-custom-presets';
+import { renderNewsError, renderNewsFeed } from './terminal-news.js?v=20260514-custom-presets';
+import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js?v=20260514-custom-presets';
+import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh, syncActiveQuoteCard } from './terminal-quotes.js?v=20260514-custom-presets';
 import {
     beep as playNotificationSound,
     bindSoundPicker as bindSoundPickerControl,
@@ -57,7 +57,7 @@ import {
     ensureAudio,
     renderSoundToggle as renderSoundToggleControl,
     syncSoundPicker,
-} from './terminal-sound.js?v=20260514-market-universe';
+} from './terminal-sound.js?v=20260514-custom-presets';
 
 function loadPrefs() {
     return loadStoredPrefs(PREFS_KEY);
@@ -81,7 +81,10 @@ let currentCenterTab = PREFS.centerTab || 'bias';
 let customCalendarCountries = Array.isArray(PREFS.calendarCountries) ? PREFS.calendarCountries : null;
 let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKeys : null;
 let quoteCards = Array.isArray(PREFS.quoteCards) ? PREFS.quoteCards : [];
-let currentWorkspacePreset = WORKSPACE_PRESETS[PREFS.workspacePreset] ? PREFS.workspacePreset : '';
+let customWorkspaces = Array.isArray(PREFS.customWorkspaces) ? PREFS.customWorkspaces : [];
+let currentWorkspacePreset = (
+    WORKSPACE_PRESETS[PREFS.workspacePreset] || customWorkspaces.find((preset) => preset.id === PREFS.workspacePreset)
+) ? PREFS.workspacePreset : '';
 let marketFavorites = Array.isArray(PREFS.marketFavorites) ? PREFS.marketFavorites : ['xauusd', 'eurusd', 'usdjpy', 'gbpjpy'];
 let marketRecents = Array.isArray(PREFS.marketRecents) ? PREFS.marketRecents : [];
 let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
@@ -116,6 +119,7 @@ function getClientPrefsSnapshot() {
         watchlistKeys: customWatchlistKeys,
         quoteCards,
         workspacePreset: currentWorkspacePreset,
+        customWorkspaces,
         marketFavorites,
         marketRecents,
         widgets: widgetVisibility,
@@ -156,7 +160,8 @@ function applyLoadedPrefs(prefs = {}) {
     customCalendarCountries = Array.isArray(prefs.calendarCountries) ? prefs.calendarCountries : customCalendarCountries;
     customWatchlistKeys = Array.isArray(prefs.watchlistKeys) ? prefs.watchlistKeys : customWatchlistKeys;
     quoteCards = Array.isArray(prefs.quoteCards) ? prefs.quoteCards : quoteCards;
-    currentWorkspacePreset = WORKSPACE_PRESETS[prefs.workspacePreset] ? prefs.workspacePreset : currentWorkspacePreset;
+    customWorkspaces = Array.isArray(prefs.customWorkspaces) ? prefs.customWorkspaces : customWorkspaces;
+    currentWorkspacePreset = getWorkspacePreset(prefs.workspacePreset) ? prefs.workspacePreset : currentWorkspacePreset;
     marketFavorites = Array.isArray(prefs.marketFavorites) ? prefs.marketFavorites : marketFavorites;
     marketRecents = Array.isArray(prefs.marketRecents) ? prefs.marketRecents : marketRecents;
     widgetVisibility = { ...DEFAULT_WIDGETS, ...(prefs.widgets || widgetVisibility) };
@@ -271,6 +276,23 @@ function getCalendarCountryQuery() {
     return encodeURIComponent(getCalendarCountries().join(','));
 }
 
+function getWorkspacePreset(presetId) {
+    if (!presetId) return null;
+    return WORKSPACE_PRESETS[presetId] || customWorkspaces.find((preset) => preset.id === presetId) || null;
+}
+
+function slugifyWorkspaceLabel(label) {
+    const slug = String(label || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 36);
+    return slug || 'preset';
+}
+
 calendarController = createCalendarController({
     initialImpactFilters: PREFS.impactFilters,
     getProfileQuery,
@@ -279,7 +301,7 @@ calendarController = createCalendarController({
 });
 
 function renderMarketProfileSelect() {
-    renderWorkspacePresetSelect(WORKSPACE_PRESETS, currentWorkspacePreset);
+    renderWorkspacePresetSelect(WORKSPACE_PRESETS, currentWorkspacePreset, customWorkspaces);
 }
 
 function normalizeRecentSymbol(symbol) {
@@ -331,7 +353,7 @@ function setMarketProfile(profileId) {
 }
 
 function applyWorkspacePreset(presetId) {
-    const preset = WORKSPACE_PRESETS[presetId];
+    const preset = getWorkspacePreset(presetId);
     if (!preset) return;
 
     const profile = MARKET_PROFILES[preset.marketProfile] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
@@ -340,13 +362,18 @@ function applyWorkspacePreset(presetId) {
     currentSymbol = preset.symbol || profile.symbol;
     customContextSymbol = null;
     customCalendarCountries = Array.isArray(preset.calendarCountries) ? preset.calendarCountries : null;
+    customWatchlistKeys = Array.isArray(preset.watchlistKeys) ? preset.watchlistKeys : customWatchlistKeys;
     quoteCards = Array.isArray(preset.quoteCards) ? preset.quoteCards : quoteCards;
+    widgetVisibility = { ...DEFAULT_WIDGETS, ...(preset.widgets || widgetVisibility) };
+    layoutState = preset.layout ? loadLayoutPrefs(preset.layout) : layoutState;
     suppressNextNewsFresh = true;
 
     syncCommandSymbol(currentSymbol);
     changeChart(currentSymbol, { save: false, refresh: false, fromWorkspace: true });
     renderMarketProfileSelect();
     renderPersonalQuoteCards(quoteCards, currentSymbol);
+    applyWidgetVisibility(widgetVisibility);
+    applyLayoutState(layoutState);
     refreshQuoteCards();
     const nextRecents = rememberProfile(profile.id);
     savePrefs({
@@ -354,13 +381,55 @@ function applyWorkspacePreset(presetId) {
         marketProfile: currentMarketProfile,
         symbol: currentSymbol,
         calendarCountries: customCalendarCountries,
+        watchlistKeys: customWatchlistKeys,
         quoteCards,
+        widgets: widgetVisibility,
+        layout: layoutState,
+        customWorkspaces,
         marketRecents: nextRecents,
     });
     renderCustomizePanel();
     getNews();
     fetchCalendar(false);
     fetchContext(false);
+}
+
+function saveCurrentWorkspace(label) {
+    const cleanLabel = label.trim();
+    if (!cleanLabel) {
+        return { ok: false, message: 'Ajoute un nom pour sauvegarder ce preset.' };
+    }
+
+    const id = `user_${slugifyWorkspaceLabel(cleanLabel)}`;
+    const nextPreset = {
+        id,
+        label: cleanLabel,
+        description: 'Preset personnel',
+        marketProfile: currentMarketProfile,
+        symbol: currentSymbol,
+        calendarCountries: getCalendarCountries(),
+        watchlistKeys: customWatchlistKeys,
+        quoteCards,
+        widgets: widgetVisibility,
+        layout: layoutState,
+    };
+    customWorkspaces = [
+        nextPreset,
+        ...customWorkspaces.filter((preset) => preset.id !== id),
+    ].slice(0, 12);
+    currentWorkspacePreset = id;
+    renderMarketProfileSelect();
+    savePrefs({ customWorkspaces, workspacePreset: currentWorkspacePreset });
+    return { ok: true, message: `${cleanLabel} sauvegardé dans le menu presets.` };
+}
+
+function deleteCustomWorkspace(id) {
+    customWorkspaces = customWorkspaces.filter((preset) => preset.id !== id);
+    if (currentWorkspacePreset === id) {
+        currentWorkspacePreset = '';
+    }
+    renderMarketProfileSelect();
+    savePrefs({ customWorkspaces, workspacePreset: currentWorkspacePreset });
 }
 
 function beep() {
@@ -557,6 +626,7 @@ function renderCustomizePanel() {
         context: contextState,
         selectedWatchlistKeys: customWatchlistKeys,
         widgetVisibility,
+        customWorkspaces,
     });
 }
 
@@ -582,6 +652,8 @@ function bindCustomizeControls() {
         onSymbolSelect: (symbol) => changeChart(symbol, { contextMode: 'symbol' }),
         refreshCalendar: fetchCalendar,
         refreshContext: fetchContext,
+        onSaveWorkspace: saveCurrentWorkspace,
+        onDeleteWorkspace: deleteCustomWorkspace,
     });
 }
 

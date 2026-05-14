@@ -1,4 +1,13 @@
-import { CALENDAR_COUNTRY_OPTIONS, DEFAULT_WIDGETS, WIDGET_OPTIONS } from './terminal-config.js?v=20260514-market-universe';
+import { CALENDAR_COUNTRY_OPTIONS, DEFAULT_WIDGETS, WIDGET_OPTIONS } from './terminal-config.js?v=20260514-custom-presets';
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 export function toggleCustomizePanel(open = null, renderPanel = null) {
     const panel = document.getElementById('customize-panel');
@@ -13,10 +22,12 @@ export function renderCustomizePanel({
     context,
     selectedWatchlistKeys,
     widgetVisibility,
+    customWorkspaces = [],
 }) {
     const countriesRoot = document.getElementById('customize-countries');
     const watchRoot = document.getElementById('customize-watchlist');
     const widgetsRoot = document.getElementById('customize-widgets');
+    const workspacesRoot = document.getElementById('custom-workspace-list');
     const activeCountries = new Set(countries);
 
     if (countriesRoot) {
@@ -47,6 +58,17 @@ export function renderCustomizePanel({
             </label>
         `).join('');
     }
+
+    if (workspacesRoot) {
+        workspacesRoot.innerHTML = customWorkspaces.length
+            ? customWorkspaces.map((preset) => `
+                <div class="custom-workspace-item">
+                    <span>${escapeHtml(preset.label)}</span>
+                    <button type="button" class="panel-btn" data-custom-workspace-delete="${escapeHtml(preset.id)}" title="Supprimer">x</button>
+                </div>
+            `).join('')
+            : '<span class="customize-empty">Aucun preset personnel sauvegardé</span>';
+    }
 }
 
 export function bindCustomizeControls({
@@ -64,11 +86,16 @@ export function bindCustomizeControls({
     onSymbolSelect,
     refreshCalendar,
     refreshContext,
+    onSaveWorkspace,
+    onDeleteWorkspace,
 }) {
     const toggle = document.getElementById('customize-toggle');
     const close = document.getElementById('customize-close');
     const reset = document.getElementById('customize-reset');
     const panel = document.getElementById('customize-panel');
+    const workspaceSave = document.getElementById('custom-workspace-save');
+    const workspaceName = document.getElementById('custom-workspace-name');
+    const workspaceStatus = document.getElementById('custom-workspace-status');
 
     toggle?.addEventListener('click', () => toggleCustomizePanel(null, renderPanel));
     close?.addEventListener('click', () => toggleCustomizePanel(false, renderPanel));
@@ -81,6 +108,16 @@ export function bindCustomizeControls({
         renderPanel();
         refreshCalendar(false);
         refreshContext(false);
+    });
+
+    workspaceSave?.addEventListener('click', () => {
+        const label = workspaceName?.value.trim() || '';
+        const result = onSaveWorkspace?.(label);
+        if (!result) return;
+        if (workspaceStatus) workspaceStatus.textContent = result.message || 'Preset sauvegardé.';
+        if (!result.ok) return;
+        if (workspaceName) workspaceName.value = '';
+        renderPanel();
     });
 
     panel?.addEventListener('change', (event) => {
@@ -120,5 +157,15 @@ export function bindCustomizeControls({
             savePrefs({ widgets: nextWidgetVisibility });
             applyWidgetVisibility(nextWidgetVisibility);
         }
+    });
+
+    panel?.addEventListener('click', (event) => {
+        const deleteButton = event.target.closest('[data-custom-workspace-delete]');
+        if (!deleteButton) return;
+        const id = deleteButton.dataset.customWorkspaceDelete;
+        if (!id) return;
+        onDeleteWorkspace?.(id);
+        if (workspaceStatus) workspaceStatus.textContent = 'Preset supprimé.';
+        renderPanel();
     });
 }

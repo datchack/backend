@@ -5,6 +5,15 @@ function normalize(value) {
     return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function normalizeSymbol(value) {
     return normalize(String(value || '').split(':').pop());
 }
@@ -103,15 +112,24 @@ export function renderCompactProfileSelect(profiles, currentMarketProfile) {
     `).join('');
 }
 
-export function renderWorkspacePresetSelect(presets, currentWorkspacePreset) {
+export function renderWorkspacePresetSelect(presets, currentWorkspacePreset, customPresets = []) {
     const select = document.getElementById('market-profile');
     if (!select) return;
 
     const items = Object.values(presets || {});
     const placeholder = currentWorkspacePreset ? '' : '<option value="" selected>WORKSPACE</option>';
-    select.innerHTML = `${placeholder}${items.map((preset) => `
-        <option value="${preset.id}" ${preset.id === currentWorkspacePreset ? 'selected' : ''}>${preset.label}</option>
-    `).join('')}`;
+    const officialOptions = items.map((preset) => `
+        <option value="${escapeHtml(preset.id)}" ${preset.id === currentWorkspacePreset ? 'selected' : ''}>${escapeHtml(preset.label)}</option>
+    `).join('');
+    const customOptions = (customPresets || []).map((preset) => `
+        <option value="${escapeHtml(preset.id)}" ${preset.id === currentWorkspacePreset ? 'selected' : ''}>${escapeHtml(preset.label)}</option>
+    `).join('');
+
+    select.innerHTML = `
+        ${placeholder}
+        <optgroup label="XAUTERMINAL">${officialOptions}</optgroup>
+        ${customOptions ? `<optgroup label="Mes presets">${customOptions}</optgroup>` : ''}
+    `;
 }
 
 export function bindMarketSelector({

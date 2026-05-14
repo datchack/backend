@@ -1,6 +1,6 @@
-import { MARKET_CATEGORIES, MARKET_PROFILES, QUOTES_REFRESH_MS } from './terminal-config.js?v=20260514-market-universe';
-import { formatQuoteChange, formatQuotePrice } from './terminal-formatters.js?v=20260514-market-universe';
-import { fetchMarketQuotes } from './terminal-market-api.js?v=20260514-market-universe';
+import { MARKET_CATEGORIES, MARKET_PROFILES, QUOTES_REFRESH_MS } from './terminal-config.js?v=20260514-custom-presets';
+import { formatQuoteChange, formatQuotePrice } from './terminal-formatters.js?v=20260514-custom-presets';
+import { fetchMarketQuotes } from './terminal-market-api.js?v=20260514-custom-presets';
 
 const QUOTE_SLOT_COUNT = 8;
 const CATEGORY_ALL = 'all';

@@ -1,4 +1,4 @@
-import { sourceClass } from './terminal-formatters.js?v=20260514-market-universe';
+import { sourceClass } from './terminal-formatters.js?v=20260514-custom-presets';
 
 function renderNewsSummaries(items) {
     const priorityEl = document.getElementById('news-priority-summary');
