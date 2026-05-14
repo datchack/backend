@@ -103,6 +103,17 @@ export function renderCompactProfileSelect(profiles, currentMarketProfile) {
     `).join('');
 }
 
+export function renderWorkspacePresetSelect(presets, currentWorkspacePreset) {
+    const select = document.getElementById('market-profile');
+    if (!select) return;
+
+    const items = Object.values(presets || {});
+    const placeholder = currentWorkspacePreset ? '' : '<option value="" selected>WORKSPACE</option>';
+    select.innerHTML = `${placeholder}${items.map((preset) => `
+        <option value="${preset.id}" ${preset.id === currentWorkspacePreset ? 'selected' : ''}>${preset.label}</option>
+    `).join('')}`;
+}
+
 export function bindMarketSelector({
     profiles,
     categories,

@@ -1,6 +1,6 @@
-import { MARKET_CATEGORIES, MARKET_PROFILES, QUOTES_REFRESH_MS } from './terminal-config.js';
-import { formatQuoteChange, formatQuotePrice } from './terminal-formatters.js';
-import { fetchMarketQuotes } from './terminal-market-api.js';
+import { MARKET_CATEGORIES, MARKET_PROFILES, QUOTES_REFRESH_MS } from './terminal-config.js?v=20260514-workspace-presets';
+import { formatQuoteChange, formatQuotePrice } from './terminal-formatters.js?v=20260514-workspace-presets';
+import { fetchMarketQuotes } from './terminal-market-api.js?v=20260514-workspace-presets';
 
 const QUOTE_SLOT_COUNT = 8;
 const CATEGORY_ALL = 'all';
@@ -116,6 +116,8 @@ function renderFilledCard(card, quote, currentSymbol) {
             <span class="quote-price">${quote ? formatQuotePrice(quote.price, quote.decimals ?? 2) : '--'}</span>
             <span class="quote-change">${quote ? formatQuoteChange(quote.change, quote.change_pct) : '--'}</span>
             <span class="quote-card-actions">
+                <span class="quote-move" data-quote-move="${escapeHtml(card.symbol)}" data-quote-direction="-1" aria-label="Deplacer vers la gauche">‹</span>
+                <span class="quote-move" data-quote-move="${escapeHtml(card.symbol)}" data-quote-direction="1" aria-label="Deplacer vers la droite">›</span>
                 <span class="quote-replace" data-quote-replace="${escapeHtml(card.symbol)}" aria-label="Remplacer cette carte">↻</span>
                 <span class="quote-remove" data-quote-remove="${escapeHtml(card.symbol)}" aria-label="Retirer cette carte">x</span>
             </span>
@@ -391,6 +393,23 @@ export function bindQuoteCards({ onSymbolSelect, getCurrentSymbol, getQuoteCards
     });
 
     header.addEventListener('click', (event) => {
+        const moveButton = event.target.closest('[data-quote-move]');
+        if (moveButton) {
+            event.stopPropagation();
+            const symbol = moveButton.dataset.quoteMove;
+            const direction = Number.parseInt(moveButton.dataset.quoteDirection || '0', 10);
+            const nextCards = cleanCards(getQuoteCards());
+            const index = nextCards.findIndex((card) => card.symbol === symbol);
+            const nextIndex = index + direction;
+            if (index >= 0 && nextIndex >= 0 && nextIndex < nextCards.length) {
+                [nextCards[index], nextCards[nextIndex]] = [nextCards[nextIndex], nextCards[index]];
+                setQuoteCards(nextCards);
+                savePrefs({ quoteCards: nextCards });
+                renderQuoteSlots({ cards: nextCards, quotes: latestQuotes, currentSymbol: getCurrentSymbol?.() || '' });
+            }
+            return;
+        }
+
         const removeButton = event.target.closest('[data-quote-remove]');
         if (removeButton) {
             event.stopPropagation();

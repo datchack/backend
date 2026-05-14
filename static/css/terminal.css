@@ -498,6 +498,7 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     opacity: 1;
 }
 
+.quote-move,
 .quote-replace,
 .quote-remove {
     width: 18px;
@@ -512,6 +513,7 @@ body[data-show-chart="false"][data-show-bias="false"] .col-center {
     line-height: 1;
 }
 
+.quote-move:hover,
 .quote-replace:hover {
     color: var(--accent);
     border-color: rgba(162, 89, 255, 0.45);

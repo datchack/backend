@@ -8,20 +8,21 @@ import {
     MARKET_PROFILES,
     NEWS_REFRESH_MS,
     PREFS_KEY,
-} from './terminal-config.js?v=20260513-quote-active2';
-import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js?v=20260513-quote-active2';
+    WORKSPACE_PRESETS,
+} from './terminal-config.js?v=20260514-workspace-presets';
+import { saveAccountPreferences, syncBillingCheckoutSession } from './terminal-account-api.js?v=20260514-workspace-presets';
 import {
     fetchAccountState as fetchAccountStateAction,
     submitAccessAuthForm as submitAccessAuthFormAction,
-} from './terminal-account-actions.js?v=20260513-quote-active2';
+} from './terminal-account-actions.js?v=20260514-workspace-presets';
 import {
     bindAccountControls as bindAccountControlsModule,
     hasTerminalAccess as accountHasTerminalAccess,
     renderAccessGate as renderAccessGateView,
     renderAccountState as renderAccountStateView,
     setAccessAuthMessage,
-} from './terminal-account-ui.js?v=20260513-quote-active2';
-import { createCalendarController } from './terminal-calendar.js?v=20260513-quote-active2';
+} from './terminal-account-ui.js?v=20260514-workspace-presets';
+import { createCalendarController } from './terminal-calendar.js?v=20260514-workspace-presets';
 import {
     bindCenterTabs as bindCenterTabsModule,
     bindCommandInput as bindCommandInputModule,
@@ -30,25 +31,25 @@ import {
     initChart as initChartView,
     setCenterTab as setCenterTabView,
     syncCommandSymbol,
-} from './terminal-chart.js?v=20260513-quote-active2';
-import { updateClocks as updateClocksView } from './terminal-clocks.js?v=20260513-quote-active2';
-import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js?v=20260513-quote-active2';
+} from './terminal-chart.js?v=20260514-workspace-presets';
+import { updateClocks as updateClocksView } from './terminal-clocks.js?v=20260514-workspace-presets';
+import { renderMarketContext, renderWatchlist } from './terminal-context-ui.js?v=20260514-workspace-presets';
 import {
     bindCustomizeControls as bindCustomizeControlsModule,
     renderCustomizePanel as renderCustomizePanelView,
-} from './terminal-customize.js?v=20260513-quote-active2';
+} from './terminal-customize.js?v=20260514-workspace-presets';
 import {
     applyLayoutState,
     applyWidgetVisibility,
     bindLayoutControls as bindLayoutControlsModule,
     bindResizers as bindResizersModule,
     loadLayoutPrefs,
-} from './terminal-layout.js?v=20260513-quote-active2';
-import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js?v=20260513-quote-active2';
-import { bindMarketSelector, renderCompactProfileSelect } from './terminal-market-selector.js?v=20260513-quote-active2';
-import { renderNewsError, renderNewsFeed } from './terminal-news.js?v=20260513-quote-active2';
-import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js?v=20260513-quote-active2';
-import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh, syncActiveQuoteCard } from './terminal-quotes.js?v=20260513-quote-active2';
+} from './terminal-layout.js?v=20260514-workspace-presets';
+import { fetchMarketContext, fetchNewsFeed } from './terminal-market-api.js?v=20260514-workspace-presets';
+import { bindMarketSelector, renderWorkspacePresetSelect } from './terminal-market-selector.js?v=20260514-workspace-presets';
+import { renderNewsError, renderNewsFeed } from './terminal-news.js?v=20260514-workspace-presets';
+import { loadStoredPrefs, mergeStoredPrefs, writeStoredPrefs } from './terminal-prefs.js?v=20260514-workspace-presets';
+import { bindQuoteCards, renderPersonalQuoteCards, startQuotesRefresh, syncActiveQuoteCard } from './terminal-quotes.js?v=20260514-workspace-presets';
 import {
     beep as playNotificationSound,
     bindSoundPicker as bindSoundPickerControl,
@@ -56,7 +57,7 @@ import {
     ensureAudio,
     renderSoundToggle as renderSoundToggleControl,
     syncSoundPicker,
-} from './terminal-sound.js?v=20260513-quote-active2';
+} from './terminal-sound.js?v=20260514-workspace-presets';
 
 function loadPrefs() {
     return loadStoredPrefs(PREFS_KEY);
@@ -80,6 +81,7 @@ let currentCenterTab = PREFS.centerTab || 'bias';
 let customCalendarCountries = Array.isArray(PREFS.calendarCountries) ? PREFS.calendarCountries : null;
 let customWatchlistKeys = Array.isArray(PREFS.watchlistKeys) ? PREFS.watchlistKeys : null;
 let quoteCards = Array.isArray(PREFS.quoteCards) ? PREFS.quoteCards : [];
+let currentWorkspacePreset = WORKSPACE_PRESETS[PREFS.workspacePreset] ? PREFS.workspacePreset : '';
 let marketFavorites = Array.isArray(PREFS.marketFavorites) ? PREFS.marketFavorites : ['xauusd', 'eurusd', 'usdjpy', 'gbpjpy'];
 let marketRecents = Array.isArray(PREFS.marketRecents) ? PREFS.marketRecents : [];
 let widgetVisibility = { ...DEFAULT_WIDGETS, ...(PREFS.widgets || {}) };
@@ -113,6 +115,7 @@ function getClientPrefsSnapshot() {
         calendarCountries: getCalendarCountries(),
         watchlistKeys: customWatchlistKeys,
         quoteCards,
+        workspacePreset: currentWorkspacePreset,
         marketFavorites,
         marketRecents,
         widgets: widgetVisibility,
@@ -153,6 +156,7 @@ function applyLoadedPrefs(prefs = {}) {
     customCalendarCountries = Array.isArray(prefs.calendarCountries) ? prefs.calendarCountries : customCalendarCountries;
     customWatchlistKeys = Array.isArray(prefs.watchlistKeys) ? prefs.watchlistKeys : customWatchlistKeys;
     quoteCards = Array.isArray(prefs.quoteCards) ? prefs.quoteCards : quoteCards;
+    currentWorkspacePreset = WORKSPACE_PRESETS[prefs.workspacePreset] ? prefs.workspacePreset : currentWorkspacePreset;
     marketFavorites = Array.isArray(prefs.marketFavorites) ? prefs.marketFavorites : marketFavorites;
     marketRecents = Array.isArray(prefs.marketRecents) ? prefs.marketRecents : marketRecents;
     widgetVisibility = { ...DEFAULT_WIDGETS, ...(prefs.widgets || widgetVisibility) };
@@ -275,7 +279,7 @@ calendarController = createCalendarController({
 });
 
 function renderMarketProfileSelect() {
-    renderCompactProfileSelect(MARKET_PROFILES, currentMarketProfile);
+    renderWorkspacePresetSelect(WORKSPACE_PRESETS, currentWorkspacePreset);
 }
 
 function normalizeRecentSymbol(symbol) {
@@ -310,6 +314,7 @@ function setMarketProfile(profileId) {
     currentMarketProfile = profile.id;
     currentSymbol = profile.symbol;
     customContextSymbol = null;
+    currentWorkspacePreset = '';
     suppressNextNewsFresh = true;
     customCalendarCountries = null;
 
@@ -318,7 +323,40 @@ function setMarketProfile(profileId) {
     changeChart(currentSymbol, { save: false, refresh: false });
     renderMarketProfileSelect();
     const nextRecents = rememberProfile(profile.id);
-    savePrefs({ marketProfile: currentMarketProfile, symbol: currentSymbol, calendarCountries: null, marketRecents: nextRecents });
+    savePrefs({ workspacePreset: currentWorkspacePreset, marketProfile: currentMarketProfile, symbol: currentSymbol, calendarCountries: null, marketRecents: nextRecents });
+    renderCustomizePanel();
+    getNews();
+    fetchCalendar(false);
+    fetchContext(false);
+}
+
+function applyWorkspacePreset(presetId) {
+    const preset = WORKSPACE_PRESETS[presetId];
+    if (!preset) return;
+
+    const profile = MARKET_PROFILES[preset.marketProfile] || MARKET_PROFILES[DEFAULT_MARKET_PROFILE];
+    currentWorkspacePreset = preset.id;
+    currentMarketProfile = profile.id;
+    currentSymbol = preset.symbol || profile.symbol;
+    customContextSymbol = null;
+    customCalendarCountries = Array.isArray(preset.calendarCountries) ? preset.calendarCountries : null;
+    quoteCards = Array.isArray(preset.quoteCards) ? preset.quoteCards : quoteCards;
+    suppressNextNewsFresh = true;
+
+    syncCommandSymbol(currentSymbol);
+    changeChart(currentSymbol, { save: false, refresh: false, fromWorkspace: true });
+    renderMarketProfileSelect();
+    renderPersonalQuoteCards(quoteCards, currentSymbol);
+    refreshQuoteCards();
+    const nextRecents = rememberProfile(profile.id);
+    savePrefs({
+        workspacePreset: currentWorkspacePreset,
+        marketProfile: currentMarketProfile,
+        symbol: currentSymbol,
+        calendarCountries: customCalendarCountries,
+        quoteCards,
+        marketRecents: nextRecents,
+    });
     renderCustomizePanel();
     getNews();
     fetchCalendar(false);
@@ -397,7 +435,7 @@ function bindAccountControls() {
 function bindMarketProfileControls() {
     bindMarketProfileControlsModule({
         renderSelect: renderMarketProfileSelect,
-        onChange: setMarketProfile,
+        onChange: applyWorkspacePreset,
     });
 
     bindMarketSelector({
@@ -414,7 +452,9 @@ function bindMarketProfileControls() {
         onCustomSymbol: (symbol) => {
             syncCommandSymbol(symbol);
             const nextRecents = rememberCustomSymbol(symbol);
-            savePrefs({ marketRecents: nextRecents });
+            currentWorkspacePreset = '';
+            renderMarketProfileSelect();
+            savePrefs({ workspacePreset: currentWorkspacePreset, marketRecents: nextRecents });
             changeChart(symbol, { contextMode: 'symbol' });
         },
     });
@@ -467,6 +507,9 @@ function changeChart(symbol, options = {}) {
     currentSymbol = symbol;
     const matchedProfileId = getProfileIdFromSymbol(symbol);
     const shouldUseSymbolContext = options.contextMode === 'symbol';
+    if (!options.fromWorkspace && shouldUseSymbolContext) {
+        currentWorkspacePreset = '';
+    }
     if (shouldUseSymbolContext) {
         customContextSymbol = symbol;
     }
@@ -484,7 +527,7 @@ function changeChart(symbol, options = {}) {
     changeChartView(symbol);
     syncActiveQuoteCard(currentSymbol);
     if (options.save !== false) {
-        savePrefs({ symbol, marketProfile: currentMarketProfile, marketRecents, calendarCountries: customCalendarCountries });
+        savePrefs({ workspacePreset: currentWorkspacePreset, symbol, marketProfile: currentMarketProfile, marketRecents, calendarCountries: customCalendarCountries });
     }
     if (options.refresh !== false) {
         fetchCalendar(false);
@@ -536,7 +579,7 @@ function bindCustomizeControls() {
         applyWidgetVisibility,
         renderPanel: renderCustomizePanel,
         renderWatchlist,
-        onSymbolSelect: changeChart,
+        onSymbolSelect: (symbol) => changeChart(symbol, { contextMode: 'symbol' }),
         refreshCalendar: fetchCalendar,
         refreshContext: fetchContext,
     });
@@ -546,7 +589,7 @@ async function fetchContext(scheduleNext = true) {
     try {
         const payload = await fetchMarketContext(getProfileQuery(), getCalendarCountryQuery(), getContextSymbol());
         contextState = payload;
-        renderMarketContext(payload, { selectedKeys: customWatchlistKeys, onSymbolSelect: changeChart });
+        renderMarketContext(payload, { selectedKeys: customWatchlistKeys, onSymbolSelect: (symbol) => changeChart(symbol, { contextMode: 'symbol' }) });
         renderCustomizePanel();
         updateClocks();
     } catch (error) {
@@ -620,7 +663,7 @@ function init() {
     bindMarketProfileControls();
     renderPersonalQuoteCards(quoteCards, currentSymbol);
     bindQuoteCards({
-        onSymbolSelect: changeChart,
+        onSymbolSelect: (symbol) => changeChart(symbol, { contextMode: 'symbol' }),
         getCurrentSymbol: () => currentSymbol,
         getQuoteCards: () => quoteCards,
         setQuoteCards: (nextQuoteCards) => {
