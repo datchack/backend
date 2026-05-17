@@ -8,6 +8,7 @@ from fastapi import HTTPException
 
 from app.config import (
     APP_BASE_URL,
+    IS_PRODUCTION,
     STRIPE_ALLOWED_WEBHOOK_EVENTS,
     STRIPE_WEBHOOK_MAX_BYTES,
     STRIPE_WEBHOOK_SECRET,
@@ -230,9 +231,12 @@ async def billing_webhook(request: Request):
         print(f"Stripe webhook processing failed for {event_type}: {exc}", flush=True)
         traceback.print_exc()
         message = str(exc) or type(exc).__name__
+        detail = "Erreur traitement webhook Stripe"
+        if not IS_PRODUCTION:
+            detail = f"Erreur traitement webhook Stripe: {type(exc).__name__}: {message}"
         raise HTTPException(
             status_code=500,
-            detail=f"Erreur traitement webhook Stripe: {type(exc).__name__}: {message}",
+            detail=detail,
         ) from exc
 
     return {"received": True}

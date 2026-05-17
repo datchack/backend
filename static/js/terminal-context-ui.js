@@ -1,5 +1,20 @@
 import { formatLayerScore, formatSignedPercent, formatValue } from './terminal-formatters.js?v=20260514-custom-presets';
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[char]));
+}
+
+function safeCssToken(value, fallback = 'neutral') {
+    const token = String(value || '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    return token || fallback;
+}
+
 export function renderBiasCard(context) {
     const card = document.getElementById('bias-card');
     const scoreEl = document.getElementById('bias-score');
@@ -53,7 +68,7 @@ export function renderBiasCard(context) {
         <span class="bias-layer ${String(layers.momentum?.label || '').toLowerCase()}">MOMO ${layers.momentum?.label || '-'} ${formatLayerScore(layers.momentum?.score)}</span>
         <span class="bias-layer ${String(eventRisk.level || '').toLowerCase()}">EVENT ${eventRisk.level || '-'}${eventMinutes}</span>
     `;
-    reasonsEl.innerHTML = (context.reasons || []).slice(0, 3).map((reason) => `<span class="bias-reason">${reason}</span>`).join('');
+    reasonsEl.innerHTML = (context.reasons || []).slice(0, 3).map((reason) => `<span class="bias-reason">${escapeHtml(reason)}</span>`).join('');
     confidenceEl.textContent = `CONF ${context.confidence || 0}%`;
     confidenceEl.className = `desk-pill ${toneClass}`;
     volEl.textContent = `VOL ${volatility}`;
@@ -80,13 +95,13 @@ export function renderDrivers(context) {
     if (!root) return;
 
     root.innerHTML = (context.drivers || []).map((driver) => `
-        <div class="driver-item ${driver.bias}">
+        <div class="driver-item ${safeCssToken(driver.bias)}">
             <div class="driver-top">
-                <span class="driver-label">${driver.label}</span>
-                <span class="driver-change ${driver.bias}">${formatSignedPercent(driver.change_pct)}</span>
+                <span class="driver-label">${escapeHtml(driver.label)}</span>
+                <span class="driver-change ${safeCssToken(driver.bias)}">${formatSignedPercent(driver.change_pct)}</span>
             </div>
             <div class="driver-value">${formatValue(driver.value)}</div>
-            <div class="driver-note">${driver.note}</div>
+            <div class="driver-note">${escapeHtml(driver.note)}</div>
         </div>
     `).join('');
 }
@@ -103,8 +118,8 @@ export function renderWatchlist(context, { selectedKeys = null, onSymbolSelect =
     root.innerHTML = selected.map((item) => {
         const direction = item.change_pct > 0 ? 'up' : item.change_pct < 0 ? 'down' : 'flat';
         return `
-        <button type="button" class="watch-item" data-symbol="${item.symbol}">
-            <span class="watch-label">${item.label}</span>
+        <button type="button" class="watch-item" data-symbol="${escapeHtml(item.symbol)}">
+            <span class="watch-label">${escapeHtml(item.label)}</span>
             <span class="watch-price">${formatValue(item.price)}</span>
             <span class="watch-change ${direction}">${formatSignedPercent(item.change_pct)}</span>
         </button>`;

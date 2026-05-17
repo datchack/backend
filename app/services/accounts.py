@@ -239,7 +239,9 @@ def seed_owner_accounts() -> None:
 
 def is_owner_row(row) -> bool:
     email = str(row["email"]).strip().lower()
-    return email in OWNER_EMAILS or row["plan"] == "owner" or (not OWNER_EMAILS and int(row["id"]) == 1)
+    if email in OWNER_EMAILS or row["plan"] == "owner":
+        return True
+    return not IS_PRODUCTION and not OWNER_EMAILS and int(row["id"]) == 1
 
 
 def derive_access_state(row) -> tuple[str, str, bool, bool, int]:

@@ -236,11 +236,15 @@ async def account_resend_confirmation(payload: AccountResendConfirmationPayload,
     check_rate_limit(f"resend-confirmation:{client_ip(request)}")
     check_rate_limit(f"resend-confirmation-email:{email}", limit=6)
 
+    generic_response = {"ok": True, "message": "Si un compte non confirme existe, un nouveau code vient d'être envoye."}
+    if "@" not in email or "." not in email:
+        return generic_response
+
     row = execute_one("SELECT * FROM users WHERE email = ?", (email,))
     if not row:
-        raise HTTPException(status_code=404, detail="Compte introuvable")
+        return generic_response
     if "email_confirmed" in row.keys() and row["email_confirmed"]:
-        raise HTTPException(status_code=400, detail="Email deja confirme")
+        return generic_response
 
     code = generate_email_confirmation_code()
     expires_at = email_confirmation_expires_at()
@@ -253,7 +257,7 @@ async def account_resend_confirmation(payload: AccountResendConfirmationPayload,
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Impossible de renvoyer le code de confirmation") from exc
 
-    return {"ok": True, "message": "Un nouveau code de confirmation a ete envoye."}
+    return generic_response
 
 
 @router.post("/api/account/password-reset/request")

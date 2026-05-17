@@ -3,7 +3,7 @@ import time
 from typing import Optional
 
 import aiohttp
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from app.config import SESSION_COOKIE
 from app.services.accounts import get_user_by_session, require_terminal_access
@@ -30,6 +30,8 @@ from app.services.quotes import (
 )
 
 router = APIRouter()
+MAX_CUSTOM_QUOTE_SYMBOLS = 12
+MAX_CUSTOM_SYMBOL_LENGTH = 48
 
 @router.get("/api/market-profiles")
 async def market_profiles(request: Request):
@@ -42,6 +44,10 @@ async def market_quotes(request: Request, symbols: Optional[str] = None):
     require_terminal_access(request)
     if symbols:
         requested_symbols = [symbol.strip() for symbol in symbols.split(",") if symbol.strip()]
+        if len(requested_symbols) > MAX_CUSTOM_QUOTE_SYMBOLS:
+            raise HTTPException(status_code=400, detail="Trop de symboles demandes")
+        if any(len(symbol) > MAX_CUSTOM_SYMBOL_LENGTH for symbol in requested_symbols):
+            raise HTTPException(status_code=400, detail="Symbole trop long")
         quotes = await fetch_custom_quote_cards(requested_symbols)
         return {
             "items": quotes,
@@ -168,5 +174,7 @@ async def health():
 @router.get("/api/context")
 async def get_context(request: Request, profile: Optional[str] = None, countries: Optional[str] = None, symbol: Optional[str] = None):
     require_terminal_access(request)
+    if symbol and len(symbol.strip()) > MAX_CUSTOM_SYMBOL_LENGTH:
+        raise HTTPException(status_code=400, detail="Symbole trop long")
     context = await fetch_market_context(profile, countries, symbol)
     return context
