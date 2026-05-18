@@ -2039,6 +2039,8 @@ async def terms_page():
         ("terms_section6_title", "terms_section6"),
         ("terms_section7_title", "terms_section7"),
         ("terms_section8_title", "terms_section8"),
+        ("terms_section9_title", "terms_section9"),
+        ("terms_section10_title", "terms_section10"),
     ]))
 
 

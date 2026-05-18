@@ -16,6 +16,7 @@ from app.config import (
 )
 from app.schemas import BillingCheckoutPayload, BillingCheckoutSyncPayload, BillingPortalPayload
 from app.services.accounts import require_user
+from app.services.accounts import utc_now
 from app.services.billing import (
     iso_from_stripe_timestamp,
     mark_user_paid,
@@ -47,6 +48,8 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
 
     if not user.get("email_confirmed"):
         raise HTTPException(status_code=403, detail="Email non confirme. Confirme ton adresse email avant de payer.")
+    if not payload.accepted_terms:
+        raise HTTPException(status_code=400, detail="Acceptation des CGU et conditions d'abonnement requise")
 
     plan_key = payload.plan.strip().lower()
     plan_cfg = stripe_checkout_plans().get(plan_key)
@@ -56,6 +59,16 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
         raise HTTPException(status_code=503, detail=f"Prix Stripe manquant pour {plan_key}")
 
     return_path = safe_billing_return_path(payload.return_path)
+    accepted_at = utc_now().isoformat()
+    checkout_metadata = {
+        "user_id": str(user["id"]),
+        "plan": plan_cfg["plan"],
+        "price_id": plan_cfg["price"],
+        "terms_accepted": "true",
+        "terms_accepted_at": accepted_at,
+        "terms_version": "2026-05-18",
+        "billing_policy": "paid_period_non_refundable_cancel_at_period_end",
+    }
     cancel_url = f"{APP_BASE_URL}{return_path}?billing=canceled" if return_path == "/account" else f"{APP_BASE_URL}/#pricing"
     session_payload: dict[str, Any] = {
         "mode": plan_cfg["mode"],
@@ -63,12 +76,9 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
         "success_url": f"{APP_BASE_URL}{return_path}?billing=success&session_id={{CHECKOUT_SESSION_ID}}",
         "cancel_url": cancel_url,
         "client_reference_id": str(user["id"]),
-        "metadata": {
-            "user_id": str(user["id"]),
-            "plan": plan_cfg["plan"],
-            "price_id": plan_cfg["price"],
-        },
+        "metadata": checkout_metadata,
         "allow_promotion_codes": True,
+        "consent_collection": {"terms_of_service": "required"},
     }
 
     if user.get("stripe_customer_id"):
@@ -80,21 +90,13 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
         session_payload["payment_method_collection"] = "always"
         session_payload["subscription_data"] = {
             "trial_period_days": TRIAL_DAYS,
-            "metadata": {
-                "user_id": str(user["id"]),
-                "plan": plan_cfg["plan"],
-                "price_id": plan_cfg["price"],
-            }
+            "metadata": checkout_metadata,
         }
     else:
         session_payload["customer_creation"] = "always"
         session_payload["invoice_creation"] = {"enabled": True}
         session_payload["payment_intent_data"] = {
-            "metadata": {
-                "user_id": str(user["id"]),
-                "plan": plan_cfg["plan"],
-                "price_id": plan_cfg["price"],
-            }
+            "metadata": checkout_metadata,
         }
 
     checkout_session = stripe.checkout.Session.create(**session_payload)

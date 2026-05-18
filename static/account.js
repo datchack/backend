@@ -58,7 +58,7 @@ const ACCOUNT_COPY = {
         next_plan_action: 'Voir les formules',
         next_sync_title: 'Paiement en synchronisation',
         next_sync_copy: 'Stripe est lié au compte. Si l’accès n’est pas encore actif, tu peux gérer ton paiement ou contacter le support.',
-        next_portal_action: 'Gérer Stripe',
+        next_portal_action: 'Résilier / gérer Stripe',
         next_active_title: 'Accès terminal prêt',
         next_active_copy: 'Ton compte est actif. Tu peux ouvrir le terminal et gérer ton abonnement depuis Stripe.',
         next_terminal_action: 'Ouvrir le terminal',
@@ -69,7 +69,7 @@ const ACCOUNT_COPY = {
         terminal_access: 'Accès terminal',
         period_end: 'Échéance',
         resend_code: 'Renvoyer le code',
-        manage_stripe: 'Gérer avec Stripe',
+        manage_stripe: 'Résilier / gérer avec Stripe',
         billing_kicker: 'ABONNEMENT',
         billing_title: 'Formule et facturation',
         billing_default_copy: 'Stripe gère les moyens de paiement, factures, changements de formule et annulations.',
@@ -154,6 +154,7 @@ const ACCOUNT_COPY = {
         code_sent: 'Code de confirmation renvoyé par email.',
         code_error: 'Code non envoyé.',
         payment_canceled: 'Paiement annulé. Tu peux choisir une formule quand tu veux.',
+        legal_confirm: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement: essai 7 jours, renouvellement automatique, période payée non remboursable sauf obligation légale contraire, résiliation à l'échéance de la période en cours. Continuer ?",
         validating_payment: 'Validation du paiement Stripe...',
         payment_valid: 'Paiement validé. Ton accès est activé.',
         payment_pending: 'Paiement reçu, synchronisation en attente.',
@@ -212,7 +213,7 @@ const ACCOUNT_COPY = {
         next_plan_action: 'View plans',
         next_sync_title: 'Payment syncing',
         next_sync_copy: 'Stripe is linked to the account. If access is not active yet, you can manage payment or contact support.',
-        next_portal_action: 'Manage Stripe',
+        next_portal_action: 'Cancel / manage Stripe',
         next_active_title: 'Terminal access ready',
         next_active_copy: 'Your account is active. You can open the terminal and manage billing through Stripe.',
         next_terminal_action: 'Open terminal',
@@ -223,7 +224,7 @@ const ACCOUNT_COPY = {
         terminal_access: 'Terminal access',
         period_end: 'Period end',
         resend_code: 'Resend code',
-        manage_stripe: 'Manage with Stripe',
+        manage_stripe: 'Cancel / manage with Stripe',
         billing_kicker: 'SUBSCRIPTION',
         billing_title: 'Plan and billing',
         billing_default_copy: 'Stripe manages payment methods, invoices, plan changes and cancellations.',
@@ -308,6 +309,7 @@ const ACCOUNT_COPY = {
         code_sent: 'Confirmation code sent again by email.',
         code_error: 'Code not sent.',
         payment_canceled: 'Payment canceled. You can choose a plan whenever you want.',
+        legal_confirm: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions: 7-day trial, automatic renewal, paid period non-refundable unless legally required otherwise, cancellation at the end of the current period. Continue?',
         validating_payment: 'Validating Stripe payment...',
         payment_valid: 'Payment valid. Your access is active.',
         payment_pending: 'Payment received, sync pending.',
@@ -625,12 +627,16 @@ async function savePassword(event) {
 }
 
 async function startCheckout(plan) {
+    if (!window.confirm(t('legal_confirm'))) {
+        setMessage('account-message', '');
+        return;
+    }
     try {
         setMessage('account-message', t('redirect_stripe'));
         const response = await fetch('/api/billing/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan, return_path: '/account' }),
+            body: JSON.stringify({ plan, return_path: '/account', accepted_terms: true }),
         });
         const payload = await readJson(response);
         window.location.href = payload.url;
