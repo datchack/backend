@@ -2,6 +2,7 @@ import ast
 import json
 import re
 from html import escape
+from pathlib import Path
 
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, Request
@@ -304,6 +305,28 @@ def extract_static_locale_copy(locale: str = "en") -> dict[str, str]:
 
 
 STATIC_EN_COPY = extract_static_locale_copy("en")
+TRANSLATION_DIR = Path(__file__).resolve().parents[1] / "translations"
+
+
+def load_locale_file(locale: str) -> dict[str, str]:
+    path = TRANSLATION_DIR / f"{locale}.json"
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return {str(key): str(value) for key, value in data.items() if isinstance(value, str)}
+
+
+def load_market_locale_file(locale: str, path: str) -> dict[str, str]:
+    file_path = TRANSLATION_DIR / f"market-{locale}.json"
+    try:
+        with file_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    page_data = data.get(path, {})
+    return {str(key): str(value) for key, value in page_data.items() if isinstance(value, str)}
 
 
 def absolute_url(path: str = "/") -> str:
@@ -354,7 +377,7 @@ def language_selector(current_locale: str, path: str) -> str:
 def localized_copy(locale: str) -> dict[str, str]:
     if locale == "fr":
         return {}
-    return {**STATIC_EN_COPY, **LOCALE_COPY.get("en", {}), **LOCALE_COPY.get(locale, {})}
+    return {**STATIC_EN_COPY, **load_locale_file(locale), **LOCALE_COPY.get("en", {}), **LOCALE_COPY.get(locale, {})}
 
 
 def localize_html(html: str, locale: str, path: str) -> str:
@@ -388,6 +411,30 @@ def localize_html(html: str, locale: str, path: str) -> str:
         title = soup.find("title")
         if title and copy.get(title.get("data-i18n", "")):
             title.string = copy[title["data-i18n"]]
+
+    market_copy = load_market_locale_file(locale, path)
+    if market_copy:
+        for element in soup.find_all(attrs={"data-market-i18n": True}):
+            value = market_copy.get(element["data-market-i18n"])
+            if value:
+                element.string = value
+        for element in soup.find_all(attrs={"data-market-content": True}):
+            value = market_copy.get(element["data-market-content"])
+            if value:
+                element["content"] = value
+        title = soup.find("title", attrs={"data-market-i18n": True})
+        if title and market_copy.get(title["data-market-i18n"]):
+            title.string = market_copy[title["data-market-i18n"]]
+        for script in soup.find_all("script"):
+            if script.string and "window.XT_MARKET_COPY" in script.string:
+                match = re.search(r"window\\.XT_MARKET_COPY\\s*=\\s*(.*);", script.string, re.S)
+                if match:
+                    try:
+                        market_payload = json.loads(match.group(1))
+                        market_payload[locale] = market_copy
+                        script.string = f"window.XT_MARKET_COPY = {json.dumps(market_payload, ensure_ascii=False)};"
+                    except json.JSONDecodeError:
+                        pass
 
     initial_script = soup.new_tag("script")
     initial_script.string = (
@@ -1761,8 +1808,8 @@ def market_lang_script() -> str:
     (function () {
         const copy = window.XT_MARKET_COPY || {};
         function applyMarketLanguage() {
-            const lang = localStorage.getItem('xt_lang') || 'fr';
-            const current = copy[lang] || copy.fr || {};
+            const lang = window.XT_INITIAL_LANG || localStorage.getItem('xt_lang') || 'fr';
+            const current = copy[lang] || copy.en || copy.fr || {};
             document.querySelectorAll('[data-market-i18n]').forEach((el) => {
                 const key = el.dataset.marketI18n;
                 if (current[key] !== undefined) el.textContent = current[key];
