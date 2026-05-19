@@ -1,5 +1,6 @@
 let landingAuthMode = 'register';
-let landingLang = localStorage.getItem('xt_lang') || 'fr';
+const LANDING_LANGS = window.XT_SUPPORTED_LANGS || ['fr', 'en'];
+let landingLang = window.XT_INITIAL_LANG || localStorage.getItem('xt_lang') || 'fr';
 let selectedBillingPlan = null;
 
 const LANDING_COPY = {
@@ -1032,6 +1033,15 @@ Object.keys(SEO_COPY).forEach((lang) => {
     LANDING_COPY[lang] = { ...LANDING_COPY[lang], ...SEO_COPY[lang] };
 });
 
+if (window.XT_LOCALE_COPY && landingLang && !LANDING_COPY[landingLang]) {
+    LANDING_COPY[landingLang] = { ...LANDING_COPY.en, ...window.XT_LOCALE_COPY };
+} else if (window.XT_LOCALE_COPY && landingLang) {
+    LANDING_COPY[landingLang] = { ...LANDING_COPY[landingLang], ...window.XT_LOCALE_COPY };
+}
+if (!LANDING_COPY[landingLang]) {
+    landingLang = 'fr';
+}
+
 function t(key) {
     return LANDING_COPY[landingLang]?.[key] || LANDING_COPY.fr[key] || key;
 }
@@ -1062,7 +1072,11 @@ function applyLandingLanguage() {
     }
 
     const toggle = document.querySelector('[data-lang-toggle]');
-    if (toggle) toggle.textContent = landingLang === 'fr' ? 'EN' : 'FR';
+    if (toggle) {
+        const currentIndex = Math.max(0, LANDING_LANGS.indexOf(landingLang));
+        const nextLang = LANDING_LANGS[(currentIndex + 1) % LANDING_LANGS.length] || 'fr';
+        toggle.textContent = nextLang.toUpperCase();
+    }
 
     setLandingAuthMode(landingAuthMode);
 }
@@ -1311,9 +1325,11 @@ function bindLanding() {
     const langToggle = document.querySelector('[data-lang-toggle]');
     if (langToggle) {
         langToggle.addEventListener('click', () => {
-            landingLang = landingLang === 'fr' ? 'en' : 'fr';
+            const currentIndex = Math.max(0, LANDING_LANGS.indexOf(landingLang));
+            landingLang = LANDING_LANGS[(currentIndex + 1) % LANDING_LANGS.length] || 'fr';
             localStorage.setItem('xt_lang', landingLang);
-            applyLandingLanguage();
+            const prefix = landingLang === 'fr' ? '' : `/${landingLang}`;
+            window.location.href = `${prefix}${window.location.pathname.replace(/^\/(en|es|pt-br|de|ar|ja|hi|id|zh)(?=\/|$)/, '')}${window.location.hash}`;
         });
     }
 

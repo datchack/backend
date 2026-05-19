@@ -1,6 +1,9 @@
+import ast
 import json
+import re
 from html import escape
 
+from bs4 import BeautifulSoup
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response as FastAPIResponse
 
@@ -24,9 +27,361 @@ from app.services.pulse import build_public_market_pulse
 router = APIRouter()
 
 
+SUPPORTED_LOCALES = {
+    "fr": {"prefix": "", "hreflang": "fr", "name": "Français", "dir": "ltr"},
+    "en": {"prefix": "/en", "hreflang": "en", "name": "English", "dir": "ltr"},
+    "es": {"prefix": "/es", "hreflang": "es", "name": "Español", "dir": "ltr"},
+    "pt-br": {"prefix": "/pt-br", "hreflang": "pt-BR", "name": "Português BR", "dir": "ltr"},
+    "de": {"prefix": "/de", "hreflang": "de", "name": "Deutsch", "dir": "ltr"},
+    "ar": {"prefix": "/ar", "hreflang": "ar", "name": "العربية", "dir": "rtl"},
+    "ja": {"prefix": "/ja", "hreflang": "ja", "name": "日本語", "dir": "ltr"},
+    "hi": {"prefix": "/hi", "hreflang": "hi", "name": "हिन्दी", "dir": "ltr"},
+    "id": {"prefix": "/id", "hreflang": "id", "name": "Bahasa Indonesia", "dir": "ltr"},
+    "zh": {"prefix": "/zh", "hreflang": "zh-Hans", "name": "简体中文", "dir": "ltr"},
+}
+
+LOCALE_PREFIXES = {cfg["prefix"].strip("/"): code for code, cfg in SUPPORTED_LOCALES.items() if cfg["prefix"]}
+
+LOCALE_COPY = {
+    "en": {
+        "meta_title": "XAUTERMINAL - Professional macro and trading terminal",
+        "hero_copy": "A macro workstation to track news, the economic calendar, market drivers and your charts in a fast, customizable, decision-focused interface.",
+        "hero_trial": "Start 7-day trial",
+        "hero_login": "I already have an account",
+        "nav_tools": "Tools",
+        "nav_markets": "Markets",
+        "nav_pricing": "Plans",
+        "nav_login": "Login",
+        "nav_terminal": "Open terminal",
+        "nav_account": "My account",
+        "nav_support": "Support",
+        "features_title": "Everything that matters before a market decision.",
+        "pricing_title": "Try the terminal, then choose the rhythm that fits you.",
+        "pricing_monthly_label": "Monthly",
+        "pricing_yearly_label": "Yearly",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "Choose this plan",
+        "pricing_note_title": "Secure trial and payment",
+        "footer_trial": "Start trial",
+        "footer_tagline": "Professional macro and trading terminal. Information tool, not financial advice.",
+        "billing_redirect": "Redirecting to payment...",
+    },
+    "es": {
+        "meta_title": "XAUTERMINAL - Terminal macro y trading profesional",
+        "hero_copy": "Un puesto de trabajo macro para seguir noticias, calendario económico, drivers de mercado y gráficos en una interfaz rápida, personalizable y orientada a la decisión.",
+        "hero_trial": "Iniciar prueba de 7 días",
+        "hero_login": "Ya tengo una cuenta",
+        "nav_tools": "Herramientas",
+        "nav_markets": "Mercados",
+        "nav_pricing": "Planes",
+        "nav_login": "Conexión",
+        "nav_terminal": "Abrir terminal",
+        "nav_account": "Mi cuenta",
+        "nav_support": "Soporte",
+        "features_title": "Todo lo importante antes de una decisión de mercado.",
+        "pricing_title": "Prueba el terminal y elige el ritmo que encaje contigo.",
+        "pricing_monthly_label": "Mensual",
+        "pricing_yearly_label": "Anual",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "Elegir este plan",
+        "pricing_note_title": "Prueba y pago seguro",
+        "footer_trial": "Iniciar prueba",
+        "footer_tagline": "Terminal macro y trading profesional. Herramienta informativa, no asesoramiento financiero.",
+        "billing_redirect": "Redirección al pago...",
+    },
+    "pt-br": {
+        "meta_title": "XAUTERMINAL - Terminal macro e trading profissional",
+        "hero_copy": "Uma estação macro para acompanhar notícias, calendário econômico, drivers de mercado e gráficos em uma interface rápida, personalizável e orientada à decisão.",
+        "hero_trial": "Iniciar teste de 7 dias",
+        "hero_login": "Já tenho uma conta",
+        "nav_tools": "Ferramentas",
+        "nav_markets": "Mercados",
+        "nav_pricing": "Planos",
+        "nav_login": "Entrar",
+        "nav_terminal": "Abrir terminal",
+        "nav_account": "Minha conta",
+        "nav_support": "Suporte",
+        "features_title": "Tudo que importa antes de uma decisão de mercado.",
+        "pricing_title": "Teste o terminal e escolha o ritmo ideal.",
+        "pricing_monthly_label": "Mensal",
+        "pricing_yearly_label": "Anual",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "Escolher este plano",
+        "pricing_note_title": "Teste e pagamento seguro",
+        "footer_trial": "Iniciar teste",
+        "footer_tagline": "Terminal macro e trading profissional. Ferramenta informativa, não aconselhamento financeiro.",
+        "billing_redirect": "Redirecionando para o pagamento...",
+    },
+    "de": {
+        "meta_title": "XAUTERMINAL - Professionelles Makro- und Trading-Terminal",
+        "hero_copy": "Ein Makro-Arbeitsplatz für News, Wirtschaftskalender, Markttreiber und Charts in einer schnellen, anpassbaren und entscheidungsorientierten Oberfläche.",
+        "hero_trial": "7-Tage-Test starten",
+        "hero_login": "Ich habe bereits ein Konto",
+        "nav_tools": "Tools",
+        "nav_markets": "Märkte",
+        "nav_pricing": "Tarife",
+        "nav_login": "Login",
+        "nav_terminal": "Terminal öffnen",
+        "nav_account": "Mein Konto",
+        "nav_support": "Support",
+        "features_title": "Alles Wichtige vor einer Marktentscheidung.",
+        "pricing_title": "Teste das Terminal und wähle deinen Rhythmus.",
+        "pricing_monthly_label": "Monatlich",
+        "pricing_yearly_label": "Jährlich",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "Diesen Tarif wählen",
+        "pricing_note_title": "Sichere Testphase und Zahlung",
+        "footer_trial": "Test starten",
+        "footer_tagline": "Professionelles Makro- und Trading-Terminal. Informationstool, keine Finanzberatung.",
+        "billing_redirect": "Weiterleitung zur Zahlung...",
+    },
+    "ar": {
+        "meta_title": "XAUTERMINAL - منصة ماكرو وتداول احترافية",
+        "hero_copy": "مساحة عمل ماكرو لمتابعة الأخبار والتقويم الاقتصادي ومحركات السوق والرسوم البيانية عبر واجهة سريعة وقابلة للتخصيص وموجهة للقرار.",
+        "hero_trial": "ابدأ تجربة 7 أيام",
+        "hero_login": "لدي حساب بالفعل",
+        "nav_tools": "الأدوات",
+        "nav_markets": "الأسواق",
+        "nav_pricing": "الخطط",
+        "nav_login": "تسجيل الدخول",
+        "nav_terminal": "فتح المنصة",
+        "nav_account": "حسابي",
+        "nav_support": "الدعم",
+        "features_title": "كل ما يهم قبل اتخاذ قرار في السوق.",
+        "pricing_title": "جرّب المنصة ثم اختر الخطة المناسبة لك.",
+        "pricing_monthly_label": "شهري",
+        "pricing_yearly_label": "سنوي",
+        "pricing_lifetime_label": "مدى الحياة",
+        "pricing_choose": "اختر هذه الخطة",
+        "pricing_note_title": "تجربة ودفع آمن",
+        "footer_trial": "ابدأ التجربة",
+        "footer_tagline": "منصة ماكرو وتداول احترافية. أداة معلومات وليست نصيحة مالية.",
+        "billing_redirect": "جارٍ التحويل إلى الدفع...",
+    },
+    "ja": {
+        "meta_title": "XAUTERMINAL - プロ向けマクロ・トレーディング端末",
+        "hero_copy": "ニュース、経済カレンダー、市場ドライバー、チャートを素早くカスタマイズ可能な意思決定向けインターフェースで確認できるマクロワークステーション。",
+        "hero_trial": "7日間トライアルを開始",
+        "hero_login": "すでにアカウントを持っています",
+        "nav_tools": "ツール",
+        "nav_markets": "市場",
+        "nav_pricing": "プラン",
+        "nav_login": "ログイン",
+        "nav_terminal": "端末を開く",
+        "nav_account": "アカウント",
+        "nav_support": "サポート",
+        "features_title": "市場判断の前に必要な情報を一か所に。",
+        "pricing_title": "端末を試して、自分に合うプランを選択。",
+        "pricing_monthly_label": "月額",
+        "pricing_yearly_label": "年額",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "このプランを選ぶ",
+        "pricing_note_title": "安全なトライアルと決済",
+        "footer_trial": "トライアル開始",
+        "footer_tagline": "プロ向けマクロ・トレーディング端末。情報ツールであり、金融助言ではありません。",
+        "billing_redirect": "決済へ移動しています...",
+    },
+    "hi": {
+        "meta_title": "XAUTERMINAL - प्रोफेशनल मैक्रो और ट्रेडिंग टर्मिनल",
+        "hero_copy": "समाचार, आर्थिक कैलेंडर, मार्केट ड्राइवर और चार्ट को तेज, कस्टमाइजेबल और निर्णय-केंद्रित इंटरफेस में ट्रैक करने वाला मैक्रो वर्कस्टेशन.",
+        "hero_trial": "7 दिन का ट्रायल शुरू करें",
+        "hero_login": "मेरे पास पहले से खाता है",
+        "nav_tools": "टूल्स",
+        "nav_markets": "मार्केट्स",
+        "nav_pricing": "प्लान",
+        "nav_login": "लॉगिन",
+        "nav_terminal": "टर्मिनल खोलें",
+        "nav_account": "मेरा खाता",
+        "nav_support": "सहायता",
+        "features_title": "मार्केट निर्णय से पहले जरूरी सब कुछ.",
+        "pricing_title": "टर्मिनल आज़माएँ और अपना प्लान चुनें.",
+        "pricing_monthly_label": "मासिक",
+        "pricing_yearly_label": "वार्षिक",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "यह प्लान चुनें",
+        "pricing_note_title": "सुरक्षित ट्रायल और भुगतान",
+        "footer_trial": "ट्रायल शुरू करें",
+        "footer_tagline": "प्रोफेशनल मैक्रो और ट्रेडिंग टर्मिनल. सूचना उपकरण, वित्तीय सलाह नहीं.",
+        "billing_redirect": "भुगतान पर भेजा जा रहा है...",
+    },
+    "id": {
+        "meta_title": "XAUTERMINAL - Terminal makro dan trading profesional",
+        "hero_copy": "Workspace makro untuk mengikuti berita, kalender ekonomi, driver pasar, dan chart dalam antarmuka cepat, personal, dan berorientasi keputusan.",
+        "hero_trial": "Mulai uji coba 7 hari",
+        "hero_login": "Saya sudah punya akun",
+        "nav_tools": "Alat",
+        "nav_markets": "Pasar",
+        "nav_pricing": "Paket",
+        "nav_login": "Masuk",
+        "nav_terminal": "Buka terminal",
+        "nav_account": "Akun saya",
+        "nav_support": "Dukungan",
+        "features_title": "Semua yang penting sebelum keputusan pasar.",
+        "pricing_title": "Coba terminal, lalu pilih ritme yang cocok.",
+        "pricing_monthly_label": "Bulanan",
+        "pricing_yearly_label": "Tahunan",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "Pilih paket ini",
+        "pricing_note_title": "Uji coba dan pembayaran aman",
+        "footer_trial": "Mulai uji coba",
+        "footer_tagline": "Terminal makro dan trading profesional. Alat informasi, bukan nasihat keuangan.",
+        "billing_redirect": "Mengalihkan ke pembayaran...",
+    },
+    "zh": {
+        "meta_title": "XAUTERMINAL - 专业宏观与交易终端",
+        "hero_copy": "一个宏观工作台，用快速、可定制、面向决策的界面跟踪新闻、经济日历、市场驱动因素和图表。",
+        "hero_trial": "开始 7 天试用",
+        "hero_login": "我已有账户",
+        "nav_tools": "工具",
+        "nav_markets": "市场",
+        "nav_pricing": "方案",
+        "nav_login": "登录",
+        "nav_terminal": "打开终端",
+        "nav_account": "我的账户",
+        "nav_support": "支持",
+        "features_title": "市场决策前需要关注的一切。",
+        "pricing_title": "先试用终端，再选择适合你的方案。",
+        "pricing_monthly_label": "月付",
+        "pricing_yearly_label": "年付",
+        "pricing_lifetime_label": "Lifetime",
+        "pricing_choose": "选择此方案",
+        "pricing_note_title": "安全试用与支付",
+        "footer_trial": "开始试用",
+        "footer_tagline": "专业宏观与交易终端。信息工具，不构成金融建议。",
+        "billing_redirect": "正在跳转到支付...",
+    },
+}
+
+
+def extract_static_locale_copy(locale: str = "en") -> dict[str, str]:
+    try:
+        with open("static/landing.js", "r", encoding="utf-8") as handle:
+            source = handle.read()
+    except OSError:
+        return {}
+
+    result: dict[str, str] = {}
+    for object_name in ("LANDING_COPY", "SEO_COPY"):
+        object_start = source.find(f"const {object_name} = {{")
+        if object_start < 0:
+            continue
+        locale_marker = f"\n    {locale}: {{"
+        locale_start = source.find(locale_marker, object_start)
+        if locale_start < 0:
+            continue
+        brace_start = source.find("{", locale_start + 1)
+        if brace_start < 0:
+            continue
+        depth = 0
+        quote: str | None = None
+        escaped = False
+        block_end = brace_start
+        for index, char in enumerate(source[brace_start:], start=brace_start):
+            if quote:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == quote:
+                    quote = None
+                continue
+            if char in {"'", '"'}:
+                quote = char
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    block_end = index
+                    break
+        block = source[brace_start + 1:block_end]
+        for match in re.finditer(r"\n\s*([A-Za-z0-9_]+):\s*('(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\")", block):
+            try:
+                result[match.group(1)] = ast.literal_eval(match.group(2))
+            except (SyntaxError, ValueError):
+                continue
+    return result
+
+
+STATIC_EN_COPY = extract_static_locale_copy("en")
+
+
 def absolute_url(path: str = "/") -> str:
     suffix = path if path.startswith("/") else f"/{path}"
     return f"{APP_BASE_URL}{suffix}"
+
+
+def locale_path(path: str, locale: str = "fr") -> str:
+    clean_path = path if path.startswith("/") else f"/{path}"
+    if clean_path != "/" and clean_path.endswith("/"):
+        clean_path = clean_path.rstrip("/")
+    prefix = SUPPORTED_LOCALES.get(locale, SUPPORTED_LOCALES["fr"])["prefix"]
+    if not prefix:
+        return clean_path
+    return prefix if clean_path == "/" else f"{prefix}{clean_path}"
+
+
+def alternate_links(path: str) -> str:
+    links = [
+        f'    <link rel="alternate" hreflang="{cfg["hreflang"]}" href="{absolute_url(locale_path(path, locale))}">'
+        for locale, cfg in SUPPORTED_LOCALES.items()
+    ]
+    links.append(f'    <link rel="alternate" hreflang="x-default" href="{absolute_url(locale_path(path, "en"))}">')
+    return "\n".join(links)
+
+
+def localized_copy(locale: str) -> dict[str, str]:
+    if locale == "fr":
+        return {}
+    return {**STATIC_EN_COPY, **LOCALE_COPY.get("en", {}), **LOCALE_COPY.get(locale, {})}
+
+
+def localize_html(html: str, locale: str, path: str) -> str:
+    if locale not in SUPPORTED_LOCALES:
+        locale = "fr"
+    soup = BeautifulSoup(html, "html.parser")
+    locale_cfg = SUPPORTED_LOCALES[locale]
+    if soup.html:
+        soup.html["lang"] = locale_cfg["hreflang"]
+        soup.html["dir"] = locale_cfg["dir"]
+
+    canonical_url = absolute_url(locale_path(path, locale))
+    canonical = soup.find("link", rel="canonical")
+    if canonical:
+        canonical["href"] = canonical_url
+        canonical.insert_after(BeautifulSoup("\n" + alternate_links(path), "html.parser"))
+
+    for tag in soup.find_all("meta", property="og:url"):
+        tag["content"] = canonical_url
+
+    copy = localized_copy(locale)
+    if copy:
+        for element in soup.find_all(attrs={"data-i18n": True}):
+            value = copy.get(element["data-i18n"])
+            if value:
+                element.string = value
+        for element in soup.find_all(attrs={"data-i18n-content": True}):
+            value = copy.get(element["data-i18n-content"])
+            if value:
+                element["content"] = value
+        title = soup.find("title")
+        if title and copy.get(title.get("data-i18n", "")):
+            title.string = copy[title["data-i18n"]]
+
+    initial_script = soup.new_tag("script")
+    initial_script.string = (
+        f"window.XT_INITIAL_LANG={json.dumps(locale)};"
+        f"window.XT_SUPPORTED_LANGS={json.dumps(list(SUPPORTED_LOCALES))};"
+        f"window.XT_LOCALE_COPY={json.dumps(copy, ensure_ascii=False)};"
+    )
+    if soup.head:
+        soup.head.append(initial_script)
+    return str(soup)
+
+
+def localized_landing(locale: str = "fr") -> str:
+    with open("templates/landing.html", "r", encoding="utf-8") as handle:
+        return localize_html(handle.read(), locale, "/")
 
 
 FAVICON_LINKS = """    <link rel="icon" href="/favicon.ico" sizes="any">
@@ -2021,7 +2376,7 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
 
 @router.get("/", response_class=HTMLResponse)
 async def index():
-    return FileResponse("templates/landing.html")
+    return HTMLResponse(localized_landing("fr"))
 
 
 @router.head("/")
@@ -2051,75 +2406,75 @@ async def reset_password_page():
 
 @router.get("/ressources", response_class=HTMLResponse)
 async def resources_index_page():
-    return HTMLResponse(resources_page())
+    return HTMLResponse(localize_html(resources_page(), "fr", "/ressources"))
 
 
 @router.get("/guides", response_class=HTMLResponse)
 async def guides_index_page():
-    return HTMLResponse(guides_page())
+    return HTMLResponse(localize_html(guides_page(), "fr", "/guides"))
 
 
 @router.get("/market-pulse", response_class=HTMLResponse)
 async def market_pulse_index_page():
     pulse = await build_public_market_pulse()
-    return HTMLResponse(market_pulse_page(pulse))
+    return HTMLResponse(localize_html(market_pulse_page(pulse), "fr", "/market-pulse"))
 
 
 @router.get("/marches", response_class=HTMLResponse)
 async def markets_index_page_route():
-    return HTMLResponse(markets_index_page())
+    return HTMLResponse(localize_html(markets_index_page(), "fr", "/marches"))
 
 
 @router.get("/marches/{slug}", response_class=HTMLResponse)
 async def market_pair_page_route(slug: str):
     if slug not in FX_MARKET_BY_SLUG:
         return FastAPIResponse(status_code=404, content="Market not found")
-    return HTMLResponse(market_pair_page(slug))
+    return HTMLResponse(localize_html(market_pair_page(slug), "fr", f"/marches/{slug}"))
 
 
 @router.get("/support", response_class=HTMLResponse)
 async def support_index_page():
-    return HTMLResponse(support_page())
+    return HTMLResponse(localize_html(support_page(), "fr", "/support"))
 
 
 @router.get("/terminal-xauusd", response_class=HTMLResponse)
 async def terminal_xauusd_page():
-    return HTMLResponse(content_page("terminal_xauusd"))
+    return HTMLResponse(localize_html(content_page("terminal_xauusd"), "fr", "/terminal-xauusd"))
 
 
 @router.get("/calendrier-economique-or", response_class=HTMLResponse)
 async def calendrier_economique_or_page():
-    return HTMLResponse(content_page("calendrier_or"))
+    return HTMLResponse(localize_html(content_page("calendrier_or"), "fr", "/calendrier-economique-or"))
 
 
 @router.get("/news-forex-or", response_class=HTMLResponse)
 async def news_forex_or_page():
-    return HTMLResponse(content_page("news_forex_or"))
+    return HTMLResponse(localize_html(content_page("news_forex_or"), "fr", "/news-forex-or"))
 
 
 @router.get("/guide/trading-or-macro", response_class=HTMLResponse)
 async def guide_trading_or_macro_page():
-    return HTMLResponse(content_page("guide_trading_or_macro"))
+    return HTMLResponse(localize_html(content_page("guide_trading_or_macro"), "fr", "/guide/trading-or-macro"))
 
 
 @router.get("/guides/routine-trading-xauusd", response_class=HTMLResponse)
 async def routine_trading_xauusd_page():
-    return HTMLResponse(content_page("routine_trading_xauusd"))
+    return HTMLResponse(localize_html(content_page("routine_trading_xauusd"), "fr", "/guides/routine-trading-xauusd"))
 
 
 @router.get("/guides/dxy-taux-us-or", response_class=HTMLResponse)
 async def dxy_taux_us_or_page():
-    return HTMLResponse(content_page("dxy_taux_or"))
+    return HTMLResponse(localize_html(content_page("dxy_taux_or"), "fr", "/guides/dxy-taux-us-or"))
 
 
 @router.get("/guides/bias-desk-trading", response_class=HTMLResponse)
 async def bias_desk_trading_page():
-    return HTMLResponse(content_page("bias_desk"))
+    return HTMLResponse(localize_html(content_page("bias_desk"), "fr", "/guides/bias-desk-trading"))
 
 
 @router.get("/terms", response_class=HTMLResponse)
 async def terms_page():
-    return HTMLResponse(legal_page("terms_title", "terms_kicker", [
+    return HTMLResponse(localize_html(legal_page("terms_title", "terms_kicker", [
         ("terms_section1_title", "terms_section1"),
         ("terms_section2_title", "terms_section2"),
         ("terms_section3_title", "terms_section3"),
@@ -2132,12 +2487,12 @@ async def terms_page():
         ("terms_section10_title", "terms_section10"),
         ("terms_section11_title", "terms_section11"),
         ("terms_section12_title", "terms_section12"),
-    ]))
+    ]), "fr", "/terms"))
 
 
 @router.get("/privacy", response_class=HTMLResponse)
 async def privacy_page():
-    return HTMLResponse(legal_page("privacy_title", "privacy_kicker", [
+    return HTMLResponse(localize_html(legal_page("privacy_title", "privacy_kicker", [
         ("privacy_section1_title", "privacy_section1"),
         ("privacy_section2_title", "privacy_section2"),
         ("privacy_section3_title", "privacy_section3"),
@@ -2150,19 +2505,100 @@ async def privacy_page():
         ("privacy_section10_title", "privacy_section10"),
         ("privacy_section11_title", "privacy_section11"),
         ("privacy_section12_title", "privacy_section12"),
-    ]))
+    ]), "fr", "/privacy"))
 
 
 @router.get("/risk-disclaimer", response_class=HTMLResponse)
 async def risk_disclaimer_page():
-    return HTMLResponse(legal_page("risk_title", "risk_kicker", [
+    return HTMLResponse(localize_html(legal_page("risk_title", "risk_kicker", [
         ("risk_section1_title", "risk_section1"),
         ("risk_section2_title", "risk_section2"),
         ("risk_section3_title", "risk_section3"),
         ("risk_section4_title", "risk_section4"),
         ("risk_section5_title", "risk_section5"),
         ("risk_section6_title", "risk_section6"),
-    ]))
+    ]), "fr", "/risk-disclaimer"))
+
+
+async def localized_public_page(locale: str, path: str = "/"):
+    if locale not in SUPPORTED_LOCALES or locale == "fr":
+        return FastAPIResponse(status_code=404, content="Page not found")
+
+    clean_path = path if path.startswith("/") else f"/{path}"
+    if clean_path != "/" and clean_path.endswith("/"):
+        clean_path = clean_path.rstrip("/")
+
+    if clean_path == "/":
+        return HTMLResponse(localized_landing(locale))
+    if clean_path == "/ressources":
+        return HTMLResponse(localize_html(resources_page(), locale, clean_path))
+    if clean_path == "/guides":
+        return HTMLResponse(localize_html(guides_page(), locale, clean_path))
+    if clean_path == "/market-pulse":
+        pulse = await build_public_market_pulse()
+        return HTMLResponse(localize_html(market_pulse_page(pulse), locale, clean_path))
+    if clean_path == "/marches":
+        return HTMLResponse(localize_html(markets_index_page(), locale, clean_path))
+    if clean_path.startswith("/marches/"):
+        slug = clean_path.rsplit("/", 1)[-1]
+        if slug not in FX_MARKET_BY_SLUG:
+            return FastAPIResponse(status_code=404, content="Market not found")
+        return HTMLResponse(localize_html(market_pair_page(slug), locale, clean_path))
+    if clean_path == "/support":
+        return HTMLResponse(localize_html(support_page(), locale, clean_path))
+
+    content_routes = {
+        "/terminal-xauusd": "terminal_xauusd",
+        "/calendrier-economique-or": "calendrier_or",
+        "/news-forex-or": "news_forex_or",
+        "/guide/trading-or-macro": "guide_trading_or_macro",
+        "/guides/routine-trading-xauusd": "routine_trading_xauusd",
+        "/guides/dxy-taux-us-or": "dxy_taux_or",
+        "/guides/bias-desk-trading": "bias_desk",
+    }
+    if clean_path in content_routes:
+        return HTMLResponse(localize_html(content_page(content_routes[clean_path]), locale, clean_path))
+    if clean_path == "/terms":
+        return HTMLResponse(localize_html(legal_page("terms_title", "terms_kicker", [
+            ("terms_section1_title", "terms_section1"),
+            ("terms_section2_title", "terms_section2"),
+            ("terms_section3_title", "terms_section3"),
+            ("terms_section4_title", "terms_section4"),
+            ("terms_section5_title", "terms_section5"),
+            ("terms_section6_title", "terms_section6"),
+            ("terms_section7_title", "terms_section7"),
+            ("terms_section8_title", "terms_section8"),
+            ("terms_section9_title", "terms_section9"),
+            ("terms_section10_title", "terms_section10"),
+            ("terms_section11_title", "terms_section11"),
+            ("terms_section12_title", "terms_section12"),
+        ]), locale, clean_path))
+    if clean_path == "/privacy":
+        return HTMLResponse(localize_html(legal_page("privacy_title", "privacy_kicker", [
+            ("privacy_section1_title", "privacy_section1"),
+            ("privacy_section2_title", "privacy_section2"),
+            ("privacy_section3_title", "privacy_section3"),
+            ("privacy_section4_title", "privacy_section4"),
+            ("privacy_section5_title", "privacy_section5"),
+            ("privacy_section6_title", "privacy_section6"),
+            ("privacy_section7_title", "privacy_section7"),
+            ("privacy_section8_title", "privacy_section8"),
+            ("privacy_section9_title", "privacy_section9"),
+            ("privacy_section10_title", "privacy_section10"),
+            ("privacy_section11_title", "privacy_section11"),
+            ("privacy_section12_title", "privacy_section12"),
+        ]), locale, clean_path))
+    if clean_path == "/risk-disclaimer":
+        return HTMLResponse(localize_html(legal_page("risk_title", "risk_kicker", [
+            ("risk_section1_title", "risk_section1"),
+            ("risk_section2_title", "risk_section2"),
+            ("risk_section3_title", "risk_section3"),
+            ("risk_section4_title", "risk_section4"),
+            ("risk_section5_title", "risk_section5"),
+            ("risk_section6_title", "risk_section6"),
+        ]), locale, clean_path))
+
+    return FastAPIResponse(status_code=404, content="Page not found")
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
@@ -2185,7 +2621,6 @@ async def favicon():
 
 @router.get("/sitemap.xml")
 async def sitemap_xml():
-    today = utc_now().date().isoformat()
     urls = [
         ("/", "daily", "1.0"),
         ("/support", "weekly", "0.7"),
@@ -2205,17 +2640,24 @@ async def sitemap_xml():
         ("/privacy", "monthly", "0.5"),
         ("/risk-disclaimer", "monthly", "0.5"),
     ]
+    localized_urls = [
+        (locale_path(path, locale), path, changefreq, priority)
+        for path, changefreq, priority in urls
+        for locale in SUPPORTED_LOCALES
+    ]
     items = "\n".join(
         f"""  <url>
-    <loc>{absolute_url(path)}</loc>
-    <lastmod>{today}</lastmod>
+    <loc>{absolute_url(localized_path)}</loc>
+{chr(10).join(f'    <xhtml:link rel="alternate" hreflang="{cfg["hreflang"]}" href="{absolute_url(locale_path(base_path, alt_locale))}" />' for alt_locale, cfg in SUPPORTED_LOCALES.items())}
+    <xhtml:link rel="alternate" hreflang="x-default" href="{absolute_url(locale_path(base_path, "en"))}" />
     <changefreq>{changefreq}</changefreq>
     <priority>{priority}</priority>
   </url>"""
-        for path, changefreq, priority in urls
+        for localized_path, base_path, changefreq, priority in localized_urls
     )
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
 {items}
 </urlset>
 """
@@ -2252,3 +2694,13 @@ def db_test(request: Request):
         return {"database": "ok", "result": result[0]}
     except Exception:
         return {"database": "error"}
+
+
+@router.get("/{locale}", response_class=HTMLResponse)
+async def localized_home(locale: str):
+    return await localized_public_page(locale, "/")
+
+
+@router.get("/{locale}/{path:path}", response_class=HTMLResponse)
+async def localized_public_route(locale: str, path: str):
+    return await localized_public_page(locale, f"/{path}")
