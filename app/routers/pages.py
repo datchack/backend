@@ -2898,18 +2898,13 @@ def sitemap_xml_content() -> str:
         ("/privacy", "monthly", "0.5"),
         ("/risk-disclaimer", "monthly", "0.5"),
     ]
-    localized_urls = [
-        (locale_path(path, locale), changefreq, priority)
-        for path, changefreq, priority in urls
-        for locale in SUPPORTED_LOCALES
-    ]
     items = "\n".join(
         f"""  <url>
-    <loc>{absolute_url(localized_path)}</loc>
+    <loc>{absolute_url(path)}</loc>
     <changefreq>{changefreq}</changefreq>
     <priority>{priority}</priority>
   </url>"""
-        for localized_path, changefreq, priority in localized_urls
+        for path, changefreq, priority in urls
     )
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
