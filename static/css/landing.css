@@ -990,6 +990,7 @@ body {
 .pulse-workflow h2,
 .pulse-assets h2 {
     margin: 8px 0 0;
+    color: #eef3fb;
     font-size: clamp(26px, 4vw, 42px);
     line-height: 1.05;
 }
@@ -1028,6 +1029,9 @@ body {
 .pulse-assets {
     padding: clamp(24px, 4vw, 38px);
     margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(17, 21, 28, 0.55);
 }
 
 .pulse-asset-grid {
@@ -1061,6 +1065,7 @@ body {
 
 .markets-hero h1 {
     margin: 10px 0 14px;
+    color: #f4f7fb;
     font-size: clamp(34px, 5vw, 62px);
     line-height: 0.98;
     letter-spacing: 0;
@@ -1210,6 +1215,8 @@ body {
 }
 
 .market-related-links a {
+    display: flex;
+    align-items: center;
     min-height: 54px;
     padding: 16px;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1228,6 +1235,7 @@ body {
 .resource-list {
     display: grid;
     gap: 12px;
+    margin-top: 18px;
 }
 
 .resource-row {
@@ -1245,6 +1253,7 @@ body {
 
 .resource-row h2 {
     margin: 8px 0 8px;
+    color: #eef3fb;
     font-size: clamp(20px, 2.5vw, 28px);
     line-height: 1.08;
 }
@@ -1330,6 +1339,7 @@ body {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    margin-top: 18px;
 }
 
 .guide-card {
@@ -1362,6 +1372,7 @@ body {
 
 .guide-card h2 {
     margin: 0;
+    color: #eef3fb;
     font-size: clamp(22px, 2.5vw, 31px);
     line-height: 1.12;
 }
@@ -1583,14 +1594,32 @@ body {
 
 .legal-body {
     min-height: 100vh;
-    background: var(--bg);
+    background:
+        radial-gradient(circle at 18% 0%, rgba(0, 242, 173, 0.055), transparent 30vw),
+        radial-gradient(circle at 82% 8%, rgba(162, 89, 255, 0.05), transparent 34vw),
+        var(--bg);
     display: block;
+    color: var(--text);
 }
 
 .legal-page {
     width: min(980px, calc(100% - 32px));
     margin: 0 auto;
     padding: clamp(34px, 6vw, 72px) 0;
+    color: var(--text);
+}
+
+.legal-body h1,
+.legal-body h2,
+.legal-body h3,
+.legal-body h4,
+.legal-body strong,
+.landing-body h1,
+.landing-body h2,
+.landing-body h3,
+.landing-body h4,
+.landing-body strong {
+    color: var(--text);
 }
 
 .article-page {
@@ -1769,15 +1798,44 @@ body {
 }
 
 .legal-page h1 {
-    margin: 10px 0 8px;
-    font-size: clamp(34px, 6vw, 64px);
-    line-height: 1;
+    max-width: 920px;
+    margin: 12px 0 14px;
+    color: #f4f7fb;
+    font-size: clamp(38px, 6vw, 68px);
+    line-height: 0.98;
     letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.legal-page > .landing-kicker,
+.legal-page .article-hero .landing-kicker,
+.legal-page .markets-hero .landing-kicker,
+.legal-page .pulse-hero .landing-kicker,
+.legal-page .landing-section-head .landing-kicker {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 26px;
+    padding: 0 9px;
+    border: 1px solid rgba(0, 242, 173, 0.24);
+    border-radius: 4px;
+    background: rgba(0, 242, 173, 0.055);
+    color: var(--buy);
+    font-size: 12px;
+    letter-spacing: 0.7px;
+}
+
+.legal-page > p {
+    max-width: 820px;
+    margin: 0 0 26px;
+    color: #c7ceda;
+    font-size: clamp(16px, 2vw, 19px);
+    line-height: 1.7;
 }
 
 .legal-updated {
     margin: 0 0 24px;
-    color: var(--muted);
+    color: #9ea8b8;
     font-family: "Courier New", monospace;
     font-weight: 800;
 }
@@ -1788,19 +1846,24 @@ body {
 
 .legal-page > section:not(.article-hero):not(.markets-hero):not(.pulse-hero):not(.landing-cta):not(.resource-list):not(.guide-grid):not(.support-grid):not(.market-grid):not(.market-detail-grid):not(.pulse-feature-grid):not(.pulse-live-grid) {
     padding: clamp(22px, 3vw, 30px);
-    border-right: 1px solid transparent;
-    border-left: 1px solid transparent;
+    border-right: 1px solid rgba(255, 255, 255, 0.035);
+    border-left: 1px solid rgba(255, 255, 255, 0.035);
+    background: linear-gradient(180deg, rgba(17, 21, 28, 0.42), rgba(8, 11, 16, 0.18));
 }
 
 .legal-page h2 {
-    margin: 0 0 10px;
-    font-size: 20px;
+    margin: 0 0 12px;
+    color: #eef3fb;
+    font-size: clamp(22px, 2.8vw, 30px);
+    line-height: 1.12;
+    letter-spacing: 0;
 }
 
 .legal-page p {
     margin: 0;
     color: #c7ceda;
-    line-height: 1.7;
+    font-size: 16px;
+    line-height: 1.75;
 }
 
 .legal-page a {
@@ -1811,6 +1874,7 @@ body {
 .legal-contact {
     padding: clamp(22px, 3vw, 30px);
     border-color: rgba(0, 242, 173, 0.22) !important;
+    background: linear-gradient(135deg, rgba(0, 242, 173, 0.06), rgba(17, 21, 28, 0.72)) !important;
 }
 
 .resource-faq {
@@ -2234,6 +2298,54 @@ body {
 }
 
 @media (max-width: 700px) {
+    .landing-nav {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 12px 16px;
+    }
+
+    .landing-nav-actions {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 9px;
+    }
+
+    .landing-nav-actions a,
+    .landing-lang,
+    .landing-login {
+        min-height: 32px;
+    }
+
+    .legal-page,
+    .account-page,
+    .markets-page,
+    .guide-index-page,
+    .resource-index-page,
+    .article-page {
+        width: min(100% - 24px, 1180px);
+        padding-top: 26px;
+        padding-bottom: 42px;
+    }
+
+    .legal-page h1,
+    .article-hero h1,
+    .markets-hero h1,
+    .pulse-hero-copy h1,
+    .account-hero h1 {
+        font-size: clamp(34px, 12vw, 46px);
+        line-height: 1;
+    }
+
+    .legal-page h2,
+    .pulse-workflow h2,
+    .pulse-assets h2 {
+        font-size: clamp(22px, 7vw, 30px);
+    }
+
+    .legal-page > section:not(.article-hero):not(.markets-hero):not(.pulse-hero):not(.landing-cta):not(.resource-list):not(.guide-grid):not(.support-grid):not(.market-grid):not(.market-detail-grid):not(.pulse-feature-grid):not(.pulse-live-grid) {
+        padding: 20px;
+    }
+
     .learning-grid,
     .landing-footer,
     .footer-grid,

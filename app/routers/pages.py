@@ -538,7 +538,7 @@ def localize_html(html: str, locale: str, path: str) -> str:
     for stylesheet in soup.find_all("link", rel="stylesheet"):
         href = stylesheet.get("href", "")
         if href.startswith("/static/styles.css"):
-            stylesheet["href"] = "/static/css/landing.css?v=20260519-perf"
+            stylesheet["href"] = "/static/css/landing.css?v=20260520-visual-polish"
 
     for script_tag in soup.find_all("script", src=True):
         if script_tag["src"].startswith("/static/landing.js"):
