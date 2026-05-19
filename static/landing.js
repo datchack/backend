@@ -1,7 +1,8 @@
 let landingAuthMode = 'register';
 const LANDING_LANGS = window.XT_SUPPORTED_LANGS || ['fr', 'en'];
 const LANDING_LANGUAGE_META = window.XT_LANGUAGE_META || {};
-let landingLang = window.XT_INITIAL_LANG || localStorage.getItem('xt_lang') || 'fr';
+const LANDING_URL_LANG_MATCH = window.location.pathname.match(/^\/(en|es|pt-br|de|ar|ja|hi|id|zh)(?=\/|$)/);
+let landingLang = window.XT_INITIAL_LANG || (LANDING_URL_LANG_MATCH ? LANDING_URL_LANG_MATCH[1] : 'fr');
 let selectedBillingPlan = null;
 
 const LANDING_COPY = {
@@ -1057,6 +1058,14 @@ function localizedPathFor(lang) {
     return `${prefix}${cleanPath === '/' ? '' : cleanPath}${window.location.hash}`;
 }
 
+function persistLandingLanguage(lang) {
+    if (lang === 'fr') {
+        localStorage.removeItem('xt_lang');
+        return;
+    }
+    localStorage.setItem('xt_lang', lang);
+}
+
 function applyLandingLanguage() {
     document.documentElement.lang = landingLang;
     document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -1348,7 +1357,7 @@ function bindLanding() {
             option.addEventListener('click', (event) => {
                 event.preventDefault();
                 const nextLang = option.dataset.langOption || 'fr';
-                localStorage.setItem('xt_lang', nextLang);
+                persistLandingLanguage(nextLang);
                 window.location.href = localizedPathFor(nextLang);
             });
         });
