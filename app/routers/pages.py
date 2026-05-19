@@ -9,9 +9,14 @@ from app.config import (
     LEGAL_BUSINESS_ADDRESS,
     LEGAL_BUSINESS_ID,
     LEGAL_BUSINESS_NAME,
+    LEGAL_BUSINESS_STATUS,
     LEGAL_CONTACT_EMAIL,
     LEGAL_HOSTING_PROVIDER,
+    LEGAL_MEDIATOR_ADDRESS,
+    LEGAL_MEDIATOR_NAME,
+    LEGAL_MEDIATOR_URL,
     LEGAL_PUBLISHER_NAME,
+    LEGAL_VAT_ID,
 )
 from app.services.accounts import get_db_connection, require_owner, utc_now
 from app.services.pulse import build_public_market_pulse
@@ -1828,6 +1833,70 @@ def support_page() -> str:
 </html>"""
 
 
+LEGAL_FR_COPY = {
+    "terms_section1_title": "Objet du service",
+    "terms_section1": "XAUTERMINAL propose un terminal web d'information macro et marché permettant de consulter des news, un calendrier économique, des graphiques, des watchlists, des widgets de prix et des outils de lecture de contexte. Le service est fourni comme outil d'aide à l'organisation et à l'analyse personnelle.",
+    "terms_section2_title": "Accès au service",
+    "terms_section2": "L'accès complet peut être soumis à la création d'un compte, à une période d'essai, à un abonnement ou à une offre lifetime. L'utilisateur s'engage à fournir des informations exactes et à préserver la confidentialité de ses identifiants.",
+    "terms_section3_title": "Essai gratuit et abonnements",
+    "terms_section3": "Les formules mensuelle et annuelle peuvent inclure un essai gratuit de 7 jours. Selon la configuration Stripe, une carte bancaire peut être demandée au démarrage de l'essai afin de préparer le renouvellement. À l'issue de l'essai, l'abonnement choisi démarre automatiquement si le paiement est validé. L'abonnement mensuel est souscrit pour une période d'un mois renouvelable. L'abonnement annuel est souscrit pour une période d'un an renouvelable. L'offre lifetime correspond à un paiement unique donnant accès au service tant que celui-ci est exploité.",
+    "terms_section4_title": "Paiement",
+    "terms_section4": "Les paiements sont traités par Stripe. XAUTERMINAL ne stocke pas les numéros de carte bancaire. Sauf obligation légale contraire, toute période d'abonnement commencée et payée est due et non remboursable: un mois payé reste dû pour le mois en cours, une année payée reste due pour l'année en cours. La résiliation met fin au renouvellement automatique à l'échéance de la période en cours, sans remboursement prorata temporis.",
+    "terms_section5_title": "Utilisation acceptable",
+    "terms_section5": "L'utilisateur s'engage à ne pas perturber le service, contourner les restrictions d'accès, partager un compte de manière abusive, extraire massivement les données ou utiliser le service à des fins illicites.",
+    "terms_section6_title": "Disponibilité",
+    "terms_section6": "Le service dépend de fournisseurs tiers, notamment hébergement, données de marché, flux d'actualité, calendrier économique, graphiques et paiement. Des interruptions, retards, erreurs ou indisponibilités peuvent survenir.",
+    "terms_section7_title": "Responsabilité",
+    "terms_section7": "XAUTERMINAL ne garantit pas l'exactitude, l'exhaustivité, l'actualité ou la continuité des données affichées. L'utilisateur reste seul responsable de ses décisions, notamment financières, et de sa gestion du risque.",
+    "terms_section8_title": "Rétractation",
+    "terms_section8": "Lorsque la loi accorde un droit de rétractation, l'utilisateur dispose en principe d'un délai de 14 jours pour l'exercer. Pour un contenu ou service numérique accessible immédiatement, l'utilisateur peut demander l'exécution immédiate et reconnaître qu'il renonce au droit de rétractation lorsque les conditions légales applicables sont réunies. Pendant l'essai gratuit, l'utilisateur peut annuler avant le premier paiement depuis Stripe.",
+    "terms_section9_title": "Résiliation",
+    "terms_section9": "L'utilisateur peut demander la résiliation de son abonnement depuis son espace compte ou le portail Stripe. La résiliation d'un abonnement mensuel ou annuel prend effet à la fin de la période de facturation en cours et n'annule pas les sommes déjà dues pour cette période.",
+    "terms_section10_title": "Modification du service",
+    "terms_section10": "Les fonctionnalités, tarifs, offres, sources de données et conditions peuvent évoluer afin d'améliorer le produit, corriger des erreurs ou tenir compte de contraintes techniques ou commerciales.",
+    "terms_section11_title": "Archivage et preuve",
+    "terms_section11": "Les informations liées au compte, aux paiements, aux abonnements, aux confirmations email et à l'acceptation des conditions peuvent être conservées afin d'assurer la preuve de la relation contractuelle, gérer le support, prévenir la fraude et respecter les obligations légales.",
+    "terms_section12_title": "Réclamation",
+    "terms_section12": "Pour toute réclamation, l'utilisateur doit contacter XAUTERMINAL par email en indiquant l'adresse de compte concernée, le problème rencontré et les justificatifs utiles. XAUTERMINAL s'efforce de répondre dans un délai raisonnable.",
+    "privacy_section1_title": "Données collectées",
+    "privacy_section1": "XAUTERMINAL peut collecter l'adresse email, le mot de passe chiffré, les informations de profil renseignées volontairement comme prénom, nom et adresse, les préférences de terminal, l'état d'abonnement, les identifiants Stripe nécessaires au suivi du paiement et des données techniques liées à l'utilisation du service.",
+    "privacy_section2_title": "Finalités",
+    "privacy_section2": "Ces données servent à créer et sécuriser le compte, gérer l'accès au terminal, synchroniser les préférences, traiter les abonnements, améliorer le produit et assurer le support utilisateur.",
+    "privacy_section3_title": "Paiements",
+    "privacy_section3": "Les données de paiement sont traitées par Stripe. XAUTERMINAL conserve uniquement les références techniques utiles au suivi du compte, comme l'identifiant client, l'abonnement, le prix sélectionné ou le statut de paiement.",
+    "privacy_section4_title": "Cookies et sessions",
+    "privacy_section4": "Le service utilise un cookie de session afin de maintenir la connexion au compte. Des préférences peuvent également être conservées localement dans le navigateur pour personnaliser l'expérience.",
+    "privacy_section5_title": "Prestataires",
+    "privacy_section5": "Le service peut s'appuyer sur des prestataires techniques comme Render pour l'hébergement, Stripe pour le paiement, Financial Modeling Prep, Yahoo Finance, TradingView ou des flux RSS tiers pour les données et l'affichage.",
+    "privacy_section6_title": "Durée de conservation",
+    "privacy_section6": "Les données de compte sont conservées tant que le compte existe ou tant que cela est nécessaire pour fournir le service, respecter des obligations légales, gérer un litige ou assurer la sécurité.",
+    "privacy_section7_title": "Droits utilisateur",
+    "privacy_section7": "L'utilisateur peut demander l'accès, la correction ou la suppression de ses données en contactant l'adresse indiquée sur cette page. Certaines données peuvent être conservées si une obligation légale ou technique l'impose.",
+    "privacy_section8_title": "Sécurité",
+    "privacy_section8": "XAUTERMINAL applique des mesures raisonnables pour protéger les comptes et les données. Aucun système n'étant infaillible, l'utilisateur doit choisir un mot de passe robuste et éviter de le réutiliser.",
+    "privacy_section9_title": "Responsable du traitement et bases légales",
+    "privacy_section9": "Le responsable du traitement est l'éditeur indiqué dans les mentions légales. Les traitements reposent selon les cas sur l'exécution du contrat, l'intérêt légitime de sécurisation et d'amélioration du service, le respect d'obligations légales ou le consentement lorsque celui-ci est requis.",
+    "privacy_section10_title": "Droits RGPD et CNIL",
+    "privacy_section10": "L'utilisateur peut demander l'accès, la rectification, l'effacement, la limitation, l'opposition au traitement ou la portabilité de ses données lorsque ces droits sont applicables. Il peut également introduire une réclamation auprès de la CNIL.",
+    "privacy_section11_title": "Transferts et prestataires hors UE",
+    "privacy_section11": "Certains prestataires techniques, de paiement, d'email, de données de marché ou d'affichage peuvent traiter des données hors Union européenne. Lorsque cela est nécessaire, XAUTERMINAL s'appuie sur les garanties proposées par ces prestataires, notamment leurs mécanismes contractuels et de conformité.",
+    "privacy_section12_title": "Données obligatoires ou facultatives",
+    "privacy_section12": "L'email, le mot de passe et les informations de paiement nécessaires via Stripe sont requis pour créer un compte et fournir l'accès. Les informations de profil complémentaires sont facultatives, sauf lorsqu'elles sont nécessaires à la facturation, au support ou à une obligation légale.",
+    "risk_section1_title": "Information uniquement",
+    "risk_section1": "XAUTERMINAL fournit des informations de marché, des outils de visualisation, des classements, des alertes et des lectures de contexte. Le service ne constitue pas un conseil en investissement, une recommandation personnalisée, une gestion de portefeuille, ou une incitation à acheter ou vendre un instrument financier.",
+    "risk_section2_title": "Risque de perte",
+    "risk_section2": "Le trading, les CFD, le Forex, les cryptomonnaies, les actions, les indices, les matières premières et autres instruments financiers comportent un risque élevé de perte. Les performances passées ne préjugent pas des performances futures.",
+    "risk_section3_title": "Données tierces",
+    "risk_section3": "Les prix, news, calendriers économiques, impacts, prévisions, données actual/forecast/previous et graphiques peuvent provenir de fournisseurs tiers. Ces informations peuvent être retardées, erronées, incomplètes ou indisponibles.",
+    "risk_section4_title": "Bias Desk",
+    "risk_section4": "Le Bias Desk et les indicateurs associés sont des outils de lecture mécanique et contextuelle. Ils ne doivent pas être interprétés comme des signaux automatiques ou comme une garantie de résultat.",
+    "risk_section5_title": "Responsabilité de l'utilisateur",
+    "risk_section5": "Chaque utilisateur doit effectuer ses propres vérifications, respecter son plan de trading, adapter la taille de ses positions et ne jamais engager de capitaux qu'il ne peut pas se permettre de perdre.",
+    "risk_section6_title": "Aucune garantie",
+    "risk_section6": "XAUTERMINAL ne garantit aucun gain, aucune précision parfaite des données, aucune disponibilité continue et aucune adéquation du service à une situation financière particulière.",
+}
+
+
 def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]]) -> str:
     meta = LEGAL_PAGE_META[title_key]
     business_name = LEGAL_BUSINESS_NAME
@@ -1865,9 +1934,30 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
         ensure_ascii=False,
     )
     section_html = "\n".join(
-        f'<section><h2 data-i18n="{section_title_key}">{section_title_key}</h2><p data-i18n="{section_content_key}">{section_content_key}</p></section>'
+        f'<section><h2 data-i18n="{section_title_key}">{escape(LEGAL_FR_COPY.get(section_title_key, section_title_key))}</h2><p data-i18n="{section_content_key}">{escape(LEGAL_FR_COPY.get(section_content_key, section_content_key))}</p></section>'
         for section_title_key, section_content_key in sections
     )
+    vat_line = f'<br><span data-i18n="legal_vat">TVA intracommunautaire</span> : {escape(LEGAL_VAT_ID)}' if LEGAL_VAT_ID else ""
+    mediator_name = LEGAL_MEDIATOR_NAME or "Médiateur de la consommation à renseigner"
+    mediator_url = LEGAL_MEDIATOR_URL or "https://www.economie.gouv.fr/mediation-conso"
+    mediator_address = LEGAL_MEDIATOR_ADDRESS or "Coordonnées du médiateur à compléter après adhésion au dispositif choisi."
+    terms_extra = ""
+    if title_key == "terms_title":
+        terms_extra = f"""
+        <section>
+            <h2 data-i18n="terms_mediation_title">Médiation de la consommation</h2>
+            <p>
+                <span data-i18n="terms_mediation_copy">Après une réclamation écrite préalable adressée à XAUTERMINAL restée sans solution satisfaisante, le consommateur peut saisir gratuitement le médiateur de la consommation compétent.</span><br>
+                <span data-i18n="terms_mediation_name">Médiateur</span> : {escape(mediator_name)}<br>
+                <span data-i18n="terms_mediation_site">Site</span> : <a href="{escape(mediator_url, quote=True)}" target="_blank" rel="noopener noreferrer">{escape(mediator_url)}</a><br>
+                <span data-i18n="terms_mediation_address">Adresse</span> : {escape(mediator_address)}
+            </p>
+        </section>
+        <section>
+            <h2 data-i18n="terms_withdrawal_form_title">Formulaire type de rétractation</h2>
+            <p data-i18n="terms_withdrawal_form_copy">Lorsque le droit de rétractation est applicable, l'utilisateur peut envoyer une demande claire par email à l'adresse de contact, en indiquant son nom, son email de compte, la formule concernée, la date de commande et la phrase: Je vous notifie par la présente ma rétractation du contrat portant sur le service XAUTERMINAL.</p>
+        </section>
+        """
     return f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -1912,13 +2002,15 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
             <p>
                 <span data-i18n="legal_editor">Éditeur</span> : {LEGAL_PUBLISHER_NAME}<br>
                 <span data-i18n="legal_business">Entreprise</span> : {business_name}<br>
+                <span data-i18n="legal_status">Statut</span> : {LEGAL_BUSINESS_STATUS}<br>
                 <span data-i18n="legal_id">Identifiant</span> : {LEGAL_BUSINESS_ID}<br>
                 <span data-i18n="legal_contact">Contact</span> : <a href="mailto:{email}">{email}</a><br>
                 <span data-i18n="legal_address">Adresse</span> : {LEGAL_BUSINESS_ADDRESS}<br>
-                <span data-i18n="legal_hosting">Hébergement</span> : {LEGAL_HOSTING_PROVIDER}
+                <span data-i18n="legal_hosting">Hébergement</span> : {LEGAL_HOSTING_PROVIDER}{vat_line}
             </p>
         </section>
         {section_html}
+        {terms_extra}
         <section class="legal-contact">
             <h2 data-i18n="legal_contact_title">Contact</h2>
             <p><span data-i18n="legal_contact_copy">Pour toute question relative aux conditions d'utilisation, à la confidentialité ou aux risques liés au trading, vous pouvez nous contacter à</span> <a href="mailto:{email}">{email}</a>.</p>
@@ -2041,6 +2133,8 @@ async def terms_page():
         ("terms_section8_title", "terms_section8"),
         ("terms_section9_title", "terms_section9"),
         ("terms_section10_title", "terms_section10"),
+        ("terms_section11_title", "terms_section11"),
+        ("terms_section12_title", "terms_section12"),
     ]))
 
 
@@ -2055,6 +2149,10 @@ async def privacy_page():
         ("privacy_section6_title", "privacy_section6"),
         ("privacy_section7_title", "privacy_section7"),
         ("privacy_section8_title", "privacy_section8"),
+        ("privacy_section9_title", "privacy_section9"),
+        ("privacy_section10_title", "privacy_section10"),
+        ("privacy_section11_title", "privacy_section11"),
+        ("privacy_section12_title", "privacy_section12"),
     ]))
 
 

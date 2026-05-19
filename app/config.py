@@ -42,7 +42,12 @@ LEGAL_PUBLISHER_NAME = os.getenv("LEGAL_PUBLISHER_NAME", "Marc Debiais")
 LEGAL_CONTACT_EMAIL = os.getenv("LEGAL_CONTACT_EMAIL", "mdtrading@xauterminal.com")
 LEGAL_BUSINESS_ADDRESS = os.getenv("LEGAL_BUSINESS_ADDRESS", "42 Av. de Bordeaux, 86130 Jaunay-Marigny, France")
 LEGAL_BUSINESS_ID = os.getenv("LEGAL_BUSINESS_ID", "SIREN 824468789")
+LEGAL_BUSINESS_STATUS = os.getenv("LEGAL_BUSINESS_STATUS", "Entrepreneur individuel")
+LEGAL_VAT_ID = os.getenv("LEGAL_VAT_ID", "")
 LEGAL_HOSTING_PROVIDER = os.getenv("LEGAL_HOSTING_PROVIDER", "Render")
+LEGAL_MEDIATOR_NAME = os.getenv("LEGAL_MEDIATOR_NAME", "")
+LEGAL_MEDIATOR_URL = os.getenv("LEGAL_MEDIATOR_URL", "")
+LEGAL_MEDIATOR_ADDRESS = os.getenv("LEGAL_MEDIATOR_ADDRESS", "")
 
 EMAIL_SMTP_HOST = os.getenv("EMAIL_SMTP_HOST", "")
 EMAIL_SMTP_PORT = int(os.getenv("EMAIL_SMTP_PORT", "587")) if os.getenv("EMAIL_SMTP_PORT") else 0
