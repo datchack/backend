@@ -1901,7 +1901,6 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     meta = LEGAL_PAGE_META[title_key]
     business_name = LEGAL_BUSINESS_NAME
     email = LEGAL_CONTACT_EMAIL
-    updated = utc_now().date().strftime("%d/%m/%Y")
     page_path = {
         "terms_title": "/terms",
         "privacy_title": "/privacy",
@@ -1929,7 +1928,6 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
                 "logo": absolute_url("/static/icon-192x192.png"),
             },
             "inLanguage": "fr-FR",
-            "dateModified": utc_now().date().isoformat(),
         },
         ensure_ascii=False,
     )
@@ -1996,7 +1994,6 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     <main class="legal-page">
         <div class="landing-kicker" data-i18n="{kicker_key}">{meta["kicker"]}</div>
         <h1 data-i18n="{title_key}">{meta["title"]}</h1>
-        <p class="legal-updated"><span data-i18n="legal_updated">Dernière mise à jour :</span> {updated}</p>
         <section>
             <h2 data-i18n="legal_general">Informations générales</h2>
             <p>
