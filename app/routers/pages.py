@@ -28,16 +28,16 @@ router = APIRouter()
 
 
 SUPPORTED_LOCALES = {
-    "fr": {"prefix": "", "hreflang": "fr", "name": "Français", "dir": "ltr"},
-    "en": {"prefix": "/en", "hreflang": "en", "name": "English", "dir": "ltr"},
-    "es": {"prefix": "/es", "hreflang": "es", "name": "Español", "dir": "ltr"},
-    "pt-br": {"prefix": "/pt-br", "hreflang": "pt-BR", "name": "Português BR", "dir": "ltr"},
-    "de": {"prefix": "/de", "hreflang": "de", "name": "Deutsch", "dir": "ltr"},
-    "ar": {"prefix": "/ar", "hreflang": "ar", "name": "العربية", "dir": "rtl"},
-    "ja": {"prefix": "/ja", "hreflang": "ja", "name": "日本語", "dir": "ltr"},
-    "hi": {"prefix": "/hi", "hreflang": "hi", "name": "हिन्दी", "dir": "ltr"},
-    "id": {"prefix": "/id", "hreflang": "id", "name": "Bahasa Indonesia", "dir": "ltr"},
-    "zh": {"prefix": "/zh", "hreflang": "zh-Hans", "name": "简体中文", "dir": "ltr"},
+    "fr": {"prefix": "", "hreflang": "fr", "name": "Français", "flag": "🇫🇷", "dir": "ltr"},
+    "en": {"prefix": "/en", "hreflang": "en", "name": "English", "flag": "🇬🇧", "dir": "ltr"},
+    "es": {"prefix": "/es", "hreflang": "es", "name": "Español", "flag": "🇪🇸", "dir": "ltr"},
+    "pt-br": {"prefix": "/pt-br", "hreflang": "pt-BR", "name": "Português BR", "flag": "🇧🇷", "dir": "ltr"},
+    "de": {"prefix": "/de", "hreflang": "de", "name": "Deutsch", "flag": "🇩🇪", "dir": "ltr"},
+    "ar": {"prefix": "/ar", "hreflang": "ar", "name": "العربية", "flag": "🇸🇦", "dir": "rtl"},
+    "ja": {"prefix": "/ja", "hreflang": "ja", "name": "日本語", "flag": "🇯🇵", "dir": "ltr"},
+    "hi": {"prefix": "/hi", "hreflang": "hi", "name": "हिन्दी", "flag": "🇮🇳", "dir": "ltr"},
+    "id": {"prefix": "/id", "hreflang": "id", "name": "Bahasa Indonesia", "flag": "🇮🇩", "dir": "ltr"},
+    "zh": {"prefix": "/zh", "hreflang": "zh-Hans", "name": "简体中文", "flag": "🇨🇳", "dir": "ltr"},
 }
 
 LOCALE_PREFIXES = {cfg["prefix"].strip("/"): code for code, cfg in SUPPORTED_LOCALES.items() if cfg["prefix"]}
@@ -330,6 +330,27 @@ def alternate_links(path: str) -> str:
     return "\n".join(links)
 
 
+def language_selector(current_locale: str, path: str) -> str:
+    current = SUPPORTED_LOCALES.get(current_locale, SUPPORTED_LOCALES["fr"])
+    options = "\n".join(
+        f"""        <a class="language-option{' active' if locale == current_locale else ''}" href="{escape(locale_path(path, locale), quote=True)}" data-lang-option="{locale}" hreflang="{cfg['hreflang']}" lang="{cfg['hreflang']}">
+            <span class="language-flag" aria-hidden="true">{cfg['flag']}</span>
+            <span>{escape(cfg['name'])}</span>
+            <strong>{locale.upper()}</strong>
+        </a>"""
+        for locale, cfg in SUPPORTED_LOCALES.items()
+    )
+    return f"""<div class="language-picker" data-language-picker>
+    <button type="button" class="landing-lang language-trigger" data-lang-toggle aria-haspopup="true" aria-expanded="false" aria-label="Choisir la langue">
+        <span class="language-flag" aria-hidden="true">{current['flag']}</span>
+        <span class="language-code">{current_locale.upper()}</span>
+    </button>
+    <div class="language-menu" data-language-menu role="menu">
+{options}
+    </div>
+</div>"""
+
+
 def localized_copy(locale: str) -> dict[str, str]:
     if locale == "fr":
         return {}
@@ -372,10 +393,14 @@ def localize_html(html: str, locale: str, path: str) -> str:
     initial_script.string = (
         f"window.XT_INITIAL_LANG={json.dumps(locale)};"
         f"window.XT_SUPPORTED_LANGS={json.dumps(list(SUPPORTED_LOCALES))};"
+        f"window.XT_LANGUAGE_META={json.dumps(SUPPORTED_LOCALES, ensure_ascii=False)};"
         f"window.XT_LOCALE_COPY={json.dumps(copy, ensure_ascii=False)};"
     )
     if soup.head:
         soup.head.append(initial_script)
+    for button in soup.select("[data-lang-toggle]"):
+        wrapper = BeautifulSoup(language_selector(locale, path), "html.parser")
+        button.replace_with(wrapper)
     return str(soup)
 
 

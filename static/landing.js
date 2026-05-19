@@ -1,5 +1,6 @@
 let landingAuthMode = 'register';
 const LANDING_LANGS = window.XT_SUPPORTED_LANGS || ['fr', 'en'];
+const LANDING_LANGUAGE_META = window.XT_LANGUAGE_META || {};
 let landingLang = window.XT_INITIAL_LANG || localStorage.getItem('xt_lang') || 'fr';
 let selectedBillingPlan = null;
 
@@ -1050,6 +1051,12 @@ function legalConfirmMessage(plan) {
     return t(plan === 'lifetime' ? 'legal_confirm_lifetime' : 'legal_confirm_subscription');
 }
 
+function localizedPathFor(lang) {
+    const cleanPath = window.location.pathname.replace(/^\/(en|es|pt-br|de|ar|ja|hi|id|zh)(?=\/|$)/, '') || '/';
+    const prefix = lang === 'fr' ? '' : `/${lang}`;
+    return `${prefix}${cleanPath === '/' ? '' : cleanPath}${window.location.hash}`;
+}
+
 function applyLandingLanguage() {
     document.documentElement.lang = landingLang;
     document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -1073,9 +1080,11 @@ function applyLandingLanguage() {
 
     const toggle = document.querySelector('[data-lang-toggle]');
     if (toggle) {
-        const currentIndex = Math.max(0, LANDING_LANGS.indexOf(landingLang));
-        const nextLang = LANDING_LANGS[(currentIndex + 1) % LANDING_LANGS.length] || 'fr';
-        toggle.textContent = nextLang.toUpperCase();
+        const meta = LANDING_LANGUAGE_META[landingLang] || {};
+        const flag = toggle.querySelector('.language-flag');
+        const code = toggle.querySelector('.language-code');
+        if (flag) flag.textContent = meta.flag || landingLang.toUpperCase();
+        if (code) code.textContent = landingLang.toUpperCase();
     }
 
     setLandingAuthMode(landingAuthMode);
@@ -1322,14 +1331,32 @@ function bindLanding() {
         button.addEventListener('click', () => handleBillingPlan(button.dataset.billingPlan));
     });
 
-    const langToggle = document.querySelector('[data-lang-toggle]');
-    if (langToggle) {
-        langToggle.addEventListener('click', () => {
-            const currentIndex = Math.max(0, LANDING_LANGS.indexOf(landingLang));
-            landingLang = LANDING_LANGS[(currentIndex + 1) % LANDING_LANGS.length] || 'fr';
-            localStorage.setItem('xt_lang', landingLang);
-            const prefix = landingLang === 'fr' ? '' : `/${landingLang}`;
-            window.location.href = `${prefix}${window.location.pathname.replace(/^\/(en|es|pt-br|de|ar|ja|hi|id|zh)(?=\/|$)/, '')}${window.location.hash}`;
+    const languagePicker = document.querySelector('[data-language-picker]');
+    const langToggle = languagePicker?.querySelector('[data-lang-toggle]');
+    const langMenu = languagePicker?.querySelector('[data-language-menu]');
+    if (languagePicker && langToggle && langMenu) {
+        const closeLanguageMenu = () => {
+            languagePicker.classList.remove('open');
+            langToggle.setAttribute('aria-expanded', 'false');
+        };
+        langToggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isOpen = languagePicker.classList.toggle('open');
+            langToggle.setAttribute('aria-expanded', String(isOpen));
+        });
+        langMenu.querySelectorAll('[data-lang-option]').forEach((option) => {
+            option.addEventListener('click', (event) => {
+                event.preventDefault();
+                const nextLang = option.dataset.langOption || 'fr';
+                localStorage.setItem('xt_lang', nextLang);
+                window.location.href = localizedPathFor(nextLang);
+            });
+        });
+        document.addEventListener('click', (event) => {
+            if (!languagePicker.contains(event.target)) closeLanguageMenu();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeLanguageMenu();
         });
     }
 
