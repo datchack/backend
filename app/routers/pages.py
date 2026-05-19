@@ -2856,8 +2856,7 @@ async def localized_public_page(locale: str, path: str = "/"):
     return FastAPIResponse(status_code=404, content="Page not found")
 
 
-@router.get("/robots.txt", response_class=PlainTextResponse)
-async def robots_txt():
+def robots_txt_content() -> str:
     return f"""User-agent: *
 Allow: /
 Disallow: /admin
@@ -2869,13 +2868,17 @@ Sitemap: {absolute_url('/sitemap.xml')}
 """
 
 
+@router.api_route("/robots.txt", methods=["GET", "HEAD"], response_class=PlainTextResponse)
+async def robots_txt():
+    return robots_txt_content()
+
+
 @router.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
 async def favicon():
     return FileResponse("static/favicon.ico", media_type="image/x-icon")
 
 
-@router.get("/sitemap.xml")
-async def sitemap_xml():
+def sitemap_xml_content() -> str:
     urls = [
         ("/", "daily", "1.0"),
         ("/support", "weekly", "0.7"),
@@ -2916,7 +2919,12 @@ async def sitemap_xml():
 {items}
 </urlset>
 """
-    return FastAPIResponse(content=xml, media_type="application/xml")
+    return xml
+
+
+@router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
+async def sitemap_xml():
+    return FastAPIResponse(content=sitemap_xml_content(), media_type="application/xml")
 
 
 @router.get("/admin", response_class=HTMLResponse)
