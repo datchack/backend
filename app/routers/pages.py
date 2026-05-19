@@ -1,6 +1,7 @@
 import ast
 import json
 import re
+from functools import lru_cache
 from html import escape
 from pathlib import Path
 
@@ -308,6 +309,7 @@ STATIC_EN_COPY = extract_static_locale_copy("en")
 TRANSLATION_DIR = Path(__file__).resolve().parents[1] / "translations"
 
 
+@lru_cache(maxsize=32)
 def load_locale_file(locale: str) -> dict[str, str]:
     path = TRANSLATION_DIR / f"{locale}.json"
     try:
@@ -318,6 +320,7 @@ def load_locale_file(locale: str) -> dict[str, str]:
     return {str(key): str(value) for key, value in data.items() if isinstance(value, str)}
 
 
+@lru_cache(maxsize=512)
 def load_market_locale_file(locale: str, path: str) -> dict[str, str]:
     file_path = TRANSLATION_DIR / f"market-{locale}.json"
     try:
@@ -398,6 +401,15 @@ def localize_html(html: str, locale: str, path: str) -> str:
     for tag in soup.find_all("meta", property="og:url"):
         tag["content"] = canonical_url
 
+    for stylesheet in soup.find_all("link", rel="stylesheet"):
+        href = stylesheet.get("href", "")
+        if href.startswith("/static/styles.css"):
+            stylesheet["href"] = "/static/css/landing.css?v=20260519-perf"
+
+    for script_tag in soup.find_all("script", src=True):
+        if script_tag["src"] == "/static/landing.js":
+            script_tag["src"] = "/static/landing.js?v=20260519-perf"
+
     copy = localized_copy(locale)
     if copy:
         for element in soup.find_all(attrs={"data-i18n": True}):
@@ -451,6 +463,7 @@ def localize_html(html: str, locale: str, path: str) -> str:
     return str(soup)
 
 
+@lru_cache(maxsize=32)
 def localized_landing(locale: str = "fr") -> str:
     with open("templates/landing.html", "r", encoding="utf-8") as handle:
         return localize_html(handle.read(), locale, "/")

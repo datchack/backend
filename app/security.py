@@ -63,8 +63,14 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     _apply_security_headers(response)
     path = request.url.path
-    if path.startswith("/static/") and path.endswith((".js", ".css")):
-        response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
+    if path.startswith("/static/"):
+        versioned = bool(request.url.query)
+        if path.endswith((".js", ".css", ".png", ".jpg", ".jpeg", ".webp", ".avif", ".ico", ".svg", ".json")):
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable"
+                if versioned
+                else "public, max-age=86400"
+            )
     elif response.headers.get("content-type", "").startswith("text/html"):
         response.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate"
     return response
