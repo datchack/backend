@@ -47,6 +47,10 @@ LOCALE_PREFIXES = {cfg["prefix"].strip("/"): code for code, cfg in SUPPORTED_LOC
 LOCALE_COPY = {
     "en": {
         "meta_title": "XAUTERMINAL - Professional macro and trading terminal",
+        "meta_description": "XAUTERMINAL centralizes charting, economic calendar, multi-source news, macro alerts and market profiles in a professional terminal for traders.",
+        "terms_description": "XAUTERMINAL terms covering service access, subscriptions, payment, immediate digital access and responsibilities.",
+        "privacy_description": "XAUTERMINAL privacy policy covering account data, sessions, payments and service providers.",
+        "risk_description": "Trading risk warning covering market data, financial instruments and the use of XAUTERMINAL tools.",
         "hero_copy": "A macro workstation to track news, the economic calendar, market drivers and your charts in a fast, customizable, decision-focused interface.",
         "hero_trial": "Start 7-day trial",
         "hero_login": "I already have an account",
@@ -70,6 +74,10 @@ LOCALE_COPY = {
     },
     "es": {
         "meta_title": "XAUTERMINAL - Terminal macro y trading profesional",
+        "meta_description": "XAUTERMINAL centraliza gráficos, calendario económico, noticias multi-fuente, alertas macro y perfiles de mercado en un terminal profesional para traders.",
+        "terms_description": "Condiciones de XAUTERMINAL sobre acceso al servicio, suscripciones, pago, acceso digital inmediato y responsabilidades.",
+        "privacy_description": "Política de privacidad de XAUTERMINAL sobre datos de cuenta, sesiones, pagos y proveedores.",
+        "risk_description": "Advertencia de riesgos de trading sobre datos de mercado, instrumentos financieros y uso de las herramientas XAUTERMINAL.",
         "hero_copy": "Un puesto de trabajo macro para seguir noticias, calendario económico, drivers de mercado y gráficos en una interfaz rápida, personalizable y orientada a la decisión.",
         "hero_trial": "Iniciar prueba de 7 días",
         "hero_login": "Ya tengo una cuenta",
@@ -93,6 +101,10 @@ LOCALE_COPY = {
     },
     "pt-br": {
         "meta_title": "XAUTERMINAL - Terminal macro e trading profissional",
+        "meta_description": "XAUTERMINAL centraliza gráficos, calendário econômico, notícias multi-fonte, alertas macro e perfis de mercado em um terminal profissional para traders.",
+        "terms_description": "Termos da XAUTERMINAL sobre acesso ao serviço, assinaturas, pagamento, acesso digital imediato e responsabilidades.",
+        "privacy_description": "Política de privacidade da XAUTERMINAL sobre dados de conta, sessões, pagamentos e prestadores.",
+        "risk_description": "Aviso de risco de trading sobre dados de mercado, instrumentos financeiros e uso das ferramentas XAUTERMINAL.",
         "hero_copy": "Uma estação macro para acompanhar notícias, calendário econômico, drivers de mercado e gráficos em uma interface rápida, personalizável e orientada à decisão.",
         "hero_trial": "Iniciar teste de 7 dias",
         "hero_login": "Já tenho uma conta",
@@ -116,6 +128,10 @@ LOCALE_COPY = {
     },
     "de": {
         "meta_title": "XAUTERMINAL - Professionelles Makro- und Trading-Terminal",
+        "meta_description": "XAUTERMINAL bündelt Charting, Wirtschaftskalender, Multi-Source-News, Makro-Warnungen und Marktprofile in einem professionellen Terminal für Trader.",
+        "terms_description": "XAUTERMINAL Bedingungen zu Servicezugang, Abonnements, Zahlung, sofortigem digitalem Zugang und Verantwortlichkeiten.",
+        "privacy_description": "XAUTERMINAL Datenschutzerklärung zu Kontodaten, Sitzungen, Zahlungen und Dienstleistern.",
+        "risk_description": "Trading-Risikohinweis zu Marktdaten, Finanzinstrumenten und der Nutzung der XAUTERMINAL Tools.",
         "hero_copy": "Ein Makro-Arbeitsplatz für News, Wirtschaftskalender, Markttreiber und Charts in einer schnellen, anpassbaren und entscheidungsorientierten Oberfläche.",
         "hero_trial": "7-Tage-Test starten",
         "hero_login": "Ich habe bereits ein Konto",
@@ -139,6 +155,10 @@ LOCALE_COPY = {
     },
     "ar": {
         "meta_title": "XAUTERMINAL - منصة ماكرو وتداول احترافية",
+        "meta_description": "يجمع XAUTERMINAL الرسوم البيانية والتقويم الاقتصادي والأخبار متعددة المصادر والتنبيهات الكلية وملفات الأسواق في منصة احترافية للمتداولين.",
+        "terms_description": "شروط XAUTERMINAL حول الوصول إلى الخدمة والاشتراكات والدفع والوصول الرقمي الفوري والمسؤوليات.",
+        "privacy_description": "سياسة خصوصية XAUTERMINAL حول بيانات الحساب والجلسات والمدفوعات ومقدمي الخدمات.",
+        "risk_description": "تحذير مخاطر التداول حول بيانات السوق والأدوات المالية واستخدام أدوات XAUTERMINAL.",
         "hero_copy": "مساحة عمل ماكرو لمتابعة الأخبار والتقويم الاقتصادي ومحركات السوق والرسوم البيانية عبر واجهة سريعة وقابلة للتخصيص وموجهة للقرار.",
         "hero_trial": "ابدأ تجربة 7 أيام",
         "hero_login": "لدي حساب بالفعل",
@@ -162,6 +182,10 @@ LOCALE_COPY = {
     },
     "ja": {
         "meta_title": "XAUTERMINAL - プロ向けマクロ・トレーディング端末",
+        "meta_description": "XAUTERMINAL は、チャート、経済カレンダー、複数ソースのニュース、マクロアラート、市場プロファイルをプロ向け端末に集約します。",
+        "terms_description": "サービスアクセス、サブスクリプション、支払い、即時デジタルアクセス、責任に関する XAUTERMINAL の利用規約。",
+        "privacy_description": "アカウントデータ、セッション、支払い、サービス提供者に関する XAUTERMINAL のプライバシーポリシー。",
+        "risk_description": "市場データ、金融商品、XAUTERMINAL ツールの利用に関する取引リスク警告。",
         "hero_copy": "ニュース、経済カレンダー、市場ドライバー、チャートを素早くカスタマイズ可能な意思決定向けインターフェースで確認できるマクロワークステーション。",
         "hero_trial": "7日間トライアルを開始",
         "hero_login": "すでにアカウントを持っています",
@@ -185,6 +209,10 @@ LOCALE_COPY = {
     },
     "hi": {
         "meta_title": "XAUTERMINAL - प्रोफेशनल मैक्रो और ट्रेडिंग टर्मिनल",
+        "meta_description": "XAUTERMINAL चार्टिंग, आर्थिक कैलेंडर, मल्टी-सोर्स समाचार, मैक्रो अलर्ट और मार्केट प्रोफाइल को ट्रेडर्स के लिए एक प्रोफेशनल टर्मिनल में जोड़ता है.",
+        "terms_description": "सेवा पहुंच, सब्सक्रिप्शन, भुगतान, तत्काल डिजिटल पहुंच और जिम्मेदारियों से जुड़े XAUTERMINAL नियम.",
+        "privacy_description": "खाता डेटा, सेशन, भुगतान और सेवा प्रदाताओं से जुड़ी XAUTERMINAL गोपनीयता नीति.",
+        "risk_description": "मार्केट डेटा, वित्तीय इंस्ट्रूमेंट और XAUTERMINAL टूल्स के उपयोग से जुड़े ट्रेडिंग जोखिम की चेतावनी.",
         "hero_copy": "समाचार, आर्थिक कैलेंडर, मार्केट ड्राइवर और चार्ट को तेज, कस्टमाइजेबल और निर्णय-केंद्रित इंटरफेस में ट्रैक करने वाला मैक्रो वर्कस्टेशन.",
         "hero_trial": "7 दिन का ट्रायल शुरू करें",
         "hero_login": "मेरे पास पहले से खाता है",
@@ -208,6 +236,10 @@ LOCALE_COPY = {
     },
     "id": {
         "meta_title": "XAUTERMINAL - Terminal makro dan trading profesional",
+        "meta_description": "XAUTERMINAL memusatkan charting, kalender ekonomi, berita multi-sumber, alert makro, dan profil pasar dalam terminal profesional untuk trader.",
+        "terms_description": "Ketentuan XAUTERMINAL tentang akses layanan, langganan, pembayaran, akses digital langsung, dan tanggung jawab.",
+        "privacy_description": "Kebijakan privasi XAUTERMINAL tentang data akun, sesi, pembayaran, dan penyedia layanan.",
+        "risk_description": "Peringatan risiko trading tentang data pasar, instrumen keuangan, dan penggunaan alat XAUTERMINAL.",
         "hero_copy": "Workspace makro untuk mengikuti berita, kalender ekonomi, driver pasar, dan chart dalam antarmuka cepat, personal, dan berorientasi keputusan.",
         "hero_trial": "Mulai uji coba 7 hari",
         "hero_login": "Saya sudah punya akun",
@@ -231,6 +263,10 @@ LOCALE_COPY = {
     },
     "zh": {
         "meta_title": "XAUTERMINAL - 专业宏观与交易终端",
+        "meta_description": "XAUTERMINAL 将图表、经济日历、多源新闻、宏观提醒和市场档案集中在一个面向交易者的专业终端中。",
+        "terms_description": "XAUTERMINAL 关于服务访问、订阅、付款、即时数字访问和责任的条款。",
+        "privacy_description": "XAUTERMINAL 关于账户数据、会话、付款和服务提供商的隐私政策。",
+        "risk_description": "关于市场数据、金融工具以及使用 XAUTERMINAL 工具的交易风险提示。",
         "hero_copy": "一个宏观工作台，用快速、可定制、面向决策的界面跟踪新闻、经济日历、市场驱动因素和图表。",
         "hero_trial": "开始 7 天试用",
         "hero_login": "我已有账户",
@@ -380,7 +416,93 @@ def language_selector(current_locale: str, path: str) -> str:
 def localized_copy(locale: str) -> dict[str, str]:
     if locale == "fr":
         return {}
-    return {**STATIC_EN_COPY, **load_locale_file(locale), **LOCALE_COPY.get("en", {}), **LOCALE_COPY.get(locale, {})}
+    copy = {**STATIC_EN_COPY, **load_locale_file(locale), **LOCALE_COPY.get("en", {}), **LOCALE_COPY.get(locale, {})}
+    copy.setdefault("meta_description", copy.get("hero_copy", ""))
+    return copy
+
+
+def localize_structured_data(
+    payload,
+    locale_hreflang: str,
+    canonical_url: str,
+    page_title: str = "",
+    page_description: str = "",
+    headline: str = "",
+    faq_pairs=None,
+):
+    if isinstance(payload, list):
+        return [
+            localize_structured_data(
+                item,
+                locale_hreflang,
+                canonical_url,
+                page_title,
+                page_description,
+                headline,
+                faq_pairs,
+            )
+            for item in payload
+        ]
+    if not isinstance(payload, dict):
+        return payload
+
+    updated = {
+        key: localize_structured_data(
+            value,
+            locale_hreflang,
+            canonical_url,
+            page_title,
+            page_description,
+            headline,
+            faq_pairs,
+        )
+        for key, value in payload.items()
+    }
+    if "inLanguage" in updated:
+        updated["inLanguage"] = locale_hreflang
+
+    json_type = updated.get("@type")
+    if isinstance(json_type, list):
+        types = set(json_type)
+    else:
+        types = {json_type}
+    if types.intersection({"WebPage", "Article", "FAQPage"}):
+        updated["url"] = canonical_url
+    if "Article" in types:
+        if headline:
+            updated["headline"] = headline
+        if page_description:
+            updated["description"] = page_description
+        updated["mainEntityOfPage"] = canonical_url
+    if "WebPage" in types:
+        if page_title:
+            updated["name"] = page_title
+        if page_description:
+            updated["description"] = page_description
+    if "SoftwareApplication" in types and page_description:
+        updated["description"] = page_description
+        for offer in updated.get("offers", []):
+            if not isinstance(offer, dict):
+                continue
+            if offer.get("price") == "29":
+                offer["name"] = "Monthly"
+            elif offer.get("price") == "249":
+                offer["name"] = "Yearly"
+            elif offer.get("price") == "599":
+                offer["name"] = "Lifetime"
+    if "FAQPage" in types and faq_pairs:
+        updated["mainEntity"] = [
+            {
+                "@type": "Question",
+                "name": question,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": answer,
+                },
+            }
+            for question, answer in faq_pairs
+        ]
+    return updated
 
 
 def localize_html(html: str, locale: str, path: str) -> str:
@@ -401,6 +523,18 @@ def localize_html(html: str, locale: str, path: str) -> str:
     for tag in soup.find_all("meta", property="og:url"):
         tag["content"] = canonical_url
 
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        if not script.string:
+            continue
+        try:
+            payload = json.loads(script.string)
+        except json.JSONDecodeError:
+            continue
+        script.string = json.dumps(
+            localize_structured_data(payload, locale_cfg["hreflang"], canonical_url),
+            ensure_ascii=False,
+        )
+
     for stylesheet in soup.find_all("link", rel="stylesheet"):
         href = stylesheet.get("href", "")
         if href.startswith("/static/styles.css"):
@@ -408,7 +542,7 @@ def localize_html(html: str, locale: str, path: str) -> str:
 
     for script_tag in soup.find_all("script", src=True):
         if script_tag["src"].startswith("/static/landing.js"):
-            script_tag["src"] = "/static/landing.js?v=20260519-langroot"
+            script_tag["src"] = "/static/landing.js?v=20260520-seo-meta"
 
     copy = localized_copy(locale)
     if copy:
@@ -447,6 +581,36 @@ def localize_html(html: str, locale: str, path: str) -> str:
                         script.string = f"window.XT_MARKET_COPY = {json.dumps(market_payload, ensure_ascii=False)};"
                     except json.JSONDecodeError:
                         pass
+
+    page_title = soup.title.get_text(strip=True) if soup.title else ""
+    description_tag = soup.find("meta", attrs={"name": "description"})
+    page_description = description_tag.get("content", "") if description_tag else ""
+    h1 = soup.find("h1")
+    page_headline = h1.get_text(" ", strip=True) if h1 else page_title
+    faq_pairs = [
+        (article.find("h3").get_text(" ", strip=True), article.find("p").get_text(" ", strip=True))
+        for article in soup.select(".faq-card, .faq-grid article, .resource-faq article")
+        if article.find("h3") and article.find("p")
+    ]
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        if not script.string:
+            continue
+        try:
+            payload = json.loads(script.string)
+        except json.JSONDecodeError:
+            continue
+        script.string = json.dumps(
+            localize_structured_data(
+                payload,
+                locale_cfg["hreflang"],
+                canonical_url,
+                page_title,
+                page_description,
+                page_headline,
+                faq_pairs,
+            ),
+            ensure_ascii=False,
+        )
 
     initial_script = soup.new_tag("script")
     initial_script.string = (
@@ -2346,6 +2510,7 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
         "privacy_title": "/privacy",
         "risk_title": "/risk-disclaimer",
     }[title_key]
+    description_key = title_key.replace("_title", "_description")
     canonical = absolute_url(page_path)
     page_title = f'{meta["title"]} - {business_name}'
     escaped_description = escape(meta["description"], quote=True)
@@ -2402,16 +2567,18 @@ def legal_page(title_key: str, kicker_key: str, sections: list[tuple[str, str]])
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="{title_key}">{page_title}</title>
-    <meta name="description" content="{escaped_description}">
+    <meta name="description" content="{escaped_description}" data-i18n-content="{description_key}">
     <link rel="canonical" href="{canonical}">
     <meta name="robots" content="index,follow">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{business_name}">
-    <meta property="og:title" content="{page_title}">
-    <meta property="og:description" content="{escaped_description}">
+    <meta property="og:title" content="{page_title}" data-i18n-content="{title_key}">
+    <meta property="og:description" content="{escaped_description}" data-i18n-content="{description_key}">
     <meta property="og:url" content="{canonical}">
     <meta property="og:image" content="{absolute_url('/static/icon-192x192.png')}">
     <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{page_title}" data-i18n-content="{title_key}">
+    <meta name="twitter:description" content="{escaped_description}" data-i18n-content="{description_key}">
 {FAVICON_LINKS}
     <link rel="stylesheet" href="/static/styles.css">
     <script type="application/ld+json">{structured_data}</script>
@@ -2606,12 +2773,15 @@ async def risk_disclaimer_page():
 
 
 async def localized_public_page(locale: str, path: str = "/"):
-    if locale not in SUPPORTED_LOCALES or locale == "fr":
-        return FastAPIResponse(status_code=404, content="Page not found")
-
     clean_path = path if path.startswith("/") else f"/{path}"
     if clean_path != "/" and clean_path.endswith("/"):
         clean_path = clean_path.rstrip("/")
+
+    if locale == "fr":
+        target = clean_path if clean_path != "/" else "/"
+        return FastAPIResponse(status_code=308, headers={"Location": target})
+    if locale not in SUPPORTED_LOCALES:
+        return FastAPIResponse(status_code=404, content="Page not found")
 
     if clean_path == "/":
         return HTMLResponse(localized_landing(locale))

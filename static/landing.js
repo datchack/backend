@@ -8,6 +8,7 @@ let selectedBillingPlan = null;
 const LANDING_COPY = {
     fr: {
         meta_title: 'XAUTERMINAL - Terminal macro et trading professionnel',
+        meta_description: 'XAUTERMINAL centralise charting, calendrier économique, news multi-source, alertes macro et profils de marché dans un terminal professionnel pour traders.',
         nav_tools: 'Outils',
         nav_markets: 'Marchés',
         nav_pricing: 'Formules',
@@ -162,6 +163,7 @@ const LANDING_COPY = {
     },
     en: {
         meta_title: 'XAUTERMINAL - Professional macro and trading terminal',
+        meta_description: 'XAUTERMINAL centralizes charting, economic calendar, multi-source news, macro alerts and market profiles in a professional terminal for traders.',
         nav_tools: 'Tools',
         nav_markets: 'Markets',
         nav_pricing: 'Plans',
