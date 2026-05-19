@@ -50,6 +50,8 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
         raise HTTPException(status_code=403, detail="Email non confirme. Confirme ton adresse email avant de payer.")
     if not payload.accepted_terms:
         raise HTTPException(status_code=400, detail="Acceptation des CGU et conditions d'abonnement requise")
+    if not payload.immediate_access_acknowledged:
+        raise HTTPException(status_code=400, detail="Demande d'acces immediat au service requise")
 
     plan_key = payload.plan.strip().lower()
     plan_cfg = stripe_checkout_plans().get(plan_key)
@@ -66,7 +68,9 @@ async def billing_checkout(payload: BillingCheckoutPayload, request: Request):
         "price_id": plan_cfg["price"],
         "terms_accepted": "true",
         "terms_accepted_at": accepted_at,
-        "terms_version": "2026-05-18",
+        "terms_version": "2026-05-19",
+        "immediate_access_requested": "true",
+        "withdrawal_acknowledged": "true",
         "billing_policy": "paid_period_non_refundable_cancel_at_period_end",
     }
     cancel_url = f"{APP_BASE_URL}{return_path}?billing=canceled" if return_path == "/account" else f"{APP_BASE_URL}/#pricing"

@@ -154,8 +154,8 @@ const ACCOUNT_COPY = {
         code_sent: 'Code de confirmation renvoyé par email.',
         code_error: 'Code non envoyé.',
         payment_canceled: 'Paiement annulé. Tu peux choisir une formule quand tu veux.',
-        legal_confirm_subscription: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement: essai 7 jours, renouvellement automatique, période payée non remboursable sauf obligation légale contraire, résiliation à l'échéance de la période en cours. Continuer ?",
-        legal_confirm_lifetime: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions de l'offre lifetime: paiement unique, accès lifetime au terminal selon les conditions de l'offre, non remboursable sauf obligation légale contraire. Continuer ?",
+        legal_confirm_subscription: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement. Tu demandes l'accès immédiat au service numérique XAUTERMINAL dès la souscription Stripe, y compris pendant l'essai gratuit de 7 jours, et tu reconnais que cette exécution immédiate peut entraîner la perte du droit de rétractation lorsque les conditions légales sont réunies. L'abonnement se renouvelle automatiquement après l'essai sauf résiliation avant échéance. Continuer ?",
+        legal_confirm_lifetime: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions de l'offre lifetime. Tu demandes l'accès immédiat au service numérique XAUTERMINAL dès le paiement et tu reconnais que cette exécution immédiate peut entraîner la perte du droit de rétractation lorsque les conditions légales sont réunies. L'offre lifetime est un paiement unique, non remboursable sauf obligation légale contraire. Continuer ?",
         validating_payment: 'Validation du paiement Stripe...',
         payment_valid: 'Paiement validé. Ton accès est activé.',
         payment_pending: 'Paiement reçu, synchronisation en attente.',
@@ -310,8 +310,8 @@ const ACCOUNT_COPY = {
         code_sent: 'Confirmation code sent again by email.',
         code_error: 'Code not sent.',
         payment_canceled: 'Payment canceled. You can choose a plan whenever you want.',
-        legal_confirm_subscription: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions: 7-day trial, automatic renewal, paid period non-refundable unless legally required otherwise, cancellation at the end of the current period. Continue?',
-        legal_confirm_lifetime: 'By continuing to Stripe, you accept the Terms, Privacy Policy and lifetime offer conditions: one-time payment, lifetime terminal access under the offer terms, non-refundable unless legally required otherwise. Continue?',
+        legal_confirm_subscription: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions. You request immediate access to the XAUTERMINAL digital service from the Stripe subscription, including during the 7-day free trial, and acknowledge that this immediate performance may result in loss of the withdrawal right where legal conditions are met. The subscription renews automatically after the trial unless canceled before renewal. Continue?',
+        legal_confirm_lifetime: 'By continuing to Stripe, you accept the Terms, Privacy Policy and lifetime offer conditions. You request immediate access to the XAUTERMINAL digital service from payment and acknowledge that this immediate performance may result in loss of the withdrawal right where legal conditions are met. The lifetime offer is a one-time payment, non-refundable unless legally required otherwise. Continue?',
         validating_payment: 'Validating Stripe payment...',
         payment_valid: 'Payment valid. Your access is active.',
         payment_pending: 'Payment received, sync pending.',
@@ -642,7 +642,7 @@ async function startCheckout(plan) {
         const response = await fetch('/api/billing/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan, return_path: '/account', accepted_terms: true }),
+            body: JSON.stringify({ plan, return_path: '/account', accepted_terms: true, immediate_access_acknowledged: true }),
         });
         const payload = await readJson(response);
         window.location.href = payload.url;

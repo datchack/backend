@@ -112,7 +112,7 @@ const LANDING_COPY = {
         terms_section7_title: 'Responsabilité',
         terms_section7: 'XAUTERMINAL ne garantit pas l\'exactitude, l\'exhaustivité, l\'actualité ou la continuité des données affichées. L\'utilisateur reste seul responsable de ses décisions, notamment financières, et de sa gestion du risque.',
         terms_section8_title: 'Rétractation',
-        terms_section8: 'Lorsque la loi accorde un droit de rétractation, l\'utilisateur dispose en principe d\'un délai de 14 jours pour l\'exercer. Pour un contenu ou service numérique accessible immédiatement, l\'utilisateur peut demander l\'exécution immédiate et reconnaître qu\'il renonce au droit de rétractation lorsque les conditions légales applicables sont réunies. Pendant l\'essai gratuit, l\'utilisateur peut annuler avant le premier paiement depuis Stripe.',
+        terms_section8: 'Lorsque la loi accorde un droit de rétractation, l\'utilisateur dispose en principe d\'un délai de 14 jours pour l\'exercer à compter de la conclusion du contrat. XAUTERMINAL étant un service numérique accessible immédiatement, l\'utilisateur demande expressément l\'exécution immédiate du service dès la souscription Stripe, y compris pendant l\'essai gratuit, et reconnaît que cette exécution immédiate peut entraîner la perte du droit de rétractation lorsque les conditions légales applicables sont réunies. Pendant l\'essai gratuit, l\'utilisateur peut annuler avant le premier paiement depuis Stripe.',
         terms_section9_title: 'Résiliation',
         terms_section9: 'L\'utilisateur peut demander la résiliation de son abonnement depuis son espace compte ou le portail Stripe. La résiliation d\'un abonnement mensuel ou annuel prend effet à la fin de la période de facturation en cours et n\'annule pas les sommes déjà dues pour cette période.',
         terms_section10_title: 'Modification du service',
@@ -267,7 +267,7 @@ const LANDING_COPY = {
         terms_section7_title: 'Liability',
         terms_section7: 'XAUTERMINAL does not guarantee accuracy, completeness, timeliness or continuity of displayed data. Users are solely responsible for their decisions, including financial, and risk management.',
         terms_section8_title: 'Withdrawal Right',
-        terms_section8: 'Where the law grants a withdrawal right, users generally have 14 days to exercise it. For digital content or a digital service made available immediately, the user may request immediate performance and acknowledge loss of withdrawal right when the applicable legal conditions are met. During the free trial, the user may cancel before the first payment through Stripe.',
+        terms_section8: 'Where the law grants a withdrawal right, users generally have 14 days to exercise it from contract conclusion. Since XAUTERMINAL is a digital service made available immediately, the user expressly requests immediate performance from the Stripe subscription, including during the free trial, and acknowledges that this immediate performance may result in loss of the withdrawal right where applicable legal conditions are met. During the free trial, the user may cancel before the first payment through Stripe.',
         terms_section9_title: 'Cancellation',
         terms_section9: 'Users may cancel their subscription from their account area or the Stripe portal. Cancellation of a monthly or yearly subscription takes effect at the end of the current billing period and does not cancel amounts already due for that period.',
         terms_section10_title: 'Service Modification',
@@ -434,8 +434,8 @@ const SEO_COPY = {
         pricing_note_copy: "Pour les abonnements mensuel et annuel, Stripe peut demander une carte afin d'activer l'essai gratuit de 7 jours et préparer le renouvellement. Aucun débit d'abonnement n'est prévu avant la fin de l'essai. Après facturation, la période mensuelle ou annuelle commencée est due et non remboursable, sauf obligation légale contraire. La résiliation stoppe le renouvellement suivant.",
         faq_trial_title: 'Que se passe-t-il après les 7 jours ?',
         faq_trial_copy: "L'abonnement choisi démarre automatiquement si le paiement est validé par Stripe. Tu peux annuler pendant l'essai depuis Stripe avant le premier débit. Après facturation, la période en cours reste due.",
-        legal_confirm_subscription: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement: essai 7 jours, renouvellement automatique, période payée non remboursable sauf obligation légale contraire, résiliation à l'échéance de la période en cours. Continuer ?",
-        legal_confirm_lifetime: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions de l'offre lifetime: paiement unique, accès lifetime au terminal selon les conditions de l'offre, non remboursable sauf obligation légale contraire. Continuer ?",
+        legal_confirm_subscription: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement. Tu demandes l'accès immédiat au service numérique XAUTERMINAL dès la souscription Stripe, y compris pendant l'essai gratuit de 7 jours, et tu reconnais que cette exécution immédiate peut entraîner la perte du droit de rétractation lorsque les conditions légales sont réunies. L'abonnement se renouvelle automatiquement après l'essai sauf résiliation avant échéance. Continuer ?",
+        legal_confirm_lifetime: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions de l'offre lifetime. Tu demandes l'accès immédiat au service numérique XAUTERMINAL dès le paiement et tu reconnais que cette exécution immédiate peut entraîner la perte du droit de rétractation lorsque les conditions légales sont réunies. L'offre lifetime est un paiement unique, non remboursable sauf obligation légale contraire. Continuer ?",
         faq_signals_title: 'Le terminal donne-t-il des signaux ?',
         faq_signals_copy: "Non. XAUTERMINAL est un outil d'aide à la décision: news, calendrier, drivers, bias et charting. Il ne remplace pas ta stratégie ni ta gestion du risque.",
         faq_markets_title: 'Puis-je changer de marché ?',
@@ -790,8 +790,8 @@ const SEO_COPY = {
         pricing_note_copy: 'For monthly and yearly subscriptions, Stripe may ask for a card to activate the 7-day free trial and prepare renewal. No subscription charge is expected before the trial ends. After billing, the started monthly or yearly period is due and non-refundable unless legally required otherwise. Cancellation stops the next renewal.',
         faq_trial_title: 'What happens after 7 days?',
         faq_trial_copy: 'The selected subscription starts automatically if payment is validated by Stripe. You can cancel during the trial through Stripe before the first charge. After billing, the current period remains due.',
-        legal_confirm_subscription: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions: 7-day trial, automatic renewal, paid period non-refundable unless legally required otherwise, cancellation at the end of the current period. Continue?',
-        legal_confirm_lifetime: 'By continuing to Stripe, you accept the Terms, Privacy Policy and lifetime offer conditions: one-time payment, lifetime terminal access under the offer terms, non-refundable unless legally required otherwise. Continue?',
+        legal_confirm_subscription: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions. You request immediate access to the XAUTERMINAL digital service from the Stripe subscription, including during the 7-day free trial, and acknowledge that this immediate performance may result in loss of the withdrawal right where legal conditions are met. The subscription renews automatically after the trial unless canceled before renewal. Continue?',
+        legal_confirm_lifetime: 'By continuing to Stripe, you accept the Terms, Privacy Policy and lifetime offer conditions. You request immediate access to the XAUTERMINAL digital service from payment and acknowledge that this immediate performance may result in loss of the withdrawal right where legal conditions are met. The lifetime offer is a one-time payment, non-refundable unless legally required otherwise. Continue?',
         faq_signals_title: 'Does the terminal provide signals?',
         faq_signals_copy: 'No. XAUTERMINAL is a decision-support tool: news, calendar, drivers, bias and charting. It does not replace your strategy or risk management.',
         faq_markets_title: 'Can I switch markets?',
@@ -1254,7 +1254,7 @@ async function startBillingCheckout(plan) {
         const response = await fetch('/api/billing/checkout', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plan, accepted_terms: true }),
+            body: JSON.stringify({ plan, accepted_terms: true, immediate_access_acknowledged: true }),
         });
         const payload = await response.json();
         if (!response.ok) {

@@ -56,6 +56,7 @@ class BillingCheckoutPayload(BaseModel):
     plan: str
     return_path: str = "/terminal"
     accepted_terms: bool = False
+    immediate_access_acknowledged: bool = False
 
 
 class BillingCheckoutSyncPayload(BaseModel):
