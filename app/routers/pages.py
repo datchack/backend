@@ -2864,7 +2864,7 @@ Disallow: /db-test
 Disallow: /api/
 Disallow: /ws/
 
-Sitemap: {absolute_url('/sitemap.xml')}
+Sitemap: {absolute_url('/sitemap-main.xml')}
 """
 
 
@@ -2916,6 +2916,11 @@ def sitemap_xml_content() -> str:
 
 @router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
 async def sitemap_xml():
+    return FastAPIResponse(content=sitemap_xml_content(), media_type="application/xml")
+
+
+@router.api_route("/sitemap-main.xml", methods=["GET", "HEAD"])
+async def sitemap_main_xml():
     return FastAPIResponse(content=sitemap_xml_content(), media_type="application/xml")
 
 
