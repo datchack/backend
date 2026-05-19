@@ -154,7 +154,8 @@ const ACCOUNT_COPY = {
         code_sent: 'Code de confirmation renvoyé par email.',
         code_error: 'Code non envoyé.',
         payment_canceled: 'Paiement annulé. Tu peux choisir une formule quand tu veux.',
-        legal_confirm: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement: essai 7 jours, renouvellement automatique, période payée non remboursable sauf obligation légale contraire, résiliation à l'échéance de la période en cours. Continuer ?",
+        legal_confirm_subscription: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement: essai 7 jours, renouvellement automatique, période payée non remboursable sauf obligation légale contraire, résiliation à l'échéance de la période en cours. Continuer ?",
+        legal_confirm_lifetime: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions de l'offre lifetime: paiement unique, accès lifetime au terminal selon les conditions de l'offre, non remboursable sauf obligation légale contraire. Continuer ?",
         validating_payment: 'Validation du paiement Stripe...',
         payment_valid: 'Paiement validé. Ton accès est activé.',
         payment_pending: 'Paiement reçu, synchronisation en attente.',
@@ -309,7 +310,8 @@ const ACCOUNT_COPY = {
         code_sent: 'Confirmation code sent again by email.',
         code_error: 'Code not sent.',
         payment_canceled: 'Payment canceled. You can choose a plan whenever you want.',
-        legal_confirm: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions: 7-day trial, automatic renewal, paid period non-refundable unless legally required otherwise, cancellation at the end of the current period. Continue?',
+        legal_confirm_subscription: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions: 7-day trial, automatic renewal, paid period non-refundable unless legally required otherwise, cancellation at the end of the current period. Continue?',
+        legal_confirm_lifetime: 'By continuing to Stripe, you accept the Terms, Privacy Policy and lifetime offer conditions: one-time payment, lifetime terminal access under the offer terms, non-refundable unless legally required otherwise. Continue?',
         validating_payment: 'Validating Stripe payment...',
         payment_valid: 'Payment valid. Your access is active.',
         payment_pending: 'Payment received, sync pending.',
@@ -318,6 +320,10 @@ const ACCOUNT_COPY = {
 
 function t(key) {
     return ACCOUNT_COPY[accountLang]?.[key] || ACCOUNT_COPY.fr[key] || key;
+}
+
+function legalConfirmMessage(plan) {
+    return t(plan === 'lifetime' ? 'legal_confirm_lifetime' : 'legal_confirm_subscription');
 }
 
 function applyAccountLanguage() {
@@ -627,7 +633,7 @@ async function savePassword(event) {
 }
 
 async function startCheckout(plan) {
-    if (!window.confirm(t('legal_confirm'))) {
+    if (!window.confirm(legalConfirmMessage(plan))) {
         setMessage('account-message', '');
         return;
     }

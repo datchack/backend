@@ -392,7 +392,8 @@ const SEO_COPY = {
         pricing_note_copy: "Pour les abonnements mensuel et annuel, Stripe peut demander une carte afin d'activer l'essai gratuit de 7 jours et préparer le renouvellement. Aucun débit d'abonnement n'est prévu avant la fin de l'essai. Après facturation, la période mensuelle ou annuelle commencée est due et non remboursable, sauf obligation légale contraire. La résiliation stoppe le renouvellement suivant.",
         faq_trial_title: 'Que se passe-t-il après les 7 jours ?',
         faq_trial_copy: "L'abonnement choisi démarre automatiquement si le paiement est validé par Stripe. Tu peux annuler pendant l'essai depuis Stripe avant le premier débit. Après facturation, la période en cours reste due.",
-        legal_confirm: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement: essai 7 jours, renouvellement automatique, période payée non remboursable sauf obligation légale contraire, résiliation à l'échéance de la période en cours. Continuer ?",
+        legal_confirm_subscription: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions d'abonnement: essai 7 jours, renouvellement automatique, période payée non remboursable sauf obligation légale contraire, résiliation à l'échéance de la période en cours. Continuer ?",
+        legal_confirm_lifetime: "En continuant vers Stripe, tu acceptes les CGU, la politique de confidentialité et les conditions de l'offre lifetime: paiement unique, accès lifetime au terminal selon les conditions de l'offre, non remboursable sauf obligation légale contraire. Continuer ?",
         faq_signals_title: 'Le terminal donne-t-il des signaux ?',
         faq_signals_copy: "Non. XAUTERMINAL est un outil d'aide à la décision: news, calendrier, drivers, bias et charting. Il ne remplace pas ta stratégie ni ta gestion du risque.",
         faq_markets_title: 'Puis-je changer de marché ?',
@@ -747,7 +748,8 @@ const SEO_COPY = {
         pricing_note_copy: 'For monthly and yearly subscriptions, Stripe may ask for a card to activate the 7-day free trial and prepare renewal. No subscription charge is expected before the trial ends. After billing, the started monthly or yearly period is due and non-refundable unless legally required otherwise. Cancellation stops the next renewal.',
         faq_trial_title: 'What happens after 7 days?',
         faq_trial_copy: 'The selected subscription starts automatically if payment is validated by Stripe. You can cancel during the trial through Stripe before the first charge. After billing, the current period remains due.',
-        legal_confirm: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions: 7-day trial, automatic renewal, paid period non-refundable unless legally required otherwise, cancellation at the end of the current period. Continue?',
+        legal_confirm_subscription: 'By continuing to Stripe, you accept the Terms, Privacy Policy and subscription conditions: 7-day trial, automatic renewal, paid period non-refundable unless legally required otherwise, cancellation at the end of the current period. Continue?',
+        legal_confirm_lifetime: 'By continuing to Stripe, you accept the Terms, Privacy Policy and lifetime offer conditions: one-time payment, lifetime terminal access under the offer terms, non-refundable unless legally required otherwise. Continue?',
         faq_signals_title: 'Does the terminal provide signals?',
         faq_signals_copy: 'No. XAUTERMINAL is a decision-support tool: news, calendar, drivers, bias and charting. It does not replace your strategy or risk management.',
         faq_markets_title: 'Can I switch markets?',
@@ -994,6 +996,10 @@ function t(key) {
     return LANDING_COPY[landingLang]?.[key] || LANDING_COPY.fr[key] || key;
 }
 
+function legalConfirmMessage(plan) {
+    return t(plan === 'lifetime' ? 'legal_confirm_lifetime' : 'legal_confirm_subscription');
+}
+
 function applyLandingLanguage() {
     document.documentElement.lang = landingLang;
     document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -1197,7 +1203,7 @@ async function submitLandingAuth(event) {
 }
 
 async function startBillingCheckout(plan) {
-    if (!window.confirm(t('legal_confirm'))) {
+    if (!window.confirm(legalConfirmMessage(plan))) {
         setLandingMessage('');
         return;
     }
