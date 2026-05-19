@@ -2864,7 +2864,7 @@ Disallow: /db-test
 Disallow: /api/
 Disallow: /ws/
 
-Sitemap: {absolute_url('/sitemap-main.xml')}
+Sitemap: {absolute_url('/sitemap.xml')}
 """
 
 
@@ -2878,15 +2878,29 @@ async def favicon():
     return FileResponse("static/favicon.ico", media_type="image/x-icon")
 
 
-def sitemap_xml_content() -> str:
-    urls = [
+def sitemap_urlset(paths: list[tuple[str, str, str]]) -> str:
+    items = "\n".join(
+        f"""  <url>
+    <loc>{absolute_url(path)}</loc>
+    <changefreq>{changefreq}</changefreq>
+    <priority>{priority}</priority>
+  </url>"""
+        for path, changefreq, priority in paths
+    )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{items}
+</urlset>
+"""
+
+
+def sitemap_main_paths() -> list[tuple[str, str, str]]:
+    return [
         ("/", "daily", "1.0"),
         ("/support", "weekly", "0.7"),
         ("/ressources", "weekly", "0.8"),
         ("/guides", "weekly", "0.8"),
         ("/market-pulse", "daily", "0.9"),
-        ("/marches", "weekly", "0.9"),
-        *[(f"/marches/{pair['slug']}", "weekly", "0.8") for pair in FX_MARKET_PAIRS],
         ("/terminal-xauusd", "weekly", "0.8"),
         ("/calendrier-economique-or", "weekly", "0.8"),
         ("/news-forex-or", "weekly", "0.8"),
@@ -2898,20 +2912,42 @@ def sitemap_xml_content() -> str:
         ("/privacy", "monthly", "0.5"),
         ("/risk-disclaimer", "monthly", "0.5"),
     ]
+
+
+def sitemap_markets_paths() -> list[tuple[str, str, str]]:
+    return [
+        ("/marches", "weekly", "0.9"),
+        *[(f"/marches/{pair['slug']}", "weekly", "0.8") for pair in FX_MARKET_PAIRS],
+    ]
+
+
+def sitemap_i18n_paths() -> list[tuple[str, str, str]]:
+    base_paths = [*sitemap_main_paths(), *sitemap_markets_paths()]
+    return [
+        (locale_path(path, locale), changefreq, priority)
+        for path, changefreq, priority in base_paths
+        for locale in SUPPORTED_LOCALES
+        if locale != "fr"
+    ]
+
+
+def sitemap_xml_content() -> str:
+    sitemaps = [
+        "/sitemap-main.xml",
+        "/sitemap-markets.xml",
+        "/sitemap-i18n.xml",
+    ]
     items = "\n".join(
-        f"""  <url>
+        f"""  <sitemap>
     <loc>{absolute_url(path)}</loc>
-    <changefreq>{changefreq}</changefreq>
-    <priority>{priority}</priority>
-  </url>"""
-        for path, changefreq, priority in urls
+  </sitemap>"""
+        for path in sitemaps
     )
-    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {items}
-</urlset>
+</sitemapindex>
 """
-    return xml
 
 
 @router.api_route("/sitemap.xml", methods=["GET", "HEAD"])
@@ -2921,7 +2957,17 @@ async def sitemap_xml():
 
 @router.api_route("/sitemap-main.xml", methods=["GET", "HEAD"])
 async def sitemap_main_xml():
-    return FastAPIResponse(content=sitemap_xml_content(), media_type="application/xml")
+    return FastAPIResponse(content=sitemap_urlset(sitemap_main_paths()), media_type="application/xml")
+
+
+@router.api_route("/sitemap-markets.xml", methods=["GET", "HEAD"])
+async def sitemap_markets_xml():
+    return FastAPIResponse(content=sitemap_urlset(sitemap_markets_paths()), media_type="application/xml")
+
+
+@router.api_route("/sitemap-i18n.xml", methods=["GET", "HEAD"])
+async def sitemap_i18n_xml():
+    return FastAPIResponse(content=sitemap_urlset(sitemap_i18n_paths()), media_type="application/xml")
 
 
 @router.get("/admin", response_class=HTMLResponse)
