@@ -2899,23 +2899,20 @@ def sitemap_xml_content() -> str:
         ("/risk-disclaimer", "monthly", "0.5"),
     ]
     localized_urls = [
-        (locale_path(path, locale), path, changefreq, priority)
+        (locale_path(path, locale), changefreq, priority)
         for path, changefreq, priority in urls
         for locale in SUPPORTED_LOCALES
     ]
     items = "\n".join(
         f"""  <url>
     <loc>{absolute_url(localized_path)}</loc>
-{chr(10).join(f'    <xhtml:link rel="alternate" hreflang="{cfg["hreflang"]}" href="{absolute_url(locale_path(base_path, alt_locale))}" />' for alt_locale, cfg in SUPPORTED_LOCALES.items())}
-    <xhtml:link rel="alternate" hreflang="x-default" href="{absolute_url(locale_path(base_path, "en"))}" />
     <changefreq>{changefreq}</changefreq>
     <priority>{priority}</priority>
   </url>"""
-        for localized_path, base_path, changefreq, priority in localized_urls
+        for localized_path, changefreq, priority in localized_urls
     )
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {items}
 </urlset>
 """
