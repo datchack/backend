@@ -1055,7 +1055,10 @@ function legalConfirmMessage(plan) {
 function localizedPathFor(lang) {
     const cleanPath = window.location.pathname.replace(/^\/(en|es|pt-br|de|ar|ja|hi|id|zh)(?=\/|$)/, '') || '/';
     const prefix = lang === 'fr' ? '' : `/${lang}`;
-    return `${prefix}${cleanPath === '/' ? '' : cleanPath}${window.location.hash}`;
+    const localizedPath = cleanPath === '/'
+        ? (prefix || '/')
+        : `${prefix}${cleanPath}`;
+    return `${localizedPath}${window.location.hash}`;
 }
 
 function persistLandingLanguage(lang) {

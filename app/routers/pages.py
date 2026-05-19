@@ -408,7 +408,7 @@ def localize_html(html: str, locale: str, path: str) -> str:
 
     for script_tag in soup.find_all("script", src=True):
         if script_tag["src"].startswith("/static/landing.js"):
-            script_tag["src"] = "/static/landing.js?v=20260519-langfix"
+            script_tag["src"] = "/static/landing.js?v=20260519-langroot"
 
     copy = localized_copy(locale)
     if copy:
