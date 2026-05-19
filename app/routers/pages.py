@@ -2967,3 +2967,56 @@ async def localized_home(locale: str):
 @router.get("/{locale}/{path:path}", response_class=HTMLResponse)
 async def localized_public_route(locale: str, path: str):
     return await localized_public_page(locale, f"/{path}")
+
+
+PUBLIC_HEAD_PATHS = {
+    "/",
+    "/support",
+    "/ressources",
+    "/guides",
+    "/market-pulse",
+    "/marches",
+    "/terminal-xauusd",
+    "/calendrier-economique-or",
+    "/news-forex-or",
+    "/guide/trading-or-macro",
+    "/guides/routine-trading-xauusd",
+    "/guides/dxy-taux-us-or",
+    "/guides/bias-desk-trading",
+    "/terms",
+    "/privacy",
+    "/risk-disclaimer",
+}
+
+
+def public_head_response(path: str) -> FastAPIResponse:
+    clean_path = f"/{path.strip('/')}" if path else "/"
+    if clean_path != "/" and clean_path.endswith("/"):
+        clean_path = clean_path.rstrip("/")
+
+    if clean_path == "/terminal":
+        return FastAPIResponse(status_code=200, headers={"X-Robots-Tag": "noindex, follow"})
+    if clean_path in {"/account", "/reset-password"}:
+        return FastAPIResponse(status_code=200, headers={"X-Robots-Tag": "noindex, nofollow"})
+
+    segments = clean_path.strip("/").split("/", 1) if clean_path != "/" else []
+    if segments and segments[0] in SUPPORTED_LOCALES:
+        locale = segments[0]
+        base_path = f"/{segments[1]}" if len(segments) > 1 else "/"
+        if locale == "fr":
+            return FastAPIResponse(status_code=308, headers={"Location": base_path})
+    else:
+        base_path = clean_path
+
+    if base_path in PUBLIC_HEAD_PATHS:
+        return FastAPIResponse(status_code=200)
+    if base_path.startswith("/marches/"):
+        slug = base_path.rsplit("/", 1)[-1]
+        if slug in FX_MARKET_BY_SLUG:
+            return FastAPIResponse(status_code=200)
+    return FastAPIResponse(status_code=404)
+
+
+@router.head("/{path:path}")
+async def public_head_route(path: str):
+    return public_head_response(path)
